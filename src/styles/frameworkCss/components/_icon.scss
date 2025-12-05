@@ -1,0 +1,69 @@
+// ============================================
+// 🎨 ICON COMPONENT STYLES
+// ============================================
+// Tous les styles du composant Icon (wrapper Lucide)
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; // Ne pas réduire dans un flex container
+  vertical-align: middle;
+  
+  // Par défaut, hériter de la couleur du texte parent
+  color: currentColor;
+  
+  // Appliquer le stroke-width aux SVG enfants
+  :global(svg) {
+    stroke-width: attr(data-stroke-width);
+  }
+  
+  // ========== SIZES ==========
+  
+  &.icon-sm {
+    width: var(--icon-size-sm);
+    height: var(--icon-size-sm);
+    
+    :global(svg) {
+      width: var(--icon-size-sm);
+      height: var(--icon-size-sm);
+    }
+  }
+  
+  &.icon-md {
+    width: var(--icon-size-md);
+    height: var(--icon-size-md);
+    
+    :global(svg) {
+      width: var(--icon-size-md);
+      height: var(--icon-size-md);
+    }
+  }
+  
+  &.icon-lg {
+    width: var(--icon-size-lg);
+    height: var(--icon-size-lg);
+    
+    :global(svg) {
+      width: var(--icon-size-lg);
+      height: var(--icon-size-lg);
+    }
+  }
+  
+  &.icon-xl {
+    width: var(--icon-size-xl);
+    height: var(--icon-size-xl);
+    
+    :global(svg) {
+      width: var(--icon-size-xl);
+      height: var(--icon-size-xl);
+    }
+  }
+}
+

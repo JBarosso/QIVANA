@@ -1,0 +1,267 @@
+// ============================================
+// 📝 INPUT COMPONENT STYLES
+// ============================================
+// Tous les styles du composant Input
+// Utilise les component tokens de _component-tokens.scss
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Label
+.input-label {
+  display: inline-block;
+  font-size: var(--input-label-font-size);
+  font-weight: var(--input-label-font-weight);
+  color: var(--color-text);
+  margin-bottom: var(--input-label-margin-bottom);
+  
+  // Visually hidden (pour accessibilité)
+  &.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+// Required indicator
+.input-required {
+  color: var(--input-required-color);
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
+// Input container (contient l'input + icônes)
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  &.is-disabled {
+    opacity: var(--input-disabled-opacity);
+    cursor: not-allowed;
+  }
+}
+
+// Input field
+.input {
+  // Layout
+  width: 100%;
+  display: block;
+  
+  // Spacing
+  padding-inline: var(--input-padding-x);
+  padding-block: var(--input-padding-y);
+  
+  // Typography
+  font-family: inherit;
+  font-size: var(--input-font-size);
+  font-weight: var(--input-font-weight);
+  line-height: var(--input-line-height);
+  
+  // Apparence
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: var(--input-border-width) solid var(--input-border);
+  border-radius: var(--input-border-radius);
+  
+  // Animation
+  transition: var(--input-transition);
+  
+  // Placeholder
+  &::placeholder {
+    color: var(--input-placeholder);
+    opacity: 1;
+  }
+  
+  // Focus state
+  &:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+    box-shadow: var(--input-focus-ring);
+  }
+  
+  // Disabled state
+  &:disabled,
+  &:read-only {
+    background: var(--input-disabled-bg);
+    color: var(--input-disabled-text);
+    border-color: var(--input-disabled-border);
+    cursor: not-allowed;
+    
+    &::placeholder {
+      color: var(--input-disabled-text);
+    }
+  }
+  
+  // Ajustement du padding quand il y a des icônes
+  .has-icon-left & {
+    padding-left: calc(var(--input-padding-x) * 2 + 1.8rem);
+  }
+  
+  .has-icon-right & {
+    padding-right: calc(var(--input-padding-x) * 2 + 1.8rem);
+  }
+  
+  // ========== STATES ==========
+  
+  // Error state
+  &.input-error {
+    border-color: var(--input-error-border);
+    
+    &:focus {
+      border-color: var(--input-error-border);
+      box-shadow: var(--input-error-ring);
+    }
+  }
+  
+  // Success state
+  &.input-success {
+    border-color: var(--input-success-border);
+    
+    &:focus {
+      border-color: var(--input-success-border);
+      box-shadow: var(--input-success-ring);
+    }
+  }
+  
+  // ========== SIZES ==========
+  
+  &.input-sm {
+    padding-inline: var(--input-padding-x-sm);
+    padding-block: var(--input-padding-y-sm);
+    font-size: var(--input-font-size-sm);
+    border-radius: var(--input-border-radius-sm);
+    
+    .has-icon-left & {
+      padding-left: calc(var(--input-padding-x-sm) * 2 + 1.6rem);
+    }
+    
+    .has-icon-right & {
+      padding-right: calc(var(--input-padding-x-sm) * 2 + 1.6rem);
+    }
+  }
+  
+  &.input-lg {
+    padding-inline: var(--input-padding-x-lg);
+    padding-block: var(--input-padding-y-lg);
+    font-size: var(--input-font-size-lg);
+    border-radius: var(--input-border-radius-lg);
+    
+    .has-icon-left & {
+      padding-left: calc(var(--input-padding-x-lg) * 2 + 2rem);
+    }
+    
+    .has-icon-right & {
+      padding-right: calc(var(--input-padding-x-lg) * 2 + 2rem);
+    }
+  }
+  
+  // ========== TYPE SPECIFICS ==========
+  
+  // Remove spinners for number input
+  &[type="number"] {
+    appearance: textfield;
+    
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+  }
+  
+  // Search input styling
+  &[type="search"] {
+    &::-webkit-search-decoration,
+    &::-webkit-search-cancel-button {
+      appearance: none;
+    }
+  }
+}
+
+// ============================================
+// ICONS
+// ============================================
+
+.input-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--input-icon-color);
+  
+  &.input-icon-left {
+    left: var(--input-padding-x);
+  }
+  
+  &.input-icon-right {
+    right: var(--input-padding-x);
+  }
+  
+  // States
+  &.input-icon-error {
+    color: var(--input-icon-error-color);
+  }
+  
+  &.input-icon-success {
+    color: var(--input-icon-success-color);
+  }
+  
+  // Size adjustments
+  .input-wrapper-sm & {
+    &.input-icon-left {
+      left: var(--input-padding-x-sm);
+    }
+    
+    &.input-icon-right {
+      right: var(--input-padding-x-sm);
+    }
+  }
+  
+  .input-wrapper-lg & {
+    &.input-icon-left {
+      left: var(--input-padding-x-lg);
+    }
+    
+    &.input-icon-right {
+      right: var(--input-padding-x-lg);
+    }
+  }
+}
+
+// ============================================
+// HELPER TEXT
+// ============================================
+
+.input-helper {
+  font-size: var(--input-helper-font-size);
+  color: var(--color-text-muted);
+  margin-top: var(--input-helper-margin-top);
+  line-height: 1.4;
+  
+  // Error state
+  &.input-helper-error {
+    color: var(--input-error-text);
+  }
+  
+  // Success state
+  &.input-helper-success {
+    color: var(--input-success-text);
+  }
+}
+

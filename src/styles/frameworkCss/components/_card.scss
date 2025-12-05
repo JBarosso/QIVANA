@@ -1,0 +1,157 @@
+// ============================================
+// 🃏 CARD COMPONENT STYLES
+// ============================================
+// Conteneur pour regrouper du contenu connexe
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border-radius: var(--card-border-radius);
+  overflow: hidden; // Pour que les enfants (ex: images) respectent le border-radius
+  position: relative;
+  
+  // ========== DEFAULT VARIANT ==========
+  // Shadow par défaut
+  box-shadow: var(--card-shadow);
+  border: var(--card-border-width) solid transparent;
+  
+  
+  // ========== VARIANTS ==========
+  
+  // Hover - Effet d'élévation au survol
+  &--hover {
+    transition: var(--card-transition);
+    cursor: pointer;
+    
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--card-hover-shadow);
+    }
+    
+    &:active {
+      transform: translateY(-2px);
+    }
+  }
+  
+  // Outlined - Border au lieu de shadow
+  &--outlined {
+    box-shadow: none;
+    border-color: var(--card-border-color);
+  }
+  
+  // Flat - Sans élévation (minimal)
+  &--flat {
+    box-shadow: none;
+    border: var(--card-border-width) solid transparent;
+  }
+  
+  
+  // ========== PADDING VARIANTS ==========
+  
+  &--padding-sm {
+    .card__body {
+      padding: var(--card-padding-sm);
+    }
+    
+    .card__header,
+    .card__footer {
+      padding-inline: var(--card-padding-sm);
+    }
+    
+    .card__footer {
+      padding-bottom: var(--card-padding-sm);
+    }
+  }
+  
+  &--padding-lg {
+    .card__body {
+      padding: var(--card-padding-lg);
+    }
+    
+    .card__header,
+    .card__footer {
+      padding-inline: var(--card-padding-lg);
+    }
+    
+    .card__footer {
+      padding-bottom: var(--card-padding-lg);
+    }
+  }
+}
+
+
+// ============================================
+// CARD SECTIONS
+// ============================================
+
+// Header (optionnel - souvent pour les images)
+.card__header {
+  flex-shrink: 0;
+  
+  // Si l'image est directement dans le header
+  :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+}
+
+// Body (contenu principal)
+.card__body {
+  flex: 1;
+  padding: var(--card-padding);
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+// Footer (optionnel - pour les actions/liens)
+.card__footer {
+  flex-shrink: 0;
+  padding-inline: var(--card-padding);
+  padding-bottom: var(--card-padding);
+  
+  // Si le body et footer sont présents ensemble
+  .card__body + & {
+    padding-top: 0;
+  }
+}
+
+
+// ============================================
+// LINK WRAPPER (quand href est fourni)
+// ============================================
+
+.card__link-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .card {
+    // Les tokens s'adaptent automatiquement via _tokens.scss
+    // Pas besoin de surcharges spécifiques ici
+  }
+}
+

@@ -1,0 +1,71 @@
+.modal {
+  border: 0;
+  padding: 0;
+  width: var(--modal-width-md);
+  max-width: 90vw;
+  max-height: var(--modal-max-height);
+  background: transparent; // le contenu gère le fond
+  position: fixed;
+  inset: 0;
+  margin: auto; // centre le dialog
+}
+
+.modal__content {
+  background: var(--modal-bg);
+  border-radius: var(--modal-border-radius);
+  box-shadow: var(--modal-shadow);
+  padding: var(--modal-padding);
+  display: block;
+  position: relative;
+  z-index: 2;
+  color: var(--color-text);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--modal-header-padding-bottom);
+}
+
+.modal__close {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--fs-6);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal__body {
+  display: block;
+}
+
+.modal__footer {
+  padding-top: var(--modal-footer-padding-top);
+}
+
+// Sizes
+.modal--sm { width: var(--modal-width-sm); }
+.modal--md { width: var(--modal-width-md); }
+.modal--lg { width: var(--modal-width-lg); }
+
+// Transitions (show/hide)
+@media (prefers-reduced-motion: no-preference) {
+  .modal[open] .modal__content {
+    animation: modal-enter var(--modal-transition-duration) var(--modal-transition-easing);
+  }
+}
+
+@keyframes modal-enter {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+// Backdrop natif du <dialog>
+.modal::backdrop {
+  background: var(--modal-backdrop-bg);
+  z-index: 1;
+}
+
+

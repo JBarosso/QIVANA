@@ -1,0 +1,30 @@
+// ============================================
+// ⭐ RATING
+// ============================================
+// Note: Layout (display, flex, gap) géré par les classes utilities CSS
+
+.rating__star {
+  color: var(--color-warning);
+  
+  svg {
+    width: var(--icon-size-md);
+    height: var(--icon-size-md);
+  }
+}
+
+.rating--sm .rating__star svg {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+
+.rating--lg .rating__star svg {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+
+.rating__value {
+  margin-left: var(--space-2);
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+

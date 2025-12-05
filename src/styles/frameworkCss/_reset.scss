@@ -1,0 +1,114 @@
+// ============================================
+// 🔄 RESET CSS - Modern CSS Reset
+// ============================================
+// Basé sur les meilleures pratiques modernes
+// Source: Josh Comeau, Andy Bell
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  // Permet le scroll smooth
+  scroll-behavior: smooth;
+  
+  // Améliore le rendu des fonts
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  // Font size de base (16px)
+  font-size: 62.5%; // 10px = 1rem
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+  font-family: var(--font-primary);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-size: var(--fs-2);
+
+  // Améliore le rendu du texte
+  text-rendering: optimizeSpeed;
+}
+
+// Typographie
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+}
+
+p {
+  line-height: var(--leading-relaxed);
+}
+
+// Listes
+ul, ol {
+  list-style: none;
+}
+
+// Liens
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary);
+}
+
+// Médias
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+// Forms
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+// Accessibilité
+// Respecte les préférences utilisateur pour les animations
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// Focus visible pour l'accessibilité
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+// Remove focus outline pour les clics souris (gardé pour clavier)
+:focus:not(:focus-visible) {
+  outline: none;
+}
+

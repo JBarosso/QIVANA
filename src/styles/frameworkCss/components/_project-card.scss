@@ -1,0 +1,183 @@
+// ============================================
+// 🎯 PROJECT CARD COMPONENT STYLES
+// ============================================
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.project-card {
+  position: relative;
+  border-radius: var(--project-card-image-radius);
+  overflow: hidden;
+  transition: var(--project-card-transition);
+}
+
+// ============================================
+// IMAGE WRAPPER
+// ============================================
+
+.project-card__image-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--project-card-image-aspect-ratio);
+  overflow: hidden;
+}
+
+.project-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: var(--project-card-transition);
+  display: block;
+}
+
+// ============================================
+// OVERLAY
+// ============================================
+
+.project-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--project-card-overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: var(--project-card-overlay-transition);
+  backdrop-filter: blur(4px);
+}
+
+.project-card--with-overlay:hover .project-card__overlay {
+  opacity: 1;
+}
+
+.project-card__overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--project-card-overlay-padding);
+  text-align: center;
+}
+
+// ============================================
+// CONTENT (without overlay)
+// ============================================
+
+.project-card__content {
+  padding: var(--project-card-content-padding);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+// ============================================
+// TITLE
+// ============================================
+
+.project-card__title {
+  font-size: var(--project-card-title-font-size);
+  font-weight: var(--project-card-title-font-weight);
+  color: var(--project-card-title-color);
+  margin: 0;
+  
+  // In overlay
+  .project-card__overlay & {
+    color: white;
+  }
+  
+  // In content
+  .project-card__content & {
+    color: var(--color-text);
+    font-size: var(--fs-5);
+  }
+}
+
+// ============================================
+// DESCRIPTION
+// ============================================
+
+.project-card__description {
+  font-size: var(--project-card-description-font-size);
+  color: var(--project-card-description-color);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+
+.project-card__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--project-card-categories-gap);
+  justify-content: center;
+}
+
+.project-card__categories--floating {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--project-card-categories-gap);
+}
+
+// ============================================
+// LINK
+// ============================================
+
+.project-card__link {
+  color: var(--project-card-link-color);
+  font-weight: var(--project-card-link-font-weight);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: var(--project-card-transition);
+  
+  &:hover {
+    gap: var(--space-2);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+// ============================================
+// VARIANTS
+// ============================================
+
+.project-card--zoom {
+  .project-card__image-wrapper:hover .project-card__image {
+    transform: scale(1.1);
+  }
+}
+
+.project-card--default {
+  box-shadow: var(--project-card-shadow);
+  
+  &:hover {
+    box-shadow: var(--project-card-hover-shadow);
+    transform: translateY(-4px);
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .project-card {
+    // Les tokens s'adaptent automatiquement
+  }
+}
+

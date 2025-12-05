@@ -1,0 +1,191 @@
+// ============================================
+// 💬 TESTIMONIAL COMPONENT STYLES
+// ============================================
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.testimonial {
+  display: flex;
+  flex-direction: column;
+  gap: var(--testimonial-gap);
+  padding: var(--testimonial-padding);
+  background: var(--testimonial-bg);
+  border-radius: var(--testimonial-border-radius);
+  box-shadow: var(--testimonial-shadow);
+  transition: var(--testimonial-transition);
+  
+  // Size variants
+  &--size-sm {
+    padding: var(--testimonial-padding-sm);
+    gap: var(--space-3);
+  }
+  
+  &--size-lg {
+    padding: var(--testimonial-padding-lg);
+    gap: var(--space-6);
+  }
+  
+  // Hover effect
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+// ============================================
+// QUOTE ICON
+// ============================================
+
+.testimonial__quote-icon {
+  width: var(--testimonial-quote-icon-size);
+  height: var(--testimonial-quote-icon-size);
+  color: var(--testimonial-quote-icon-color);
+  margin-bottom: var(--space-2);
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+.testimonial__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.testimonial__text {
+  font-size: var(--testimonial-text-font-size);
+  line-height: var(--leading-relaxed);
+  color: var(--testimonial-text-color);
+  font-style: italic;
+  margin: 0;
+}
+
+.testimonial__rating {
+  display: flex;
+  align-items: center;
+}
+
+// ============================================
+// AUTHOR SECTION
+// ============================================
+
+.testimonial__author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--testimonial-border-color);
+}
+
+.testimonial__avatar {
+  width: var(--testimonial-avatar-size);
+  height: var(--testimonial-avatar-size);
+  border-radius: var(--testimonial-avatar-border-radius);
+  object-fit: cover;
+  flex-shrink: 0;
+  
+  .testimonial--size-sm & {
+    width: var(--testimonial-avatar-size-sm);
+    height: var(--testimonial-avatar-size-sm);
+  }
+  
+  .testimonial--size-lg & {
+    width: var(--testimonial-avatar-size-lg);
+    height: var(--testimonial-avatar-size-lg);
+  }
+}
+
+.testimonial__author-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.testimonial__name {
+  font-size: var(--testimonial-name-font-size);
+  font-weight: var(--testimonial-name-font-weight);
+  color: var(--testimonial-text-color);
+}
+
+.testimonial__role {
+  font-size: var(--testimonial-role-font-size);
+  color: var(--testimonial-role-color);
+}
+
+// ============================================
+// VARIANTS
+// ============================================
+
+.testimonial--quote {
+  position: relative;
+  
+  // Quote icon plus visible
+  .testimonial__quote-icon {
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
+    width: 60px;
+    height: 60px;
+    opacity: 0.2;
+    
+    .testimonial--size-sm & {
+      width: 48px;
+      height: 48px;
+      top: var(--space-3);
+      left: var(--space-3);
+    }
+    
+    .testimonial--size-lg & {
+      width: 80px;
+      height: 80px;
+      top: var(--space-6);
+      left: var(--space-6);
+    }
+  }
+}
+
+.testimonial--compact {
+  padding: var(--space-4);
+  box-shadow: none;
+  border: 1px solid var(--testimonial-border-color);
+  
+  .testimonial--size-sm & {
+    padding: var(--space-3);
+  }
+  
+  .testimonial--size-lg & {
+    padding: var(--space-6);
+  }
+  
+  &:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .testimonial {
+    --testimonial-bg: var(--color-neutral-800);
+    --testimonial-border-color: var(--color-neutral-700);
+  }
+  
+  .testimonial__quote-icon {
+    opacity: 0.3;
+  }
+}
+

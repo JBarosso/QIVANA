@@ -1,0 +1,36 @@
+// ============================================
+// 🛒 CART SUMMARY
+// ============================================
+
+.cart-summary {
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.cart-summary__items {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cart-summary__item {
+  // Layout géré par les classes utilities CSS
+}
+
+.cart-summary__totals {
+  margin-top: var(--space-4);
+}
+
+.cart-summary__line {
+  color: var(--color-text-muted);
+}
+
+.cart-summary__total {
+  font-size: var(--fs-5);
+  font-weight: var(--font-weight-bold);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--color-border);
+  margin-top: var(--space-2);
+}
+

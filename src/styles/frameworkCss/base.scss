@@ -1,0 +1,50 @@
+// ============================================
+// 🌍 GLOBAL STYLES
+// ============================================
+// Fichier principal à importer dans BaseLayout.astro
+// ⚠️ ORDRE IMPORTANT : Tous les @use AVANT @import
+
+// ============================================
+// 1. @USE IMPORTS (doivent être en premier)
+// ============================================
+
+// Functions (logique de calcul)
+@use 'functions' as *;
+
+// Tokens (variables globales uniquement)
+@use 'tokens' as *;
+
+// Component Tokens (variables spécifiques aux composants)
+@use 'component-tokens';
+
+// Mixins (helpers réutilisables)
+@use 'mixins' as *;
+
+// Reset CSS
+@use 'reset';
+
+// Utilities (Tailwind-inspired)
+@use 'utilities/layout';
+@use 'utilities/spacing';
+@use 'utilities/typography';
+@use 'utilities/cols';
+
+// Components (logique séparée dans components/)
+@use 'components';
+
+// ============================================
+// 2. @IMPORT (après les @use)
+// ============================================
+
+// Google Fonts Import
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Crimson+Pro:wght@400;600;700&display=swap');
+
+// ============================================
+// 3. STYLES GLOBAUX
+// ============================================
+
+body {
+  // Transition smooth pour le theme switch
+  transition: background-color 300ms ease, color 300ms ease;
+}
+

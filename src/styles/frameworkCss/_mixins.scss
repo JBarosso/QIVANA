@@ -1,0 +1,162 @@
+// ============================================
+// 🛠️ MIXINS & FUNCTIONS
+// ============================================
+// Helpers réutilisables pour SCSS
+
+@use 'sass:map';
+@use 'tokens' as *;
+
+// ============================================
+// 📱 RESPONSIVE BREAKPOINTS
+// ============================================
+
+/// Mixin responsive général
+/// @param {String} $direction - 'min' (default) ou 'max'
+/// @param {Number|String} $break - breakpoint (par défaut $bp-md)
+/// Mixin responsive général (utilise une clé de breakpoint, ex: 'md', 'lg')
+/// @param {String} $direction - 'min' (default) ou 'max'
+/// @param {String} $break - clé du breakpoint ('sm', 'md', 'lg', 'xl'), default: 'md'
+@mixin media($direction: min, $break: md) {
+  // On récupère la valeur du breakpoint depuis la map $breakpoints
+  $breakpoint-value: map.get($breakpoints, $break);
+
+  @if not $breakpoint-value {
+    @warn 'media() → breakpoint "#{$break}" introuvable dans $breakpoints. (Choix: sm, md, lg, xl)';
+  }
+
+  @if $direction == min {
+    @media (min-width: #{$breakpoint-value}) {
+      @content;
+    }
+  } @else if $direction == max {
+    @media (max-width: #{$breakpoint-value}) {
+      @content;
+    }
+  } @else {
+    @warn 'media() direction doit être "min" ou "max".';
+  }
+}
+
+// ============================================
+// 📏 SPACING HELPERS
+// ============================================
+
+// ⚠️ Les spacings sont maintenant des CSS custom properties fluides
+// Utiliser directement var(--space-4), var(--space-8), etc.
+// Voir _tokens.scss pour la liste complète
+
+// ============================================
+// ♿ ACCESSIBILITÉ
+// ============================================
+
+// Focus visible
+@mixin focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+// Masquer visuellement mais garder accessible aux lecteurs d'écran
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+// ============================================
+// 📝 TYPOGRAPHY
+// ============================================
+
+// Truncate text (...)
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Clamp lines (multiline truncate)
+@mixin line-clamp($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ============================================
+// 🎨 VISUAL
+// ============================================
+
+// Center absolument un élément
+@mixin absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+// Ratio d'aspect (pour images, vidéos)
+@mixin aspect-ratio($width, $height) {
+  aspect-ratio: $width / $height;
+  
+  @supports not (aspect-ratio: 1 / 1) {
+    // Fallback pour anciens navigateurs
+    position: relative;
+    
+    &::before {
+      content: '';
+      display: block;
+      padding-top: calc(($height / $width) * 100%);
+    }
+  }
+}
+
+// ============================================
+// 🎬 ANIMATIONS
+// ============================================
+
+// Smooth transition standard
+@mixin transition($properties: all) {
+  transition: $properties var(--duration-base) var(--ease-standard);
+}
+
+// Hover lift effect
+@mixin hover-lift($scale: 1.02, $y: -2px) {
+  transition: transform var(--duration-base) var(--ease-out);
+  
+  &:hover {
+    transform: translateY($y) scale($scale);
+  }
+}
+
+// ============================================
+// 📦 LAYOUT
+// ============================================
+
+// Container avec max-width
+@mixin container($max-width: 1200px, $padding: var(--space-6)) {
+  max-width: $max-width;
+  margin: 0 auto;
+  padding-left: $padding;
+  padding-right: $padding;
+}
+
+// Grid avec gap responsive
+@mixin grid-responsive($mobile-cols: 1, $tablet-cols: 2, $desktop-cols: 3, $gap: var(--space-6)) {
+  display: grid;
+  gap: $gap;
+  grid-template-columns: repeat($mobile-cols, 1fr);
+  
+  @include tablet {
+    grid-template-columns: repeat($tablet-cols, 1fr);
+  }
+  
+  @include desktop {
+    grid-template-columns: repeat($desktop-cols, 1fr);
+  }
+}
+

@@ -1,0 +1,260 @@
+// ============================================
+// 🔘 RADIO COMPONENT STYLES
+// ============================================
+// Bouton radio personnalisé et accessible
+// BEM methodology - PAS de classes de layout
+
+@use '../tokens' as *;
+
+// ============================================
+// WRAPPER
+// ============================================
+
+.radio-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  
+  // ========== SIZES ==========
+  
+  &.radio-wrapper-sm {
+    --radio-current-size: var(--radio-size-sm);
+    --radio-current-gap: var(--radio-gap-sm);
+    --radio-current-dot-size: var(--radio-dot-size-sm);
+    --radio-current-font-size: var(--radio-label-font-size-sm);
+  }
+  
+  &.radio-wrapper-lg {
+    --radio-current-size: var(--radio-size-lg);
+    --radio-current-gap: var(--radio-gap-lg);
+    --radio-current-dot-size: var(--radio-dot-size-lg);
+    --radio-current-font-size: var(--radio-label-font-size-lg);
+  }
+  
+  // ========== DEFAULT (MD) ==========
+  
+  --radio-current-size: var(--radio-size);
+  --radio-current-gap: var(--radio-gap);
+  --radio-current-dot-size: var(--radio-dot-size);
+  --radio-current-font-size: var(--radio-label-font-size);
+}
+
+// ============================================
+// LABEL CONTAINER
+// ============================================
+
+.radio-label-container {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--radio-current-gap);
+  cursor: pointer;
+  user-select: none;
+  
+  // Disabled cursor
+  .radio-input:disabled ~ & {
+    cursor: not-allowed;
+  }
+}
+
+// ============================================
+// NATIVE INPUT (hidden)
+// ============================================
+
+.radio-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+  
+  // ========== CHECKED STATE ==========
+  
+  &:checked {
+    ~ .radio-box {
+      background: var(--radio-checked-bg);
+      border-color: var(--radio-checked-border);
+      
+      .radio-dot {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  }
+  
+  // ========== FOCUS STATE ==========
+  
+  &:focus-visible {
+    ~ .radio-box {
+      box-shadow: var(--radio-focus-ring);
+      outline: var(--radio-focus-outline);
+      outline-offset: var(--radio-focus-outline-offset);
+    }
+  }
+  
+  // ========== DISABLED STATE ==========
+  
+  &:disabled {
+    ~ .radio-box {
+      background: var(--radio-disabled-bg);
+      border-color: var(--radio-disabled-border);
+      cursor: not-allowed;
+      opacity: var(--radio-disabled-opacity);
+      
+      .radio-dot {
+        background: var(--radio-disabled-dot-color);
+      }
+    }
+    
+    ~ .radio-label {
+      color: var(--radio-disabled-label);
+      cursor: not-allowed;
+    }
+  }
+  
+  // ========== HOVER STATE (non-disabled) ==========
+  
+  &:not(:disabled):hover {
+    ~ .radio-box {
+      border-color: var(--radio-hover-border);
+      background: var(--radio-hover-bg);
+    }
+  }
+}
+
+// ============================================
+// RADIO BOX (cercle visible)
+// ============================================
+
+.radio-box {
+  position: relative;
+  flex-shrink: 0;
+  
+  width: var(--radio-current-size);
+  height: var(--radio-current-size);
+  
+  // Apparence circulaire
+  border-radius: 50%;
+  border: var(--radio-border-width) solid var(--radio-border);
+  background: var(--radio-bg);
+  
+  // Transition
+  transition: var(--radio-transition);
+  
+  // Centrer le dot
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  // ========== SIZES ==========
+  
+  &.radio-box-sm {
+    width: var(--radio-size-sm);
+    height: var(--radio-size-sm);
+  }
+  
+  &.radio-box-lg {
+    width: var(--radio-size-lg);
+    height: var(--radio-size-lg);
+  }
+  
+  // ========== ERROR STATE ==========
+  
+  &.radio-box-error {
+    border-color: var(--radio-error-border);
+    
+    .radio-input:checked ~ & {
+      border-color: var(--radio-error-checked-border);
+      
+      .radio-dot {
+        background: var(--radio-error-dot-color);
+      }
+    }
+    
+    .radio-input:focus-visible ~ & {
+      box-shadow: var(--radio-error-ring);
+    }
+  }
+}
+
+// ============================================
+// DOT (point interne quand sélectionné)
+// ============================================
+
+.radio-dot {
+  width: var(--radio-current-dot-size);
+  height: var(--radio-current-dot-size);
+  border-radius: 50%;
+  background: var(--radio-dot-color);
+  
+  // État initial : invisible
+  transform: scale(0);
+  opacity: 0;
+  
+  // Animation
+  transition: var(--radio-dot-transition);
+}
+
+// ============================================
+// LABEL
+// ============================================
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);                 // Gap pour icônes
+  flex: 1;
+  
+  font-size: var(--radio-current-font-size);
+  font-weight: var(--radio-label-font-weight);
+  line-height: var(--radio-label-line-height);
+  color: var(--radio-label);
+  
+  // Alignement avec le cercle
+  padding-top: 1px;
+  
+  // ========== ERROR STATE ==========
+  
+  .radio-wrapper-error & {
+    color: var(--radio-error-label);
+  }
+}
+
+// Required indicator
+.radio-required {
+  color: var(--color-error);
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
+// ============================================
+// HELPER TEXT
+// ============================================
+
+.radio-helper {
+  font-size: var(--radio-helper-font-size);
+  color: var(--radio-helper-color);
+  margin-top: var(--radio-helper-margin-top);
+  margin-left: calc(var(--radio-current-size) + var(--radio-current-gap));
+  line-height: 1.4;
+  
+  // ========== SIZES ==========
+  
+  .radio-wrapper-sm & {
+    margin-left: calc(var(--radio-size-sm) + var(--radio-gap-sm));
+  }
+  
+  .radio-wrapper-lg & {
+    margin-left: calc(var(--radio-size-lg) + var(--radio-gap-lg));
+  }
+  
+  // ========== ERROR STATE ==========
+  
+  &.radio-helper-error {
+    color: var(--radio-error-label);
+  }
+}
+

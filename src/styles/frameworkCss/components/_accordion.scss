@@ -1,0 +1,175 @@
+@use '../tokens' as *;
+@use '../component-tokens' as *;
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Variants
+.accordion--default {
+  gap: 0;
+  
+  .accordion__item {
+    border-bottom: var(--accordion-border-width) solid var(--accordion-border-color);
+    
+    &:first-child {
+      border-top: var(--accordion-border-width) solid var(--accordion-border-color);
+    }
+  }
+}
+
+.accordion--bordered {
+  border: var(--accordion-border-width) solid var(--accordion-border-color);
+  border-radius: var(--accordion-border-radius);
+  overflow: hidden;
+  
+  .accordion__item {
+    border-bottom: var(--accordion-border-width) solid var(--accordion-border-color);
+    
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.accordion--separated {
+  gap: var(--accordion-separated-gap);
+  
+  .accordion__item {
+    border: var(--accordion-border-width) solid var(--accordion-border-color);
+    border-radius: var(--accordion-border-radius);
+  }
+}
+
+// Item
+.accordion__item {
+  background: var(--accordion-bg);
+  
+  &--disabled {
+    opacity: var(--accordion-disabled-opacity);
+    pointer-events: none;
+  }
+}
+
+// Button
+.accordion__button {
+  display: flex;
+  align-items: center;
+  gap: var(--accordion-icon-gap);
+  width: 100%;
+  padding: var(--accordion-padding-y) var(--accordion-padding-x);
+  font-family: inherit;
+  font-size: var(--accordion-font-size);
+  font-weight: var(--accordion-font-weight);
+  line-height: 1.5;
+  color: var(--accordion-text-color);
+  background: var(--accordion-button-bg);
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--accordion-transition);
+  
+  &:hover:not(:disabled) {
+    background: var(--accordion-button-hover-bg);
+    color: var(--accordion-hover-color);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    z-index: 1;
+  }
+  
+  &[aria-expanded="true"] {
+    color: var(--accordion-active-color);
+    background: var(--accordion-button-active-bg);
+    
+    .accordion__icon-end {
+      transform: rotate(180deg);
+    }
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.accordion__icon-start {
+  flex-shrink: 0;
+  width: var(--accordion-icon-size);
+  height: var(--accordion-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.accordion__title {
+  flex: 1;
+}
+
+.accordion__icon-end {
+  flex-shrink: 0;
+  width: var(--accordion-icon-size);
+  height: var(--accordion-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accordion-icon-color);
+  transition: transform var(--accordion-icon-transition);
+}
+
+// Panel
+.accordion__panel {
+  overflow: hidden;
+  
+  &[hidden] {
+    display: none;
+  }
+}
+
+.accordion__content {
+  padding: var(--accordion-content-padding-y) var(--accordion-content-padding-x);
+  font-size: var(--accordion-content-font-size);
+  line-height: var(--accordion-content-line-height);
+  color: var(--accordion-content-color);
+}
+
+// Sizes
+.accordion--sm {
+  .accordion__button {
+    padding: var(--accordion-padding-y-sm) var(--accordion-padding-x-sm);
+    font-size: var(--accordion-font-size-sm);
+  }
+  
+  .accordion__content {
+    padding: var(--accordion-content-padding-y-sm) var(--accordion-content-padding-x-sm);
+    font-size: var(--accordion-content-font-size-sm);
+  }
+  
+  .accordion__icon-start,
+  .accordion__icon-end {
+    width: var(--accordion-icon-size-sm);
+    height: var(--accordion-icon-size-sm);
+  }
+}
+
+.accordion--lg {
+  .accordion__button {
+    padding: var(--accordion-padding-y-lg) var(--accordion-padding-x-lg);
+    font-size: var(--accordion-font-size-lg);
+  }
+  
+  .accordion__content {
+    padding: var(--accordion-content-padding-y-lg) var(--accordion-content-padding-x-lg);
+    font-size: var(--accordion-content-font-size-lg);
+  }
+  
+  .accordion__icon-start,
+  .accordion__icon-end {
+    width: var(--accordion-icon-size-lg);
+    height: var(--accordion-icon-size-lg);
+  }
+}
+

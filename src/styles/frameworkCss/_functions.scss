@@ -1,0 +1,59 @@
+// ============================================
+// 🔧 FUNCTIONS SCSS
+// ============================================
+// Fonctions réutilisables pour les calculs
+
+@use 'sass:math';
+
+// ============================================
+// FLUID SPACE - Génère des valeurs fluides avec clamp()
+// ============================================
+// Viewport: 767px (mobile) → 1440px (desktop)
+
+// Configuration (à synchroniser avec _tokens.scss et _reset.scss)
+$viewport-min: 767;   // px - Mobile (tablette)
+$viewport-max: 1440;  // px - Desktop
+$base-rem: 10;        // px - Base font-size (1rem = 10px via font-size: 62.5%)
+
+// Fonction pour calculer clamp() automatiquement
+// Usage: fluid-space(min-px, max-px)
+// Génère: clamp(MINrem, Xvw + Yrem, MAXrem)
+// 
+// Exemple: fluid-space(16, 24)
+// → clamp(1rem, 1.188vw + -0.094rem, 1.5rem)
+// 
+// À 767px : 16px
+// À 1100px : ~20px (interpolation linéaire)
+// À 1440px : 24px
+@function fluid-space($min-px, $max-px) {
+  // Conversion en rem
+  $min-rem: math.div($min-px, $base-rem);
+  $max-rem: math.div($max-px, $base-rem);
+  
+  // Calcul de la pente (slope) et de l'intercept pour créer la fonction linéaire
+  // Formule : y = mx + b
+  // où y = taille en px, x = viewport width, m = slope, b = intercept
+  $slope: math.div(($max-px - $min-px), ($viewport-max - $viewport-min));
+  $intercept-px: $min-px - ($slope * $viewport-min);
+  $intercept-rem: math.div($intercept-px, $base-rem);
+  
+  // Conversion de la pente en vw (multiplier par 100 car 1vw = 1% de viewport)
+  $vw-value: $slope * 100;
+  
+  // Retourne la valeur clamp complète
+  @return clamp(#{$min-rem}rem, #{$vw-value}vw + #{$intercept-rem}rem, #{$max-rem}rem);
+}
+
+// ============================================
+// AUTRES FONCTIONS UTILES (pour le futur)
+// ============================================
+
+// Convertir px en rem
+@function px-to-rem($px, $base: 10) {
+  @return calc($px / $base) * 1rem;
+}
+
+// Convertir rem en px
+@function rem-to-px($rem, $base: 10) {
+  @return calc($rem * $base) * 1px;
+}

@@ -1,0 +1,41 @@
+// ============================================
+// QIVANA - MAIN STYLESHEET
+// Entry point pour tous les styles
+// ============================================
+// Utilise le frameworkCss avec les couleurs Qivana adaptées
+
+// ⚠️ IMPORTANT: Tous les @use DOIVENT être avant @import
+// L'ordre est critique pour éviter les erreurs Sass
+
+// 1. Import du frameworkCss (base du Design System Qivana)
+@use 'frameworkCss/base';
+
+// 2. Layout styles personnalisés (à créer dans Milestone 2+)
+// @import './layout/...';
+
+// 3. Component styles personnalisés (à créer in Milestone 2+)
+// @import './component/...';
+
+// ============================================
+// GLOBAL OVERRIDES QIVANA
+// ============================================
+
+body {
+  // Font de base pour Qivana (Inter)
+  font-family: var(--font-primary);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+// Headings avec Sora (font secondaire Qivana)
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-secondary);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+}

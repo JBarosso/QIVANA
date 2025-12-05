@@ -1,0 +1,58 @@
+---
+// ============================================
+// HOME PAGE
+// Temporary placeholder for Milestone 0
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Qivana - Accueil">
+  <main class="home">
+    <div class="container">
+      <section class="hero">
+        <h1 class="hero__title">Qivana</h1>
+        <p class="hero__subtitle">
+          La plateforme de quiz geek alimentée par l'IA
+        </p>
+        <p class="hero__status">
+          🚧 Milestone 0 - Project Initialization Complete
+        </p>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .home {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero {
+    text-align: center;
+
+    &__title {
+      font-family: var(--font-secondary);
+      font-size: var(--fs-10);
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      font-weight: var(--font-weight-bold);
+    }
+
+    &__subtitle {
+      font-family: var(--font-primary);
+      font-size: var(--fs-4);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-8);
+    }
+
+    &__status {
+      font-size: var(--fs-3);
+      color: var(--color-accent);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+</style>

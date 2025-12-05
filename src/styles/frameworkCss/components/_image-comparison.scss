@@ -1,0 +1,230 @@
+// ============================================
+// 🖼️ IMAGE COMPARISON COMPONENT STYLES
+// ============================================
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.image-comparison {
+  position: relative;
+  width: 100%;
+  height: var(--image-comparison-height);
+  border-radius: var(--image-comparison-border-radius);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.image-comparison__container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+// ============================================
+// BEFORE/AFTER IMAGES
+// ============================================
+
+.image-comparison__before,
+.image-comparison__after {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.image-comparison__before {
+  z-index: 1;
+  
+  .image-comparison__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.image-comparison__after {
+  z-index: 2;
+  clip-path: inset(0 calc(100% - var(--slider-position, 50%)) 0 0);
+  
+  .image-comparison__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// ============================================
+// SHADOWS
+// ============================================
+
+.image-comparison__shadow-left {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--image-comparison-shadow-left);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.image-comparison__shadow-right {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--image-comparison-shadow-right);
+  z-index: 4;
+  pointer-events: none;
+}
+
+// ============================================
+// LABELS
+// ============================================
+
+.image-comparison__label {
+  position: absolute;
+  top: var(--space-4);
+  padding: var(--image-comparison-label-padding);
+  background: var(--image-comparison-label-bg);
+  color: var(--image-comparison-label-color);
+  font-size: var(--image-comparison-label-font-size);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--image-comparison-label-border-radius);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.image-comparison__label--before {
+  left: var(--space-4);
+}
+
+.image-comparison__label--after {
+  right: var(--space-4);
+}
+
+// ============================================
+// SLIDER CONTROLS
+// ============================================
+
+.image-comparison__slider {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.image-comparison__line {
+  position: absolute;
+  background: var(--image-comparison-line-color);
+  pointer-events: none;
+}
+
+.image-comparison__handle {
+  position: absolute;
+  width: var(--image-comparison-handle-size);
+  height: var(--image-comparison-handle-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--image-comparison-handle-bg);
+  border: var(--image-comparison-handle-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--image-comparison-handle-shadow);
+  cursor: grab;
+  pointer-events: all;
+  transform: translate(-50%, -50%);
+  transition: var(--image-comparison-transition);
+  
+  &:active {
+    cursor: grabbing;
+  }
+  
+  svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-primary);
+  }
+}
+
+// ============================================
+// HORIZONTAL ORIENTATION
+// ============================================
+
+.image-comparison--horizontal {
+  .image-comparison__line {
+    left: var(--slider-position, 50%);
+    top: 0;
+    bottom: 0;
+    width: var(--image-comparison-line-width);
+    transform: translateX(-50%);
+  }
+  
+  .image-comparison__handle {
+    left: var(--slider-position, 50%);
+    top: 50%;
+  }
+  
+  .image-comparison__after {
+    clip-path: inset(0 calc(100% - var(--slider-position, 50%)) 0 0);
+  }
+}
+
+// ============================================
+// VERTICAL ORIENTATION
+// ============================================
+
+.image-comparison--vertical {
+  .image-comparison__line {
+    left: 0;
+    top: var(--slider-position, 50%);
+    right: 0;
+    height: var(--image-comparison-line-width);
+    transform: translateY(-50%);
+  }
+  
+  .image-comparison__handle {
+    left: 50%;
+    top: var(--slider-position, 50%);
+  }
+  
+  .image-comparison__after {
+    clip-path: inset(calc(100% - var(--slider-position, 50%)) 0 0 0);
+  }
+}
+
+// ============================================
+// HIDDEN INPUT RANGE
+// ============================================
+
+.image-comparison__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: grab;
+  z-index: 10;
+  
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .image-comparison {
+    // Les tokens s'adaptent automatiquement
+  }
+}
+

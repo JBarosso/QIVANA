@@ -1,0 +1,380 @@
+// ============================================
+// 🔽 CUSTOM SELECT COMPONENT STYLES
+// ============================================
+// Select entièrement personnalisé avec dropdown et checkboxes
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.custom-select-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Label
+.custom-select-label {
+  display: inline-block;
+  font-size: var(--select-label-font-size);
+  font-weight: var(--select-label-font-weight);
+  color: var(--color-text);
+  margin-bottom: var(--select-label-margin-bottom);
+  
+  &.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+// Required indicator
+.custom-select-required {
+  color: var(--select-required-color);
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
+// ============================================
+// SELECT BUTTON (trigger)
+// ============================================
+
+.custom-select-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--select-min-height);
+  
+  // Spacing
+  padding-inline: var(--select-padding-x);
+  padding-block: var(--select-padding-y);
+  
+  // Typography
+  font-family: inherit;
+  font-size: var(--select-font-size);
+  font-weight: var(--select-font-weight);
+  line-height: var(--select-line-height);
+  text-align: left;
+  
+  // Apparence
+  background: var(--select-bg);
+  color: var(--select-text);
+  border: var(--select-border-width) solid var(--select-border);
+  border-radius: var(--select-border-radius);
+  
+  // Curseur
+  cursor: pointer;
+  
+  // Animation
+  transition: var(--select-transition);
+  
+  // Focus state
+  &:focus {
+    outline: none;
+    border-color: var(--select-focus-border);
+    box-shadow: var(--select-focus-ring);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  
+  // Disabled state
+  &:disabled {
+    background: var(--select-disabled-bg);
+    color: var(--select-disabled-text);
+    border-color: var(--select-disabled-border);
+    cursor: not-allowed;
+    opacity: var(--select-disabled-opacity);
+  }
+  
+  // Open state
+  &[aria-expanded="true"] {
+    border-color: var(--select-focus-border);
+    box-shadow: var(--select-focus-ring);
+    
+    .custom-select-icon {
+      transform: rotate(180deg);
+    }
+  }
+  
+  // ========== STATES ==========
+  
+  &.custom-select-button-error {
+    border-color: var(--select-error-border);
+    
+    &:focus {
+      border-color: var(--select-error-border);
+      box-shadow: var(--select-error-ring);
+    }
+  }
+  
+  &.custom-select-button-success {
+    border-color: var(--select-success-border);
+    
+    &:focus {
+      border-color: var(--select-success-border);
+      box-shadow: var(--select-success-ring);
+    }
+  }
+  
+  // ========== SIZES ==========
+  
+  &.custom-select-button-sm {
+    padding-inline: var(--select-padding-x-sm);
+    padding-block: var(--select-padding-y-sm);
+    font-size: var(--select-font-size-sm);
+    border-radius: var(--select-border-radius-sm);
+    min-height: var(--select-min-height-sm);
+  }
+  
+  &.custom-select-button-lg {
+    padding-inline: var(--select-padding-x-lg);
+    padding-block: var(--select-padding-y-lg);
+    font-size: var(--select-font-size-lg);
+    border-radius: var(--select-border-radius-lg);
+    min-height: var(--select-min-height-lg);
+  }
+}
+
+// Button content wrapper (for icon + text)
+.custom-select-button-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  overflow: hidden;
+}
+
+// Button text
+.custom-select-button-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Button icon (selected option icon)
+.custom-select-button-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+  
+  .custom-select-wrapper-sm & {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .custom-select-wrapper-lg & {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+// Dropdown icon
+.custom-select-icon {
+  flex-shrink: 0;
+  width: var(--select-icon-size);
+  height: var(--select-icon-size);
+  color: var(--select-icon-color);
+  margin-left: var(--select-icon-spacing);
+  transition: transform 200ms ease;
+  
+  .custom-select-wrapper-sm & {
+    width: var(--select-icon-size-sm);
+    height: var(--select-icon-size-sm);
+  }
+  
+  .custom-select-wrapper-lg & {
+    width: var(--select-icon-size-lg);
+    height: var(--select-icon-size-lg);
+  }
+}
+
+// ============================================
+// DROPDOWN
+// ============================================
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--select-dropdown-z-index);
+  
+  background: var(--select-dropdown-bg);
+  border: var(--select-border-width) solid var(--select-dropdown-border);
+  border-radius: var(--select-border-radius);
+  box-shadow: var(--select-dropdown-shadow);
+  
+  max-height: var(--select-dropdown-max-height);
+  overflow-y: auto;
+  
+  // Animation
+  opacity: 1;
+  transform: translateY(0);
+  transition: var(--select-dropdown-transition);
+  
+  &[hidden] {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+  }
+}
+
+// Options container
+.custom-select-options {
+  padding: var(--space-2) 0;
+}
+
+// ============================================
+// OPTIONS
+// ============================================
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  
+  padding-inline: var(--select-option-padding-x);
+  padding-block: var(--select-option-padding-y);
+  
+  font-size: var(--select-font-size);
+  color: var(--select-text);
+  
+  cursor: pointer;
+  transition: background 150ms ease;
+  
+  // Hover state
+  &:hover:not(.disabled) {
+    background: var(--select-option-hover-bg);
+  }
+  
+  // Selected state
+  &.selected {
+    background: var(--select-option-selected-bg);
+    color: var(--select-option-selected-color);
+    font-weight: 500;
+    
+    .custom-select-checkbox {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      
+      svg {
+        opacity: 1;
+        stroke-dashoffset: 0;
+      }
+    }
+  }
+  
+  // Disabled state
+  &.disabled {
+    opacity: var(--select-option-disabled-opacity);
+    cursor: not-allowed;
+  }
+  
+  // Focus state (keyboard navigation)
+  &:focus {
+    outline: none;
+    background: var(--select-option-hover-bg);
+  }
+}
+
+// Option icon
+.custom-select-option-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+// Option label
+.custom-select-option-label {
+  flex: 1;
+}
+
+// ============================================
+// CHECKBOX (for multiple selection)
+// ============================================
+
+.custom-select-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  background: var(--color-surface);
+  border: 2px solid var(--color-neutral-400);
+  border-radius: var(--radius-sm);
+  
+  transition: all 150ms ease;
+  
+  svg {
+    width: 70%;
+    height: 70%;
+    color: var(--color-surface);
+    opacity: 0;
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    transition: stroke-dashoffset 150ms ease;
+  }
+}
+
+// ============================================
+// OPTION GROUPS
+// ============================================
+
+.custom-select-group {
+  & + & {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+.custom-select-group-label {
+  padding-inline: var(--select-option-padding-x);
+  padding-block: var(--space-2);
+  
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// ============================================
+// HELPER TEXT
+// ============================================
+
+.custom-select-helper {
+  font-size: var(--select-helper-font-size);
+  color: var(--color-text-muted);
+  margin-top: var(--select-helper-margin-top);
+  line-height: 1.4;
+  
+  &.custom-select-helper-error {
+    color: var(--select-error-text);
+  }
+  
+  &.custom-select-helper-success {
+    color: var(--select-success-text);
+  }
+}
+

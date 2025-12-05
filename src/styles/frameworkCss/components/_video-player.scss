@@ -1,0 +1,115 @@
+// ============================================
+// 🎥 VIDEO PLAYER COMPONENT STYLES
+// ============================================
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.video-player {
+  position: relative;
+  width: 100%;
+  border-radius: var(--video-player-border-radius);
+  overflow: hidden;
+  background: var(--video-player-bg);
+  box-shadow: var(--video-player-shadow);
+}
+
+.video-player__container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--video-player-aspect-ratio);
+  overflow: hidden;
+}
+
+// ============================================
+// IFRAME
+// ============================================
+
+.video-player__iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+// ============================================
+// NATIVE VIDEO
+// ============================================
+
+.video-player__video {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+// ============================================
+// THUMBNAIL & PREVIEW
+// ============================================
+
+.video-player__thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--video-player-thumbnail-overlay);
+  z-index: 2;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+  }
+}
+
+.video-player__play-button {
+  position: absolute;
+  width: var(--video-player-play-button-size);
+  height: var(--video-player-play-button-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--video-player-play-button-bg);
+  color: var(--video-player-play-button-color);
+  border: none;
+  border-radius: var(--video-player-play-button-border-radius);
+  cursor: pointer;
+  transition: var(--video-player-transition);
+  z-index: 3;
+  
+  &:hover {
+    background: var(--color-primary);
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  &:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 4px;
+  }
+  
+  svg {
+    margin-left: 4px; // Visual centering
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .video-player {
+    // Les tokens s'adaptent automatiquement
+  }
+}
+

@@ -1,0 +1,492 @@
+// ============================================
+// 🎨 QIVANA DESIGN TOKENS
+// ============================================
+// Système de tokens adapté pour Qivana
+// Basé sur djooCss + couleurs Neo-Pop-Geek Minimalist
+// ============================================
+
+@use 'sass:list';
+@use 'sass:color';
+@use 'sass:map';
+@use 'functions' as *;
+
+// ============================================
+// 📏 SPACING - Système Fluide avec clamp()
+// ============================================
+
+$space-scale-fluid: (
+  1: (4, 8),
+  2: (8, 12),
+  3: (12, 16),
+  4: (16, 24),
+  5: (20, 28),
+  6: (24, 32),
+  8: (32, 48),
+  10: (40, 56),
+  12: (48, 64),
+  16: (64, 80),
+  20: (80, 96),
+  24: (96, 128),
+  32: (128, 160),
+) !default;
+
+// ============================================
+// 🎨 QIVANA COLORS - Système HSL
+// ============================================
+
+// PRIMARY - Violet (#7C3AED)
+$color-primary-h: 259 !default;
+$color-primary-s-light: 85% !default;
+$color-primary-l-light: 75% !default;
+$color-primary-s: 83% !default;
+$color-primary-l: 66% !default;
+$color-primary-s-dark: 80% !default;
+$color-primary-l-dark: 55% !default;
+
+// SECONDARY - Indigo (#4F46E5)
+$color-secondary-h: 243 !default;
+$color-secondary-s-light: 80% !default;
+$color-secondary-l-light: 70% !default;
+$color-secondary-s: 75% !default;
+$color-secondary-l: 58% !default;
+$color-secondary-s-dark: 70% !default;
+$color-secondary-l-dark: 50% !default;
+
+// ACCENT - Cyan (#0EA5E9)
+$color-accent-h: 199 !default;
+$color-accent-s-light: 95% !default;
+$color-accent-l-light: 65% !default;
+$color-accent-s: 89% !default;
+$color-accent-l: 48% !default;
+$color-accent-s-dark: 85% !default;
+$color-accent-l-dark: 40% !default;
+
+// ACCENT 2 - Pink (#EC4899)
+$color-accent2-h: 330 !default;
+$color-accent2-s-light: 90% !default;
+$color-accent2-l-light: 70% !default;
+$color-accent2-s: 81% !default;
+$color-accent2-l: 60% !default;
+$color-accent2-s-dark: 75% !default;
+$color-accent2-l-dark: 50% !default;
+
+// ACCENT 3 - Gold (#FACC15)
+$color-accent3-h: 48 !default;
+$color-accent3-s-light: 100% !default;
+$color-accent3-l-light: 65% !default;
+$color-accent3-s: 96% !default;
+$color-accent3-l: 53% !default;
+$color-accent3-s-dark: 90% !default;
+$color-accent3-l-dark: 45% !default;
+
+// NEUTRALS
+$color-neutral-h: 0 !default;
+$color-neutral-s: 0% !default;
+$color-neutral-l-50: 98% !default;
+$color-neutral-l-100: 96% !default;
+$color-neutral-l-200: 91% !default;
+$color-neutral-l-300: 82% !default;
+$color-neutral-l-400: 64% !default;
+$color-neutral-l-500: 45% !default;
+$color-neutral-l-600: 32% !default;
+$color-neutral-l-700: 21% !default;
+$color-neutral-l-800: 12% !default;
+$color-neutral-l-900: 8% !default;
+
+// SEMANTIC COLORS
+$color-success-h: 142 !default;
+$color-success-s-lighter: 70% !default;
+$color-success-l-lighter: 80% !default;
+$color-success-s-light: 65% !default;
+$color-success-l-light: 65% !default;
+$color-success-s: 65% !default;
+$color-success-l: 49% !default;
+$color-success-s-dark: 60% !default;
+$color-success-l-dark: 40% !default;
+
+$color-warning-h: 38 !default;
+$color-warning-s-lighter: 100% !default;
+$color-warning-l-lighter: 90% !default;
+$color-warning-s-light: 100% !default;
+$color-warning-l-light: 75% !default;
+$color-warning-s: 92% !default;
+$color-warning-l: 50% !default;
+$color-warning-s-dark: 85% !default;
+$color-warning-l-dark: 40% !default;
+
+$color-error-h: 0 !default;
+$color-error-s-lighter: 90% !default;
+$color-error-l-lighter: 85% !default;
+$color-error-s-light: 90% !default;
+$color-error-l-light: 70% !default;
+$color-error-s: 84% !default;
+$color-error-l: 60% !default;
+$color-error-s-dark: 80% !default;
+$color-error-l-dark: 50% !default;
+
+$color-info-h: 199 !default;
+$color-info-s-lighter: 95% !default;
+$color-info-l-lighter: 75% !default;
+$color-info-s-light: 90% !default;
+$color-info-l-light: 65% !default;
+$color-info-s: 89% !default;
+$color-info-l: 48% !default;
+$color-info-s-dark: 85% !default;
+$color-info-l-dark: 40% !default;
+
+// ============================================
+// 📝 TYPOGRAPHY
+// ============================================
+
+$font-primary: 'Inter', system-ui, -apple-system, sans-serif !default;
+$font-secondary: 'Sora', sans-serif !default;
+$font-mono: 'Fira Code', 'Courier New', monospace !default;
+
+$font-weight-light: 300 !default;
+$font-weight-regular: 400 !default;
+$font-weight-medium: 500 !default;
+$font-weight-semibold: 600 !default;
+$font-weight-bold: 700 !default;
+$font-weight-extrabold: 800 !default;
+
+$text-scale-fluid: (
+  1: (12, 14),
+  2: (14, 16),
+  3: (16, 18),
+  4: (18, 20),
+  5: (20, 24),
+  6: (24, 28),
+  7: (28, 36),
+  8: (32, 44),
+  9: (40, 52),
+  10: (48, 64),
+) !default;
+
+$leading-tight: 1.2 !default;
+$leading-snug: 1.375 !default;
+$leading-normal: 1.5 !default;
+$leading-relaxed: 1.625 !default;
+$leading-loose: 2 !default;
+
+// ============================================
+// 🎭 BORDERS & RADIUS
+// ============================================
+
+$border-width-thin: 1px !default;
+$border-width-medium: 2px !default;
+$border-width-thick: 4px !default;
+
+$radius-sm: 0.5rem !default;
+$radius-md: 0.75rem !default;
+$radius-lg: 1rem !default;
+$radius-xl: 1.5rem !default;
+$radius-2xl: 2rem !default;
+$radius-full: 9999px !default;
+
+// ============================================
+// 🌑 SHADOWS & GLOWS
+// ============================================
+
+$shadow-color: rgba(0, 0, 0, 0.1) !default;
+$shadow-color-dark: rgba(0, 0, 0, 0.4) !default;
+
+$shadow-sm: 0 1px 2px $shadow-color !default;
+$shadow-md: 0 4px 6px $shadow-color !default;
+$shadow-lg: 0 10px 15px $shadow-color !default;
+$shadow-xl: 0 20px 25px $shadow-color !default;
+$shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15) !default;
+
+$glow-cyan: 0 0 20px hsla(199, 89%, 48%, 0.4) !default;
+$glow-violet: 0 0 20px hsla(259, 83%, 66%, 0.4) !default;
+$glow-pink: 0 0 20px hsla(330, 81%, 60%, 0.4) !default;
+$glow-gold: 0 0 20px hsla(48, 96%, 53%, 0.4) !default;
+
+// ============================================
+// 📱 BREAKPOINTS
+// ============================================
+
+$breakpoints: (
+  sm: 480px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px
+) !default;
+
+$bp-sm: map.get($breakpoints, sm) !default;
+$bp-md: map.get($breakpoints, md) !default;
+$bp-lg: map.get($breakpoints, lg) !default;
+$bp-xl: map.get($breakpoints, xl) !default;
+
+// ============================================
+// 🎬 ANIMATIONS
+// ============================================
+
+$duration-fast: 100ms !default;
+$duration-base: 200ms !default;
+$duration-slow: 300ms !default;
+$duration-slower: 500ms !default;
+
+$ease-standard: cubic-bezier(0, 0, 0.2, 1) !default;
+$ease-in: cubic-bezier(0.4, 0, 1, 1) !default;
+$ease-out: cubic-bezier(0, 0, 0.2, 1) !default;
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1) !default;
+$ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55) !default;
+
+// ============================================
+// 🌈 Z-INDEX SCALE
+// ============================================
+
+$z-base: 1 !default;
+$z-dropdown: 100 !default;
+$z-sticky: 200 !default;
+$z-fixed: 300 !default;
+$z-modal-backdrop: 400 !default;
+$z-modal: 500 !default;
+$z-popover: 600 !default;
+$z-tooltip: 700 !default;
+
+// ============================================
+// 🎯 CSS CUSTOM PROPERTIES
+// ============================================
+
+:root {
+  // QIVANA COLORS - PRIMARY
+  --color-primary-h: #{$color-primary-h};
+  --color-primary-s-light: #{$color-primary-s-light};
+  --color-primary-l-light: #{$color-primary-l-light};
+  --color-primary-light-hsl: var(--color-primary-h), var(--color-primary-s-light), var(--color-primary-l-light);
+  --color-primary-light: hsl(var(--color-primary-light-hsl));
+  --color-primary-s: #{$color-primary-s};
+  --color-primary-l: #{$color-primary-l};
+  --color-primary-hsl: var(--color-primary-h), var(--color-primary-s), var(--color-primary-l);
+  --color-primary: hsl(var(--color-primary-hsl));
+  --color-primary-s-dark: #{$color-primary-s-dark};
+  --color-primary-l-dark: #{$color-primary-l-dark};
+  --color-primary-dark-hsl: var(--color-primary-h), var(--color-primary-s-dark), var(--color-primary-l-dark);
+  --color-primary-dark: hsl(var(--color-primary-dark-hsl));
+  
+  // SECONDARY
+  --color-secondary-h: #{$color-secondary-h};
+  --color-secondary-s-light: #{$color-secondary-s-light};
+  --color-secondary-l-light: #{$color-secondary-l-light};
+  --color-secondary-light-hsl: var(--color-secondary-h), var(--color-secondary-s-light), var(--color-secondary-l-light);
+  --color-secondary-light: hsl(var(--color-secondary-light-hsl));
+  --color-secondary-s: #{$color-secondary-s};
+  --color-secondary-l: #{$color-secondary-l};
+  --color-secondary-hsl: var(--color-secondary-h), var(--color-secondary-s), var(--color-secondary-l);
+  --color-secondary: hsl(var(--color-secondary-hsl));
+  --color-secondary-s-dark: #{$color-secondary-s-dark};
+  --color-secondary-l-dark: #{$color-secondary-l-dark};
+  --color-secondary-dark-hsl: var(--color-secondary-h), var(--color-secondary-s-dark), var(--color-secondary-l-dark);
+  --color-secondary-dark: hsl(var(--color-secondary-dark-hsl));
+  
+  // ACCENT (Cyan)
+  --color-accent-h: #{$color-accent-h};
+  --color-accent-s-light: #{$color-accent-s-light};
+  --color-accent-l-light: #{$color-accent-l-light};
+  --color-accent-light-hsl: var(--color-accent-h), var(--color-accent-s-light), var(--color-accent-l-light);
+  --color-accent-light: hsl(var(--color-accent-light-hsl));
+  --color-accent-s: #{$color-accent-s};
+  --color-accent-l: #{$color-accent-l};
+  --color-accent-hsl: var(--color-accent-h), var(--color-accent-s), var(--color-accent-l);
+  --color-accent: hsl(var(--color-accent-hsl));
+  --color-accent-s-dark: #{$color-accent-s-dark};
+  --color-accent-l-dark: #{$color-accent-l-dark};
+  --color-accent-dark-hsl: var(--color-accent-h), var(--color-accent-s-dark), var(--color-accent-l-dark);
+  --color-accent-dark: hsl(var(--color-accent-dark-hsl));
+  
+  // ACCENT 2 (Pink)
+  --color-accent2-h: #{$color-accent2-h};
+  --color-accent2-s-light: #{$color-accent2-s-light};
+  --color-accent2-l-light: #{$color-accent2-l-light};
+  --color-accent2-light-hsl: var(--color-accent2-h), var(--color-accent2-s-light), var(--color-accent2-l-light);
+  --color-accent2-light: hsl(var(--color-accent2-light-hsl));
+  --color-accent2-s: #{$color-accent2-s};
+  --color-accent2-l: #{$color-accent2-l};
+  --color-accent2-hsl: var(--color-accent2-h), var(--color-accent2-s), var(--color-accent2-l);
+  --color-accent2: hsl(var(--color-accent2-hsl));
+  --color-accent2-s-dark: #{$color-accent2-s-dark};
+  --color-accent2-l-dark: #{$color-accent2-l-dark};
+  --color-accent2-dark-hsl: var(--color-accent2-h), var(--color-accent2-s-dark), var(--color-accent2-l-dark);
+  --color-accent2-dark: hsl(var(--color-accent2-dark-hsl));
+  
+  // ACCENT 3 (Gold)
+  --color-accent3-h: #{$color-accent3-h};
+  --color-accent3-s-light: #{$color-accent3-s-light};
+  --color-accent3-l-light: #{$color-accent3-l-light};
+  --color-accent3-light-hsl: var(--color-accent3-h), var(--color-accent3-s-light), var(--color-accent3-l-light);
+  --color-accent3-light: hsl(var(--color-accent3-light-hsl));
+  --color-accent3-s: #{$color-accent3-s};
+  --color-accent3-l: #{$color-accent3-l};
+  --color-accent3-hsl: var(--color-accent3-h), var(--color-accent3-s), var(--color-accent3-l);
+  --color-accent3: hsl(var(--color-accent3-hsl));
+  --color-accent3-s-dark: #{$color-accent3-s-dark};
+  --color-accent3-l-dark: #{$color-accent3-l-dark};
+  --color-accent3-dark-hsl: var(--color-accent3-h), var(--color-accent3-s-dark), var(--color-accent3-l-dark);
+  --color-accent3-dark: hsl(var(--color-accent3-dark-hsl));
+  
+  // SEMANTIC (simplifié)
+  --color-success-h: #{$color-success-h};
+  --color-success-s: #{$color-success-s};
+  --color-success-l: #{$color-success-l};
+  --color-success-hsl: var(--color-success-h), var(--color-success-s), var(--color-success-l);
+  --color-success: hsl(var(--color-success-hsl));
+  
+  --color-warning-h: #{$color-warning-h};
+  --color-warning-s: #{$color-warning-s};
+  --color-warning-l: #{$color-warning-l};
+  --color-warning-hsl: var(--color-warning-h), var(--color-warning-s), var(--color-warning-l);
+  --color-warning: hsl(var(--color-warning-hsl));
+  
+  --color-error-h: #{$color-error-h};
+  --color-error-s: #{$color-error-s};
+  --color-error-l: #{$color-error-l};
+  --color-error-hsl: var(--color-error-h), var(--color-error-s), var(--color-error-l);
+  --color-error: hsl(var(--color-error-hsl));
+  
+  --color-info-h: #{$color-info-h};
+  --color-info-s: #{$color-info-s};
+  --color-info-l: #{$color-info-l};
+  --color-info-hsl: var(--color-info-h), var(--color-info-s), var(--color-info-l);
+  --color-info: hsl(var(--color-info-hsl));
+  
+  // NEUTRALS
+  --color-neutral-h: #{$color-neutral-h};
+  --color-neutral-s: #{$color-neutral-s};
+  
+  --color-neutral-l-50: #{$color-neutral-l-50};
+  --color-neutral-50: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-50));
+  --color-neutral-l-100: #{$color-neutral-l-100};
+  --color-neutral-100: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-100));
+  --color-neutral-l-200: #{$color-neutral-l-200};
+  --color-neutral-200: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-200));
+  --color-neutral-l-300: #{$color-neutral-l-300};
+  --color-neutral-300: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-300));
+  --color-neutral-l-400: #{$color-neutral-l-400};
+  --color-neutral-400: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-400));
+  --color-neutral-l-500: #{$color-neutral-l-500};
+  --color-neutral-500: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-500));
+  --color-neutral-l-600: #{$color-neutral-l-600};
+  --color-neutral-600: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-600));
+  --color-neutral-l-700: #{$color-neutral-l-700};
+  --color-neutral-700: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-700));
+  --color-neutral-l-800: #{$color-neutral-l-800};
+  --color-neutral-800: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-800));
+  --color-neutral-l-900: #{$color-neutral-l-900};
+  --color-neutral-900: hsl(var(--color-neutral-h), var(--color-neutral-s), var(--color-neutral-l-900));
+  
+  // QIVANA SURFACES (Dark theme)
+  --color-text: var(--color-neutral-50);
+  --color-text-muted: var(--color-neutral-400);
+  --color-text-subtle: var(--color-neutral-500);
+  --color-bg: var(--color-neutral-900);
+  --color-bg-elevated: var(--color-neutral-800);
+  --color-surface: var(--color-neutral-800);
+  --color-surface-hover: var(--color-neutral-700);
+  --color-border: var(--color-neutral-700);
+  --color-border-hover: var(--color-neutral-600);
+  --color-focus: var(--color-accent);
+  --color-focus-ring: hsla(var(--color-accent-hsl), 0.4);
+  
+  // SPACING FLUIDE
+  @each $key, $values in $space-scale-fluid {
+    $min: list.nth($values, 1);
+    $max: list.nth($values, 2);
+    --space-#{$key}: #{fluid-space($min, $max)};
+  }
+  
+  // TYPOGRAPHY
+  --font-primary: #{$font-primary};
+  --font-secondary: #{$font-secondary};
+  --font-mono: #{$font-mono};
+  
+  @each $key, $values in $text-scale-fluid {
+    $min: list.nth($values, 1);
+    $max: list.nth($values, 2);
+    --fs-#{$key}: #{fluid-space($min, $max)};
+  }
+  
+  --font-weight-light: #{$font-weight-light};
+  --font-weight-regular: #{$font-weight-regular};
+  --font-weight-medium: #{$font-weight-medium};
+  --font-weight-semibold: #{$font-weight-semibold};
+  --font-weight-bold: #{$font-weight-bold};
+  --font-weight-extrabold: #{$font-weight-extrabold};
+  
+  --leading-tight: #{$leading-tight};
+  --leading-snug: #{$leading-snug};
+  --leading-normal: #{$leading-normal};
+  --leading-relaxed: #{$leading-relaxed};
+  --leading-loose: #{$leading-loose};
+  
+  // BORDERS & RADIUS
+  --border-width-thin: #{$border-width-thin};
+  --border-width-medium: #{$border-width-medium};
+  --border-width-thick: #{$border-width-thick};
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-2xl: #{$radius-2xl};
+  --radius-full: #{$radius-full};
+  
+  // SHADOWS & GLOWS
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+  --shadow-2xl: #{$shadow-2xl};
+  --glow-cyan: #{$glow-cyan};
+  --glow-violet: #{$glow-violet};
+  --glow-pink: #{$glow-pink};
+  --glow-gold: #{$glow-gold};
+  
+  // ANIMATIONS
+  --duration-fast: #{$duration-fast};
+  --duration-base: #{$duration-base};
+  --duration-slow: #{$duration-slow};
+  --duration-slower: #{$duration-slower};
+  --ease-standard: #{$ease-standard};
+  --ease-in: #{$ease-in};
+  --ease-out: #{$ease-out};
+  --ease-in-out: #{$ease-in-out};
+  --ease-bounce: #{$ease-bounce};
+  
+  // ICONS
+  --icon-stroke-width: 2;
+  --icon-stroke-width-thin: 1.5;
+  --icon-stroke-width-bold: 2.5;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+  --icon-size-xl: 32px;
+  
+  // Z-INDEX
+  --z-base: #{$z-base};
+  --z-dropdown: #{$z-dropdown};
+  --z-sticky: #{$z-sticky};
+  --z-fixed: #{$z-fixed};
+  --z-modal-backdrop: #{$z-modal-backdrop};
+  --z-modal: #{$z-modal};
+  --z-popover: #{$z-popover};
+  --z-tooltip: #{$z-tooltip};
+  
+  // SITE
+  --site-container: 1280px;
+}
+
+// LIGHT THEME (optionnel)
+[data-theme="light"] {
+  --color-text: var(--color-neutral-900);
+  --color-text-muted: var(--color-neutral-600);
+  --color-text-subtle: var(--color-neutral-500);
+  --color-bg: var(--color-neutral-50);
+  --color-bg-elevated: hsl(0, 0%, 100%);
+  --color-surface: hsl(0, 0%, 100%);
+  --color-surface-hover: var(--color-neutral-100);
+  --color-border: var(--color-neutral-200);
+  --color-border-hover: var(--color-neutral-300);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+}

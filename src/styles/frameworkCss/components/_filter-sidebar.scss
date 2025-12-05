@@ -1,0 +1,60 @@
+// ============================================
+// 🔍 FILTER SIDEBAR
+// ============================================
+
+.filter-sidebar {
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.filter-sidebar__header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.filter-sidebar__title {
+  font-size: var(--fs-5);
+  font-weight: var(--font-weight-bold);
+}
+
+.filter-sidebar__reset {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-primary);
+  font-size: var(--fs-2);
+  cursor: pointer;
+  text-decoration: underline;
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+.filter-sidebar__group {
+  margin-bottom: var(--space-6);
+}
+
+.filter-sidebar__group-title {
+  font-size: var(--fs-3);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-3);
+}
+
+.filter-sidebar__options {
+  // Layout géré par les classes utilities CSS
+}
+
+.filter-sidebar__option {
+  // Layout géré par les classes utilities CSS
+}
+
+.filter-sidebar__count {
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+

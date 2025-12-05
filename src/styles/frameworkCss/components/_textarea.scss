@@ -1,0 +1,206 @@
+// ============================================
+// 📄 TEXTAREA COMPONENT STYLES
+// ============================================
+// Tous les styles du composant Textarea
+// Utilise les component tokens de _component-tokens.scss
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.textarea-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Label
+.textarea-label {
+  display: inline-block;
+  font-size: var(--textarea-label-font-size);
+  font-weight: var(--textarea-label-font-weight);
+  color: var(--color-text);
+  margin-bottom: var(--textarea-label-margin-bottom);
+  
+  // Visually hidden (pour accessibilité)
+  &.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+// Required indicator
+.textarea-required {
+  color: var(--textarea-required-color);
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
+// Textarea field
+.textarea {
+  // Layout
+  width: 100%;
+  display: block;
+  min-height: var(--textarea-min-height);
+  resize: vertical;                         // Permet resize vertical par défaut
+  
+  // Spacing
+  padding-inline: var(--textarea-padding-x);
+  padding-block: var(--textarea-padding-y);
+  
+  // Typography
+  font-family: inherit;
+  font-size: var(--textarea-font-size);
+  font-weight: var(--textarea-font-weight);
+  line-height: var(--textarea-line-height);
+  
+  // Apparence
+  background: var(--textarea-bg);
+  color: var(--textarea-text);
+  border: var(--textarea-border-width) solid var(--textarea-border);
+  border-radius: var(--textarea-border-radius);
+  
+  // Animation
+  transition: var(--textarea-transition);
+  
+  // Placeholder
+  &::placeholder {
+    color: var(--textarea-placeholder);
+    opacity: 1;
+  }
+  
+  // Focus state
+  &:focus {
+    outline: none;
+    border-color: var(--textarea-focus-border);
+    box-shadow: var(--textarea-focus-ring);
+  }
+  
+  // Disabled state
+  &:disabled,
+  &:read-only {
+    background: var(--textarea-disabled-bg);
+    color: var(--textarea-disabled-text);
+    border-color: var(--textarea-disabled-border);
+    cursor: not-allowed;
+    resize: none;                           // Pas de resize si disabled
+    
+    &::placeholder {
+      color: var(--textarea-disabled-text);
+    }
+  }
+  
+  // Auto-resize mode
+  &.textarea-auto-resize {
+    resize: none;                           // Désactive resize manuel
+    overflow: hidden;                       // Cache scrollbar
+    transition: var(--textarea-transition), height var(--textarea-resize-transition);
+  }
+  
+  // ========== STATES ==========
+  
+  // Error state
+  &.textarea-error {
+    border-color: var(--textarea-error-border);
+    
+    &:focus {
+      border-color: var(--textarea-error-border);
+      box-shadow: var(--textarea-error-ring);
+    }
+  }
+  
+  // Success state
+  &.textarea-success {
+    border-color: var(--textarea-success-border);
+    
+    &:focus {
+      border-color: var(--textarea-success-border);
+      box-shadow: var(--textarea-success-ring);
+    }
+  }
+  
+  // ========== SIZES ==========
+  
+  &.textarea-sm {
+    padding-inline: var(--textarea-padding-x-sm);
+    padding-block: var(--textarea-padding-y-sm);
+    font-size: var(--textarea-font-size-sm);
+    border-radius: var(--textarea-border-radius-sm);
+    min-height: var(--textarea-min-height-sm);
+  }
+  
+  &.textarea-lg {
+    padding-inline: var(--textarea-padding-x-lg);
+    padding-block: var(--textarea-padding-y-lg);
+    font-size: var(--textarea-font-size-lg);
+    border-radius: var(--textarea-border-radius-lg);
+    min-height: var(--textarea-min-height-lg);
+  }
+}
+
+// ============================================
+// FOOTER (Helper text + Counter)
+// ============================================
+
+.textarea-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-4);
+  margin-top: var(--textarea-helper-margin-top);
+  
+  // Si pas de helper text, aligner le counter à droite
+  &:has(.textarea-counter:only-child) {
+    justify-content: flex-end;
+  }
+}
+
+// Helper text
+.textarea-helper {
+  flex: 1;
+  font-size: var(--textarea-helper-font-size);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  
+  // Error state
+  &.textarea-helper-error {
+    color: var(--textarea-error-text);
+  }
+  
+  // Success state
+  &.textarea-helper-success {
+    color: var(--textarea-success-text);
+  }
+}
+
+// Character counter
+.textarea-counter {
+  flex-shrink: 0;
+  font-size: var(--textarea-counter-font-size);
+  color: var(--textarea-counter-color);
+  font-variant-numeric: tabular-nums;       // Chiffres alignés
+  white-space: nowrap;
+  line-height: 1.4;
+  
+  // Warning state (> 80%)
+  &.textarea-counter-warning {
+    color: var(--textarea-counter-warning-color);
+    font-weight: 500;
+  }
+  
+  // Error state (> 100%)
+  &.textarea-counter-error {
+    color: var(--textarea-counter-error-color);
+    font-weight: 600;
+  }
+}
+

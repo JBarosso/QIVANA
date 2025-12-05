@@ -1,0 +1,152 @@
+// ============================================
+// 📐 SYSTÈME DE COLONNES FLUIDES
+// ============================================
+// Colonnes responsives basées sur la taille des items (pas des breakpoints écran)
+// 
+// Usage:
+//   <div class="grid col-3 break-4 gap-4">...</div>
+//   <div class="flex col-2 break-5 gap-6">...</div>
+//
+// - col-X   : Nombre de colonnes cible (2-8)
+// - break-X : Largeur minimale des items (1-8) via --break-X tokens
+// - gap-X   : Espacement entre items (utilise les classes gap existantes)
+
+@use '../tokens' as *;
+
+// ============================================
+// MAPS SASS POUR LES BOUCLES
+// ============================================
+
+// Nombre de colonnes disponibles (2 à 8)
+$cols-numbers: (
+  2: 2,
+  3: 3,
+  4: 4,
+  5: 5,
+  6: 6,
+  7: 7,
+  8: 8,
+);
+
+// Breakpoints d'items disponibles (1 à 8)
+$break-values: (
+    1: 160px,   // Très petit (cards compactes, badges)
+    2: 185px,   // Petit (small cards)
+    3: 215px,   // Petit-moyen (tags, chips)
+    4: 260px,   // Moyen (cards standards)
+    5: 320px,   // Moyen-large (product cards, articles)
+    6: 420px,   // Large (images, featured content)
+    7: 620px,   // Très large (wide cards)
+    8: 820px,   // Extra large (hero cards, banners)
+);
+
+// ============================================
+// FORMULE CLAMP MAGIQUE ✨
+// ============================================
+// Permet aux colonnes de s'adapter automatiquement selon la taille disponible
+// - Min : 100% / (cols-nbr + 1) + 0.1% → Force passage à 1 colonne si trop étroit
+// - Preferred : var(--break) → Taille idéale de l'item
+// - Max : 100% → Ne jamais dépasser la largeur du container
+
+$clamp: clamp(100% / (var(--cols-nbr) + 1) + 0.1%, var(--break, 300px), 100%);
+
+// ============================================
+// VARIABLES CSS POUR LES COLONNES
+// ============================================
+// Génère : .cols-2, .cols-3, ... .cols-8
+
+@each $key, $value in $cols-numbers {
+  .cols-#{$key} {
+    --cols-nbr: #{$value};
+  }
+}
+
+// ============================================
+// VARIABLES CSS POUR LES BREAKPOINTS
+// ============================================
+// Génère : .break-1, .break-2, ... .break-8
+
+@each $key, $value in $break-values {
+  .break-#{$key} {
+    --break: #{$value};
+  }
+}
+
+// ============================================
+// TYPE : CLASSIC (Flex avec max-width)
+// ============================================
+// Flex avec width fixe + max-width
+// Bon pour des layouts où on veut contrôler la largeur exacte
+
+.classic[class*="cols-"] {
+  display: flex;
+  flex-flow: row wrap;
+  
+  & > * {
+    width: 100%;
+    max-width: #{$clamp};
+  }
+}
+
+// ============================================
+// TYPE : FLEX (Flex avec flex-basis)
+// ============================================
+// Flex avec flex: 1 + flex-basis
+// Les items grandissent pour remplir l'espace disponible
+
+.flex[class*="cols-"] {
+  flex-flow: row wrap;
+  
+  & > * {
+    flex: 1;
+    flex-basis: #{$clamp};
+  }
+}
+
+// ============================================
+// TYPE : GRID (Grid avec auto-fit)
+// ============================================
+// Grid avec repeat(auto-fit, minmax(...))
+// Les colonnes se remplissent et s'adaptent automatiquement
+
+.grid[class*="cols-"] {
+  grid-template-columns: repeat(auto-fit, minmax(#{$clamp}, 1fr));
+}
+
+// ============================================
+// TYPE : GRID-FILL (Grid avec auto-fill)
+// ============================================
+// Grid avec repeat(auto-fill, minmax(...))
+// Crée des colonnes même vides (différence subtile avec auto-fit)
+
+.grid-fill[class*="cols-"] {
+  grid-template-columns: repeat(auto-fill, minmax(#{$clamp}, 1fr));
+}
+
+// ============================================
+// NOTES D'UTILISATION
+// ============================================
+//
+// 1. CLASSIC vs FLEX :
+//    - classic : items ont une largeur fixe (max-width)
+//    - flex : items grandissent pour remplir l'espace (flex: 1)
+//
+// 2. GRID vs GRID-FILL :
+//    - grid (auto-fit) : collapse les colonnes vides
+//    - grid-fill (auto-fill) : garde les colonnes vides
+//
+// 3. EXEMPLE COMPLET :
+//    <div class="grid cols-4 break-5 gap-6">
+//      <!-- 4 colonnes idéales -->
+//      <!-- Items min 320px (--break-5) -->
+//      <!-- Gap de var(--space-6) -->
+//    </div>
+//
+// 4. COMPORTEMENT RESPONSIVE :
+//    Le système s'adapte AUTOMATIQUEMENT sans media queries !
+//    - Si espace suffisant : affiche le nombre de cols demandé
+//    - Si trop étroit : réduit le nombre de colonnes
+//    - Si vraiment trop petit : passe en 1 colonne
+//
+// ============================================
+

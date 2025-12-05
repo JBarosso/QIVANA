@@ -1,0 +1,262 @@
+// ============================================
+// 🔍 LIGHTBOX COMPONENT STYLES
+// ============================================
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  
+  &[style*="display"] {
+    display: flex;
+  }
+}
+
+// ============================================
+// BACKDROP
+// ============================================
+
+.lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--lightbox-backdrop-bg);
+  backdrop-filter: var(--lightbox-backdrop-blur);
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+.lightbox__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--lightbox-content-max-width);
+  max-height: var(--lightbox-content-max-height);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--lightbox-content-padding);
+}
+
+// ============================================
+// MAIN IMAGE AREA
+// ============================================
+
+.lightbox__main {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox__image-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.lightbox__image {
+  max-width: var(--lightbox-image-max-width);
+  max-height: var(--lightbox-image-max-height);
+  border-radius: var(--lightbox-image-radius);
+  object-fit: contain;
+}
+
+.lightbox__caption {
+  color: var(--lightbox-caption-color);
+  font-size: var(--lightbox-caption-font-size);
+  text-align: center;
+  padding: var(--lightbox-caption-padding);
+  background: var(--lightbox-caption-bg);
+  border-radius: var(--lightbox-caption-radius);
+  backdrop-filter: blur(4px);
+  width: 100%;
+}
+
+// ============================================
+// NAVIGATION
+// ============================================
+
+.lightbox__nav {
+  position: absolute;
+  width: var(--lightbox-nav-size);
+  height: var(--lightbox-nav-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lightbox-nav-bg);
+  color: var(--lightbox-nav-color);
+  border-radius: var(--radius-full);
+  transition: var(--lightbox-transition);
+  z-index: 10;
+  
+  &:hover {
+    background: var(--lightbox-nav-hover-bg);
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  &--prev {
+    left: var(--space-4);
+  }
+  
+  &--next {
+    right: var(--space-4);
+  }
+}
+
+// ============================================
+// CLOSE BUTTON
+// ============================================
+
+.lightbox__close {
+  position: absolute;
+  top: var(--lightbox-close-top);
+  right: var(--lightbox-close-right);
+  width: var(--lightbox-close-size);
+  height: var(--lightbox-close-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lightbox-nav-bg);
+  color: var(--lightbox-nav-color);
+  border-radius: var(--radius-full);
+  transition: var(--lightbox-transition);
+  z-index: 10;
+  
+  &:hover {
+    background: var(--lightbox-nav-hover-bg);
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// ============================================
+// INFO BAR
+// ============================================
+
+.lightbox__info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-4);
+}
+
+.lightbox__counter {
+  color: var(--lightbox-counter-color);
+  font-size: var(--lightbox-counter-font-size);
+  font-weight: var(--font-weight-semibold);
+}
+
+.lightbox__zoom {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.lightbox__zoom-btn {
+  width: var(--lightbox-nav-size);
+  height: var(--lightbox-nav-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lightbox-nav-bg);
+  color: var(--lightbox-nav-color);
+  border-radius: var(--radius-full);
+  transition: var(--lightbox-transition);
+  
+  &:hover {
+    background: var(--lightbox-nav-hover-bg);
+  }
+}
+
+// ============================================
+// THUMBNAILS
+// ============================================
+
+.lightbox__thumbnails {
+  display: flex;
+  gap: var(--lightbox-thumbnail-gap);
+  overflow-x: auto;
+  padding: var(--space-2);
+  scroll-behavior: smooth;
+  
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-sm);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+.lightbox__thumbnail {
+  flex-shrink: 0;
+  width: var(--lightbox-thumbnail-size);
+  height: var(--lightbox-thumbnail-size);
+  border-radius: var(--lightbox-thumbnail-border-radius);
+  overflow: hidden;
+  border: var(--lightbox-thumbnail-border);
+  cursor: pointer;
+  transition: var(--lightbox-transition);
+  background: transparent;
+  padding: 0;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+  }
+  
+  &--active {
+    border: var(--lightbox-thumbnail-active-border);
+  }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+  .lightbox {
+    // Les tokens s'adaptent automatiquement
+  }
+}
+

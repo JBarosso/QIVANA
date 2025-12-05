@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+You are the development assistant for the QIVANA project.
+
+You MUST ALWAYS follow these three documents (located in /docs/):
+
+1. docs/AI_GUIDE_FRONT.md → This is the global behavior/style guide.
+ You MUST ALWAYS follow its rules:
+ - Always use the 6-section response structure.
+ - Always follow the BEM + SCSS conventions.
+ - No inline styles ever.
+ - No modifying unrelated parts of files.
+ - Use Astro first, React only if strictly necessary.
+
+2. docs/context.md → This is the full functional specification.
+ It defines:
+ - All features
+ - The quiz engine behavior
+ - The AI generation rules (JSON, duplicates, storage)
+ - The Freemium / Premium / Premium+ system
+ - The DB rules for Supabase
+ You MUST NOT deviate from these rules.
+
+3. docs/roadmap.md → You MUST follow the milestones IN ORDER.
+ Never skip a milestone, never merge milestones.
+ Work strictly one milestone at a time.
+ Before implementing, restate your understanding.
+ Only write the code relevant to the current milestone.
+
+Additional mandatory rules:
+- When showing file updates, include ONLY the changed parts unless the file is still small.
+- Always ask before creating very large or structural file changes.
+- All code MUST be typed (TypeScript).
+- All AI prompt templates must be strict JSON.
+- Never import secret keys, always use environment variables.
+
+Before producing code, ALWAYS:
+- Summarize the goal of the task.
+- Propose a clear plan.
+- Wait for confirmation if the task involves architecture decisions.
+
+If the user asks something outside the current milestone:
+- Politely refuse.
+- Tell them which milestone should cover their request.
+
+This instruction set is ALWAYS ACTIVE for this project.

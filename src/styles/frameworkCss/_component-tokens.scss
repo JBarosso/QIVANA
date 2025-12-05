@@ -1,0 +1,1327 @@
+// ============================================
+// 🧩 COMPONENT TOKENS
+// ============================================
+// Variables spécifiques aux composants
+// Basées sur les design tokens globaux (_tokens.scss)
+// Permet de personnaliser les composants sans casser le système
+// ============================================
+
+@use 'tokens' as *;
+
+:root {
+  // ============================================
+  // 🔘 BUTTON
+  // ============================================
+  
+  // Spacing
+  --button-padding-x: var(--space-4);      // 16px → 20px
+  --button-padding-y: var(--space-2);      // 8px → 12px
+  --button-gap: var(--space-2);            // Espace entre icon et texte
+  
+  // Sizes (multiplicateurs)
+  --button-padding-x-sm: var(--space-3);   // Small
+  --button-padding-y-sm: var(--space-1);
+  --button-padding-x-lg: var(--space-6);   // Large
+  --button-padding-y-lg: var(--space-3);
+  
+  // Typography
+  --button-font-size: var(--fs-3);         // 16px → 18px (base)
+  --button-font-size-sm: var(--fs-2);      // 14px → 16px
+  --button-font-size-lg: var(--fs-4);      // 18px → 20px
+  --button-font-weight: var(--font-weight-medium);
+  --button-line-height: var(--leading-none);
+  
+  // Border
+  --button-border-width: 1px;
+  --button-border-radius: var(--radius-md);
+  --button-border-radius-sm: var(--radius-sm);
+  --button-border-radius-lg: var(--radius-lg);
+  
+  // Colors (variant primary)
+  --button-primary-bg: var(--color-primary);
+  --button-primary-text: white;
+  --button-primary-border: var(--color-primary);
+  --button-primary-hover-bg: var(--color-primary-dark);
+  --button-primary-hover-border: var(--color-primary-dark);
+  
+  // Colors (variant secondary)
+  --button-secondary-bg: var(--color-secondary);
+  --button-secondary-text: white;
+  --button-secondary-border: var(--color-secondary);
+  --button-secondary-hover-bg: var(--color-secondary-dark);
+  
+  // Colors (variant outline)
+  --button-outline-bg: transparent;
+  --button-outline-text: var(--color-primary);
+  --button-outline-border: var(--color-primary);
+  --button-outline-hover-bg: var(--color-primary);
+  --button-outline-hover-text: white;
+  
+  // Colors (variant ghost)
+  --button-ghost-bg: transparent;
+  --button-ghost-text: var(--color-primary);
+  --button-ghost-hover-bg: var(--color-primary-lighter);
+  
+  // Colors (variant danger)
+  --button-danger-bg: var(--color-error);
+  --button-danger-text: white;
+  --button-danger-border: var(--color-error);
+  --button-danger-hover-bg: var(--color-error-dark);
+  --button-danger-hover-border: var(--color-error-dark);
+  
+  // States
+  --button-disabled-opacity: 0.5;
+  --button-focus-ring: 0 0 0 3px var(--color-primary-lighter);
+  
+  // Animation
+  --button-transition: all 0.2s var(--ease-out);
+  
+  
+  // ============================================
+  // 📝 INPUT
+  // ============================================
+  
+  // Layout & Spacing
+  --input-padding-x: var(--space-4);
+  --input-padding-y: var(--space-3);
+  --input-padding-x-sm: var(--space-3);
+  --input-padding-y-sm: var(--space-2);
+  --input-padding-x-lg: var(--space-5);
+  --input-padding-y-lg: var(--space-4);
+  --input-gap: var(--space-2);                      // Gap entre icon et input
+  
+  // Typography
+  --input-font-size: var(--fs-3);                   // 16px
+  --input-font-size-sm: var(--fs-2);                // 14px
+  --input-font-size-lg: var(--fs-4);                // 18px
+  --input-line-height: 1.5;
+  --input-font-weight: 400;
+  
+  // Borders
+  --input-border-width: 1px;
+  --input-border-radius: var(--radius-md);
+  --input-border-radius-sm: var(--radius-sm);
+  --input-border-radius-lg: var(--radius-lg);
+  
+  // Colors - Default state
+  --input-bg: var(--color-surface);
+  --input-text: var(--color-text);
+  --input-border: var(--color-neutral-300);
+  --input-placeholder: var(--color-neutral-400);
+  
+  // Colors - Focus state
+  --input-focus-border: var(--color-primary);
+  --input-focus-ring: 0 0 0 3px hsl(var(--color-primary-hsl), 0.1);
+  
+  // Colors - Error state
+  --input-error-border: var(--color-error);
+  --input-error-text: var(--color-error);
+  --input-error-ring: 0 0 0 3px hsl(var(--color-error-hsl), 0.1);
+  
+  // Colors - Success state
+  --input-success-border: var(--color-success);
+  --input-success-text: var(--color-success);
+  --input-success-ring: 0 0 0 3px hsl(var(--color-success-hsl), 0.1);
+  
+  // Colors - Disabled state
+  --input-disabled-bg: var(--color-neutral-100);
+  --input-disabled-text: var(--color-neutral-400);
+  --input-disabled-border: var(--color-neutral-200);
+  --input-disabled-opacity: 0.6;
+  
+  // Icon colors
+  --input-icon-color: var(--color-neutral-500);
+  --input-icon-error-color: var(--color-error);
+  --input-icon-success-color: var(--color-success);
+  
+  // Label & Helper text
+  --input-label-font-size: var(--fs-2);             // 14px
+  --input-label-font-weight: 500;
+  --input-label-margin-bottom: var(--space-2);
+  --input-helper-font-size: var(--fs-1);            // 12px
+  --input-helper-margin-top: var(--space-2);
+  --input-required-color: var(--color-error);
+  
+  // Animation
+  --input-transition: border-color 200ms ease, box-shadow 200ms ease;
+  
+  
+  // ============================================
+  // 📄 TEXTAREA
+  // ============================================
+  
+  // Layout & Spacing
+  --textarea-padding-x: var(--space-4);
+  --textarea-padding-y: var(--space-3);
+  --textarea-padding-x-sm: var(--space-3);
+  --textarea-padding-y-sm: var(--space-2);
+  --textarea-padding-x-lg: var(--space-5);
+  --textarea-padding-y-lg: var(--space-4);
+  --textarea-min-height: 100px;              // Hauteur minimale
+  --textarea-min-height-sm: 80px;
+  --textarea-min-height-lg: 120px;
+  
+  // Typography
+  --textarea-font-size: var(--fs-3);         // 16px
+  --textarea-font-size-sm: var(--fs-2);      // 14px
+  --textarea-font-size-lg: var(--fs-4);      // 18px
+  --textarea-line-height: 1.5;
+  --textarea-font-weight: 400;
+  
+  // Borders
+  --textarea-border-width: 1px;
+  --textarea-border-radius: var(--radius-md);
+  --textarea-border-radius-sm: var(--radius-sm);
+  --textarea-border-radius-lg: var(--radius-lg);
+  
+  // Colors - Default state
+  --textarea-bg: var(--color-surface);
+  --textarea-text: var(--color-text);
+  --textarea-border: var(--color-neutral-300);
+  --textarea-placeholder: var(--color-neutral-400);
+  
+  // Colors - Focus state
+  --textarea-focus-border: var(--color-primary);
+  --textarea-focus-ring: 0 0 0 3px hsl(var(--color-primary-hsl), 0.1);
+  
+  // Colors - Error state
+  --textarea-error-border: var(--color-error);
+  --textarea-error-text: var(--color-error);
+  --textarea-error-ring: 0 0 0 3px hsl(var(--color-error-hsl), 0.1);
+  
+  // Colors - Success state
+  --textarea-success-border: var(--color-success);
+  --textarea-success-text: var(--color-success);
+  --textarea-success-ring: 0 0 0 3px hsl(var(--color-success-hsl), 0.1);
+  
+  // Colors - Disabled state
+  --textarea-disabled-bg: var(--color-neutral-100);
+  --textarea-disabled-text: var(--color-neutral-400);
+  --textarea-disabled-border: var(--color-neutral-200);
+  --textarea-disabled-opacity: 0.6;
+  
+  // Label & Helper text (réutilise les mêmes que Input)
+  --textarea-label-font-size: var(--fs-2);
+  --textarea-label-font-weight: 500;
+  --textarea-label-margin-bottom: var(--space-2);
+  --textarea-helper-font-size: var(--fs-1);
+  --textarea-helper-margin-top: var(--space-2);
+  --textarea-required-color: var(--color-error);
+  
+  // Character counter
+  --textarea-counter-font-size: var(--fs-1);
+  --textarea-counter-color: var(--color-text-muted);
+  --textarea-counter-warning-color: var(--color-warning);
+  --textarea-counter-error-color: var(--color-error);
+  
+  // Animation
+  --textarea-transition: border-color 200ms ease, box-shadow 200ms ease;
+  --textarea-resize-transition: height 150ms ease;
+  
+  
+  // ============================================
+  // 🔽 SELECT
+  // ============================================
+  
+  // Layout & Spacing
+  --select-padding-x: var(--space-4);
+  --select-padding-y: var(--space-3);
+  --select-padding-x-sm: var(--space-3);
+  --select-padding-y-sm: var(--space-2);
+  --select-padding-x-lg: var(--space-5);
+  --select-padding-y-lg: var(--space-4);
+  --select-min-height: 44px;                  // Hauteur minimale (touch-friendly)
+  --select-min-height-sm: 36px;
+  --select-min-height-lg: 52px;
+  
+  // Typography
+  --select-font-size: var(--fs-3);            // 16px
+  --select-font-size-sm: var(--fs-2);         // 14px
+  --select-font-size-lg: var(--fs-4);         // 18px
+  --select-line-height: 1.5;
+  --select-font-weight: 400;
+  
+  // Borders
+  --select-border-width: 1px;
+  --select-border-radius: var(--radius-md);
+  --select-border-radius-sm: var(--radius-sm);
+  --select-border-radius-lg: var(--radius-lg);
+  
+  // Colors - Default state
+  --select-bg: var(--color-surface);
+  --select-text: var(--color-text);
+  --select-border: var(--color-neutral-300);
+  --select-placeholder: var(--color-neutral-400);
+  
+  // Colors - Focus state
+  --select-focus-border: var(--color-primary);
+  --select-focus-ring: 0 0 0 3px hsl(var(--color-primary-hsl), 0.1);
+  
+  // Colors - Error state
+  --select-error-border: var(--color-error);
+  --select-error-text: var(--color-error);
+  --select-error-ring: 0 0 0 3px hsl(var(--color-error-hsl), 0.1);
+  
+  // Colors - Success state
+  --select-success-border: var(--color-success);
+  --select-success-text: var(--color-success);
+  --select-success-ring: 0 0 0 3px hsl(var(--color-success-hsl), 0.1);
+  
+  // Colors - Disabled state
+  --select-disabled-bg: var(--color-neutral-100);
+  --select-disabled-text: var(--color-neutral-400);
+  --select-disabled-border: var(--color-neutral-200);
+  --select-disabled-opacity: 0.6;
+  
+  // Icon (dropdown arrow)
+  --select-icon-size: 20px;
+  --select-icon-size-sm: 16px;
+  --select-icon-size-lg: 24px;
+  --select-icon-color: var(--color-neutral-500);
+  --select-icon-spacing: var(--space-3);      // Espace entre texte et icône
+  
+  // Label & Helper text
+  --select-label-font-size: var(--fs-2);
+  --select-label-font-weight: 500;
+  --select-label-margin-bottom: var(--space-2);
+  --select-helper-font-size: var(--fs-1);
+  --select-helper-margin-top: var(--space-2);
+  --select-required-color: var(--color-error);
+  
+  // Custom dropdown
+  --select-dropdown-bg: var(--color-surface);
+  --select-dropdown-border: var(--color-neutral-300);
+  --select-dropdown-shadow: var(--shadow-lg);
+  --select-dropdown-max-height: 300px;
+  --select-dropdown-z-index: 1000;
+  
+  // Options
+  --select-option-padding-x: var(--space-4);
+  --select-option-padding-y: var(--space-3);
+  --select-option-hover-bg: hsl(var(--color-primary-hsl), 0.1);
+  --select-option-selected-bg: var(--color-primary-lighter);
+  --select-option-selected-color: var(--color-primary);
+  --select-option-disabled-opacity: 0.5;
+  
+  // Search input (pour variante filterable)
+  --select-search-padding: var(--space-3);
+  --select-search-border-bottom: 1px solid var(--color-border);
+  
+  // Multiple selection
+  --select-tag-bg: var(--color-primary-lighter);
+  --select-tag-color: var(--color-primary);
+  --select-tag-padding-x: var(--space-2);
+  --select-tag-padding-y: var(--space-1);
+  --select-tag-gap: var(--space-2);
+  --select-tag-border-radius: var(--radius-sm);
+  
+  // Animation
+  --select-transition: border-color 200ms ease, box-shadow 200ms ease;
+  --select-dropdown-transition: opacity 150ms ease, transform 150ms ease;
+  
+  
+  // ============================================
+  // ☑️ CHECKBOX
+  // ============================================
+  
+  // Layout & Spacing
+  --checkbox-size: 20px;                      // Taille de la box
+  --checkbox-size-sm: 16px;
+  --checkbox-size-lg: 24px;
+  --checkbox-gap: var(--space-3);             // Entre box et label
+  --checkbox-gap-sm: var(--space-2);
+  --checkbox-gap-lg: var(--space-4);
+  
+  // Typography (label)
+  --checkbox-label-font-size: var(--fs-3);    // 16px
+  --checkbox-label-font-size-sm: var(--fs-2); // 14px
+  --checkbox-label-font-size-lg: var(--fs-4); // 18px
+  --checkbox-label-font-weight: 400;
+  --checkbox-label-line-height: 1.5;
+  
+  // Border
+  --checkbox-border-width: 2px;
+  --checkbox-border-radius: var(--radius-sm);
+  --checkbox-border-radius-sm: 3px;
+  --checkbox-border-radius-lg: var(--radius-md);
+  
+  // Colors - Unchecked state
+  --checkbox-bg: var(--color-surface);
+  --checkbox-border: var(--color-neutral-400);
+  --checkbox-label: var(--color-text);
+  
+  // Colors - Checked state
+  --checkbox-checked-bg: var(--color-primary);
+  --checkbox-checked-border: var(--color-primary);
+  --checkbox-check-color: var(--color-surface);  // Couleur de la coche
+  
+  // Colors - Indeterminate state
+  --checkbox-indeterminate-bg: var(--color-primary);
+  --checkbox-indeterminate-border: var(--color-primary);
+  --checkbox-indeterminate-dash-color: var(--color-surface);
+  
+  // Colors - Focus state
+  --checkbox-focus-ring: 0 0 0 3px hsl(var(--color-primary-hsl), 0.1);
+  --checkbox-focus-outline: 2px solid var(--color-focus);
+  --checkbox-focus-outline-offset: 2px;
+  
+  // Colors - Error state
+  --checkbox-error-border: var(--color-error);
+  --checkbox-error-checked-bg: var(--color-error);
+  --checkbox-error-checked-border: var(--color-error);
+  --checkbox-error-label: var(--color-error);
+  --checkbox-error-ring: 0 0 0 3px hsl(var(--color-error-hsl), 0.1);
+  
+  // Colors - Disabled state
+  --checkbox-disabled-bg: var(--color-neutral-100);
+  --checkbox-disabled-border: var(--color-neutral-200);
+  --checkbox-disabled-label: var(--color-neutral-400);
+  --checkbox-disabled-opacity: 0.6;
+  --checkbox-disabled-checked-bg: var(--color-neutral-300);
+  
+  // Hover state
+  --checkbox-hover-border: var(--color-primary);
+  --checkbox-hover-bg: hsl(var(--color-primary-hsl), 0.05);
+  
+  // Helper text
+  --checkbox-helper-font-size: var(--fs-1);
+  --checkbox-helper-margin-top: var(--space-2);
+  --checkbox-helper-color: var(--color-text-muted);
+  
+  // Animation
+  --checkbox-transition: all 150ms ease;
+  --checkbox-check-transition: stroke-dashoffset 150ms ease;
+  
+  
+  // ============================================
+  // 🔘 RADIO
+  // ============================================
+  
+  // Layout & Spacing
+  --radio-size: 20px;                         // Taille du cercle
+  --radio-size-sm: 16px;
+  --radio-size-lg: 24px;
+  --radio-gap: var(--space-3);                // Entre le cercle et le label
+  --radio-gap-sm: var(--space-2);
+  --radio-gap-lg: var(--space-4);
+  
+  // Typography (label)
+  --radio-label-font-size: var(--fs-3);       // 16px
+  --radio-label-font-size-sm: var(--fs-2);    // 14px
+  --radio-label-font-size-lg: var(--fs-4);    // 18px
+  --radio-label-font-weight: 400;
+  --radio-label-line-height: 1.5;
+  
+  // Border
+  --radio-border-width: 2px;
+  
+  // Colors - Unchecked state
+  --radio-bg: var(--color-surface);
+  --radio-border: var(--color-neutral-400);
+  --radio-label: var(--color-text);
+  
+  // Colors - Checked state
+  --radio-checked-bg: var(--color-surface);
+  --radio-checked-border: var(--color-primary);
+  --radio-dot-color: var(--color-primary);    // Couleur du point interne
+  
+  // Colors - Focus state
+  --radio-focus-ring: 0 0 0 3px hsl(var(--color-primary-hsl), 0.1);
+  --radio-focus-outline: 2px solid var(--color-focus);
+  --radio-focus-outline-offset: 2px;
+  
+  // Colors - Error state
+  --radio-error-border: var(--color-error);
+  --radio-error-checked-border: var(--color-error);
+  --radio-error-dot-color: var(--color-error);
+  --radio-error-label: var(--color-error);
+  --radio-error-ring: 0 0 0 3px hsl(var(--color-error-hsl), 0.1);
+  
+  // Colors - Disabled state
+  --radio-disabled-bg: var(--color-neutral-100);
+  --radio-disabled-border: var(--color-neutral-200);
+  --radio-disabled-label: var(--color-neutral-400);
+  --radio-disabled-opacity: 0.6;
+  --radio-disabled-dot-color: var(--color-neutral-300);
+  
+  // Hover state
+  --radio-hover-border: var(--color-primary);
+  --radio-hover-bg: hsl(var(--color-primary-hsl), 0.05);
+  
+  // Helper text
+  --radio-helper-font-size: var(--fs-1);
+  --radio-helper-margin-top: var(--space-2);
+  --radio-helper-color: var(--color-text-muted);
+  
+  // Dot (point interne)
+  --radio-dot-size: 10px;                     // Taille du point quand checked
+  --radio-dot-size-sm: 8px;
+  --radio-dot-size-lg: 12px;
+  
+  // Animation
+  --radio-transition: all 150ms ease;
+  --radio-dot-transition: transform 150ms ease;
+  
+  
+  // ============================================
+  // 🃏 CARD
+  // ============================================
+  
+  // Spacing
+  --card-padding: var(--space-6);
+  --card-padding-sm: var(--space-4);
+  --card-padding-lg: var(--space-8);
+  --card-gap: var(--space-4);              // Entre header/body/footer
+  
+  // Border
+  --card-border-width: 1px;
+  --card-border-radius: var(--radius-lg);
+  --card-border-color: var(--color-border);
+  
+  // Colors
+  --card-bg: var(--color-surface);
+  --card-hover-bg: var(--color-surface);   // Peut être différent pour variant interactive
+  
+  // Shadow
+  --card-shadow: var(--shadow-sm);
+  --card-hover-shadow: var(--shadow-md);
+  
+  // Animation
+  --card-transition: all 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 🔔 ALERT / TOAST
+  // ============================================
+  
+  // Spacing
+  --alert-padding-x: var(--space-4);
+  --alert-padding-y: var(--space-3);
+  --alert-gap: var(--space-3);             // Entre icon et texte
+  
+  // Border
+  --alert-border-width: 1px;
+  --alert-border-radius: var(--radius-md);
+  
+  // Colors (par variant - info/success/warning/error)
+  --alert-info-bg: var(--color-info-lighter);
+  --alert-info-text: var(--color-info-dark);
+  --alert-info-border: var(--color-info);
+  --alert-info-icon: var(--color-info);
+  
+  --alert-success-bg: var(--color-success-lighter);
+  --alert-success-text: var(--color-success-dark);
+  --alert-success-border: var(--color-success);
+  --alert-success-icon: var(--color-success);
+  
+  --alert-warning-bg: var(--color-warning-lighter);
+  --alert-warning-text: var(--color-warning-dark);
+  --alert-warning-border: var(--color-warning);
+  --alert-warning-icon: var(--color-warning);
+  
+  --alert-error-bg: var(--color-error-lighter);
+  --alert-error-text: var(--color-error-dark);
+  --alert-error-border: var(--color-error);
+  --alert-error-icon: var(--color-error);
+  
+  // Position (spacing depuis les bords)
+  --alert-position-offset: var(--space-6);
+  --alert-z-index: 1000;
+  
+  // Animation
+  --alert-transition-duration: 0.3s;
+  --alert-transition-easing: var(--ease-out);
+  
+  // Shadow
+  --alert-shadow: var(--shadow-lg);
+  
+  // ============================================
+  // 🪟 MODAL / DIALOG
+  // ============================================
+  
+  // Spacing
+  --modal-padding: var(--space-6);
+  --modal-header-padding-bottom: var(--space-4);
+  --modal-footer-padding-top: var(--space-4);
+  --modal-gap: var(--space-4);
+  
+  // Sizes
+  --modal-width-sm: 400px;
+  --modal-width-md: 600px;
+  --modal-width-lg: 800px;
+  --modal-max-height: 90vh;
+  
+  // Border
+  --modal-border-radius: var(--radius-xl);
+  
+  // Colors
+  --modal-bg: var(--color-surface);
+  --modal-backdrop-bg: rgba(0, 0, 0, 0.5);
+  
+  // Shadow
+  --modal-shadow: var(--shadow-xl);
+  
+  // Animation
+  --modal-transition-duration: 0.3s;
+  --modal-transition-easing: var(--ease-out);
+  
+  
+  // ============================================
+  // 📊 TABLE (Phase 2 - Commerce & Data)
+  // ============================================
+  
+  // Spacing
+  --table-cell-padding-x: var(--space-4);
+  --table-cell-padding-y: var(--space-3);
+  --table-cell-padding-x-sm: var(--space-2);
+  --table-cell-padding-y-sm: var(--space-2);
+  
+  // Border
+  --table-border-width: 1px;
+  --table-border-color: var(--color-border);
+  
+  // Colors
+  --table-bg: var(--color-surface);
+  --table-header-bg: var(--color-neutral-100);
+  --table-row-hover-bg: hsl(var(--color-primary-hsl), 0.05);
+  --table-striped-bg: var(--color-neutral-50);
+  
+  // Typography
+  --table-header-font-weight: var(--font-weight-semibold);
+  --table-font-size: var(--fs-2);
+  
+  
+  // ============================================
+  // 📑 TABS (Phase 2 - Commerce & Data)
+  // ============================================
+  
+  // Spacing
+  --tabs-padding-x: var(--space-4);
+  --tabs-padding-y: var(--space-3);
+  --tabs-padding-x-sm: var(--space-3);
+  --tabs-padding-y-sm: var(--space-2);
+  --tabs-padding-x-lg: var(--space-5);
+  --tabs-padding-y-lg: var(--space-4);
+  --tabs-gap: var(--space-1);
+  --tabs-icon-gap: var(--space-2);
+  --tabs-vertical-gap: var(--space-6);
+  
+  // Panel spacing
+  --tabs-panel-padding: var(--space-6);
+  --tabs-panel-padding-sm: var(--space-4);
+  --tabs-panel-padding-lg: var(--space-8);
+  
+  // Border
+  --tabs-border-width: 1px;
+  --tabs-border-color: var(--color-border);
+  --tabs-border-radius: var(--radius-md);
+  --tabs-active-border-width: 2px;
+  --tabs-active-border-color: var(--color-primary);
+  --tabs-underline-height: 3px;
+  
+  // Typography
+  --tabs-font-size: var(--fs-3);
+  --tabs-font-size-sm: var(--fs-2);
+  --tabs-font-size-lg: var(--fs-4);
+  --tabs-font-weight: var(--font-weight-medium);
+  --tabs-active-font-weight: var(--font-weight-semibold);
+  
+  // Colors
+  --tabs-text-color: var(--color-text-muted);
+  --tabs-hover-color: var(--color-primary);
+  --tabs-hover-bg: hsl(var(--color-primary-hsl), 0.05);
+  --tabs-active-color: var(--color-primary);
+  
+  // Icon
+  --tabs-icon-size: 20px;
+  --tabs-icon-size-sm: 16px;
+  --tabs-icon-size-lg: 24px;
+  
+  // Pills variant
+  --tabs-pill-gap: var(--space-2);
+  --tabs-pill-border-radius: var(--radius-full);
+  --tabs-pill-bg: var(--color-surface);
+  --tabs-pill-hover-bg: var(--color-neutral-100);
+  --tabs-pill-active-bg: var(--color-primary);
+  --tabs-pill-active-color: white;
+  
+  // Boxed variant
+  --tabs-boxed-gap: var(--space-2);
+  --tabs-boxed-bg: var(--color-surface);
+  --tabs-boxed-hover-bg: var(--color-neutral-50);
+  --tabs-boxed-hover-border: var(--color-primary);
+  --tabs-boxed-active-bg: hsl(var(--color-primary-hsl), 0.1);
+  
+  // States
+  --tabs-disabled-opacity: 0.5;
+  
+  // Transition
+  --tabs-transition: all 0.2s ease;
+  
+  
+  // ============================================
+  // 📂 ACCORDION (Phase 2 - Commerce & Data)
+  // ============================================
+  
+  // Spacing
+  --accordion-padding-x: var(--space-4);
+  --accordion-padding-y: var(--space-3);
+  --accordion-padding-x-sm: var(--space-3);
+  --accordion-padding-y-sm: var(--space-2);
+  --accordion-padding-x-lg: var(--space-5);
+  --accordion-padding-y-lg: var(--space-4);
+  --accordion-icon-gap: var(--space-3);
+  --accordion-separated-gap: var(--space-3);
+  
+  // Content spacing
+  --accordion-content-padding-x: var(--space-4);
+  --accordion-content-padding-y: var(--space-4);
+  --accordion-content-padding-x-sm: var(--space-3);
+  --accordion-content-padding-y-sm: var(--space-3);
+  --accordion-content-padding-x-lg: var(--space-5);
+  --accordion-content-padding-y-lg: var(--space-5);
+  
+  // Border
+  --accordion-border-width: 1px;
+  --accordion-border-color: var(--color-border);
+  --accordion-border-radius: var(--radius-lg);
+  
+  // Typography
+  --accordion-font-size: var(--fs-3);
+  --accordion-font-size-sm: var(--fs-2);
+  --accordion-font-size-lg: var(--fs-4);
+  --accordion-font-weight: var(--font-weight-semibold);
+  --accordion-content-font-size: var(--fs-3);
+  --accordion-content-font-size-sm: var(--fs-2);
+  --accordion-content-font-size-lg: var(--fs-4);
+  --accordion-content-line-height: 1.6;
+  
+  // Colors
+  --accordion-bg: var(--color-surface);
+  --accordion-text-color: var(--color-text);
+  --accordion-hover-color: var(--color-primary);
+  --accordion-active-color: var(--color-primary);
+  --accordion-content-color: var(--color-text-muted);
+  --accordion-button-bg: transparent;
+  --accordion-button-hover-bg: hsl(var(--color-primary-hsl), 0.05);
+  --accordion-button-active-bg: hsl(var(--color-primary-hsl), 0.08);
+  
+  // Icon
+  --accordion-icon-size: 20px;
+  --accordion-icon-size-sm: 16px;
+  --accordion-icon-size-lg: 24px;
+  --accordion-icon-color: var(--color-text-muted);
+  --accordion-icon-transition: transform 0.2s ease;
+  
+  // States
+  --accordion-disabled-opacity: 0.5;
+  
+  // Transition
+  --accordion-transition: all 0.2s ease;
+  
+  
+  // ============================================
+  // 🏷️ BADGE (Phase 2 - Commerce & Data)
+  // ============================================
+  
+  // Spacing
+  --badge-padding-x: var(--space-2);
+  --badge-padding-y: var(--space-1);
+  --badge-padding-x-sm: var(--space-1);
+  --badge-padding-y-sm: calc(var(--space-1) / 2);
+  --badge-gap: var(--space-1);
+  
+  // Border
+  --badge-border-radius: var(--radius-full);
+  
+  // Typography
+  --badge-font-size: var(--fs-1);
+  --badge-font-size-sm: calc(var(--fs-1) * 0.85);
+  --badge-font-weight: var(--font-weight-medium);
+  --badge-text-transform: uppercase;
+  --badge-letter-spacing: 0.025em;
+  
+  // Colors (par variant)
+  --badge-default-bg: var(--color-neutral-200);
+  --badge-default-text: var(--color-neutral-700);
+  --badge-info-bg: var(--color-info);
+  --badge-info-text: white;
+  --badge-primary-bg: var(--color-primary);
+  --badge-primary-text: white;
+  --badge-success-bg: var(--color-success);
+  --badge-success-text: white;
+  --badge-warning-bg: var(--color-warning);
+  --badge-warning-text: var(--color-warning-dark);
+  --badge-error-bg: var(--color-error);
+  --badge-error-text: white;
+  
+  
+  // ============================================
+  // 🛒 PRODUCT CARD (E-commerce) - Phase 2
+  // ============================================
+  
+  // Layout & Spacing
+  --product-card-padding: var(--space-4);
+  --product-card-content-gap: var(--space-3);
+  
+  // Border
+  --product-card-border-width: 1px;
+  --product-card-border-color: transparent;
+  --product-card-border-radius: var(--radius-lg);
+  --product-card-image-border-radius: var(--radius-md);
+  
+  // Colors
+  --product-card-bg: var(--color-surface);
+  --product-card-hover-bg: var(--color-surface);
+  --product-card-image-bg: var(--color-neutral-100);
+  
+  // Shadow
+  --product-card-shadow: var(--shadow-sm);
+  --product-card-hover-shadow: var(--shadow-lg);
+  
+  // Badge
+  --product-card-badge-offset: var(--space-3);
+  --product-card-badge-padding-x: var(--space-2);
+  --product-card-badge-padding-y: var(--space-1);
+  --product-card-badge-font-size: var(--fs-1);
+  --product-card-badge-font-weight: var(--font-weight-semibold);
+  --product-card-badge-border-radius: var(--radius-sm);
+  --product-card-badge-default-bg: var(--color-neutral-800);
+  --product-card-badge-default-text: white;
+  --product-card-badge-success-bg: var(--color-success);
+  --product-card-badge-success-text: white;
+  --product-card-badge-warning-bg: var(--color-warning);
+  --product-card-badge-warning-text: var(--color-warning-dark);
+  --product-card-badge-error-bg: var(--color-error);
+  --product-card-badge-error-text: white;
+  
+  // Action buttons (wishlist, quick view)
+  --product-card-action-offset: var(--space-3);
+  --product-card-action-size: 36px;
+  --product-card-action-icon-size: 18px;
+  --product-card-action-bg: rgba(255, 255, 255, 0.9);
+  --product-card-action-color: var(--color-text);
+  --product-card-action-hover-bg: white;
+  --product-card-action-transition: all 0.2s ease;
+  
+  // Wishlist
+  --product-card-wishlist-active-bg: var(--color-error);
+  --product-card-wishlist-active-color: white;
+  
+  // Title
+  --product-card-title-font-size: var(--fs-4);
+  --product-card-title-font-weight: var(--font-weight-semibold);
+  --product-card-title-line-height: 1.4;
+  --product-card-title-color: var(--color-text);
+  --product-card-title-hover-color: var(--color-primary);
+  
+  // Rating
+  --product-card-rating-gap: var(--space-2);
+  --product-card-star-size: 16px;
+  --product-card-star-filled-color: var(--color-warning);
+  --product-card-star-empty-color: var(--color-neutral-300);
+  --product-card-reviews-font-size: var(--fs-2);
+  --product-card-reviews-color: var(--color-text-muted);
+  
+  // Price
+  --product-card-price-gap: var(--space-2);
+  --product-card-price-font-size: var(--fs-5);
+  --product-card-price-font-weight: var(--font-weight-bold);
+  --product-card-price-color: var(--color-text);
+  --product-card-old-price-font-size: var(--fs-3);
+  --product-card-old-price-color: var(--color-text-muted);
+  --product-card-discount-font-size: var(--fs-1);
+  --product-card-discount-font-weight: var(--font-weight-semibold);
+  --product-card-discount-color: var(--color-error);
+  --product-card-discount-bg: hsl(var(--color-error-hsl), 0.1);
+  
+  // Stock
+  --product-card-stock-font-size: var(--fs-2);
+  --product-card-stock-color: var(--color-success);
+  --product-card-stock-out-color: var(--color-error);
+  
+  // Add to cart button
+  --product-card-button-padding-x: var(--space-4);
+  --product-card-button-padding-y: var(--space-3);
+  --product-card-button-gap: var(--space-2);
+  --product-card-button-font-size: var(--fs-3);
+  --product-card-button-font-weight: var(--font-weight-medium);
+  --product-card-button-icon-size: 18px;
+  --product-card-button-border-radius: var(--radius-md);
+  --product-card-button-bg: var(--color-primary);
+  --product-card-button-text: white;
+  --product-card-button-hover-bg: var(--color-primary-dark);
+  --product-card-button-transition: all 0.2s ease;
+  
+  // Featured variant
+  --product-card-featured-border-color: var(--color-primary);
+  --product-card-featured-border-width: 2px;
+  --product-card-featured-shadow: var(--shadow-md);
+  --product-card-featured-title-color: var(--color-primary);
+  
+  // Animation
+  --product-card-transition: all 0.3s var(--ease-out);
+  --product-card-image-transition: transform 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 🎯 NAVIGATION
+  // ============================================
+  
+  // Header
+  --nav-height: 70px;
+  --nav-padding-x: var(--space-6);
+  --nav-bg: var(--color-surface);
+  --nav-border-bottom: 1px solid var(--color-border);
+  --nav-shadow: var(--shadow-sm);
+  
+  // Links
+  --nav-link-padding-x: var(--space-4);
+  --nav-link-padding-y: var(--space-2);
+  --nav-link-font-weight: var(--font-weight-medium);
+  --nav-link-color: var(--color-text);
+  --nav-link-hover-color: var(--color-primary);
+  --nav-link-active-color: var(--color-primary);
+  --nav-link-transition: color 0.2s var(--ease-out);
+  
+  // Dropdown
+  --nav-dropdown-bg: var(--color-surface);
+  --nav-dropdown-shadow: var(--shadow-lg);
+  --nav-dropdown-border-radius: var(--radius-md);
+  --nav-dropdown-padding: var(--space-2);
+  --nav-dropdown-min-width: 200px;
+  
+  
+  // ============================================
+  // 📊 PROGRESS BAR
+  // ============================================
+  
+  // Linear track & fill
+  --progress-bar-linear-height: 8px;
+  --progress-bar-linear-height-sm: 6px;
+  --progress-bar-linear-height-lg: 12px;
+  --progress-bar-linear-border-radius: var(--radius-full);
+  --progress-bar-linear-track-bg: var(--color-neutral-200);
+  --progress-bar-linear-fill-bg: var(--color-primary);
+  
+  // Circular
+  --progress-bar-circular-size-sm: 64px;
+  --progress-bar-circular-size: 80px;
+  --progress-bar-circular-size-lg: 120px;
+  --progress-bar-circular-stroke-width: 8px;
+  --progress-bar-circular-bg: var(--color-neutral-200);
+  --progress-bar-circular-fill: var(--color-primary);
+  
+  // Steps
+  --progress-bar-steps-gap: var(--space-2);
+  --progress-bar-step-size: 32px;
+  --progress-bar-step-size-sm: 24px;
+  --progress-bar-step-size-lg: 40px;
+  --progress-bar-step-bg: var(--color-neutral-200);
+  --progress-bar-step-complete-bg: var(--color-primary);
+  --progress-bar-step-line-width: 2px;
+  --progress-bar-step-line-bg: var(--color-neutral-300);
+  
+  // Colors variants
+  --progress-bar-success-bg: var(--color-success);
+  --progress-bar-warning-bg: var(--color-warning);
+  --progress-bar-error-bg: var(--color-error);
+  --progress-bar-info-bg: var(--color-info);
+  
+  // Typography
+  --progress-bar-label-font-size: var(--fs-3);
+  --progress-bar-value-font-size: var(--fs-2);
+  --progress-bar-label-color: var(--color-text);
+  --progress-bar-value-color: var(--color-text-muted);
+  
+  // Animation
+  --progress-bar-transition: width 0.5s var(--ease-out);
+  --progress-bar-rotate-duration: 2s;
+  
+  
+  // ============================================
+  // 📱 SOCIAL SHARE
+  // ============================================
+  
+  // Sizes
+  --social-share-button-size-sm: 32px;
+  --social-share-button-size: 40px;
+  --social-share-button-size-lg: 48px;
+  
+  // Spacing
+  --social-share-gap: var(--space-2);
+  --social-share-icon-size: 20px;
+  --social-share-border-radius: var(--radius-md);
+  
+  // Colors (will be overridden per platform)
+  --social-share-button-bg: var(--color-surface);
+  --social-share-button-hover-bg: var(--color-neutral-100);
+  --social-share-border-color: var(--color-border);
+  
+  // Typography
+  --social-share-label-font-size: var(--fs-2);
+  --social-share-count-font-size: var(--fs-1);
+  
+  // Transition
+  --social-share-transition: all 0.2s var(--ease-out);
+  
+  
+  // ============================================
+  // 💬 TESTIMONIAL
+  // ============================================
+  
+  // Spacing
+  --testimonial-padding: var(--space-6);
+  --testimonial-padding-sm: var(--space-4);
+  --testimonial-padding-lg: var(--space-8);
+  --testimonial-gap: var(--space-4);
+  
+  // Avatar
+  --testimonial-avatar-size: 48px;
+  --testimonial-avatar-size-sm: 40px;
+  --testimonial-avatar-size-lg: 64px;
+  --testimonial-avatar-border-radius: var(--radius-full);
+  
+  // Quote icon
+  --testimonial-quote-icon-size: 40px;
+  --testimonial-quote-icon-color: hsl(var(--color-primary-hsl), 0.15);
+  
+  // Border
+  --testimonial-border-radius: var(--radius-lg);
+  --testimonial-border-color: var(--color-border);
+  
+  // Background
+  --testimonial-bg: var(--color-surface);
+  
+  // Typography
+  --testimonial-text-font-size: var(--fs-3);
+  --testimonial-text-color: var(--color-text);
+  --testimonial-name-font-size: var(--fs-4);
+  --testimonial-name-font-weight: var(--font-weight-semibold);
+  --testimonial-role-font-size: var(--fs-2);
+  --testimonial-role-color: var(--color-text-muted);
+  
+  // Shadow
+  --testimonial-shadow: var(--shadow-md);
+  
+  // Transition
+  --testimonial-transition: all 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 📅 TIMELINE
+  // ============================================
+  
+  // Dot/marker
+  --timeline-dot-size: 24px;
+  --timeline-dot-size-sm: 20px;
+  --timeline-dot-size-lg: 32px;
+  --timeline-dot-bg: var(--color-primary);
+  --timeline-dot-border: 4px solid var(--color-bg);
+  
+  // Line/connector
+  --timeline-line-width: 2px;
+  --timeline-line-color: var(--color-border);
+  
+  // Icon
+  --timeline-icon-size: 16px;
+  --timeline-icon-size-sm: 14px;
+  --timeline-icon-size-lg: 20px;
+  
+  // Spacing
+  --timeline-spacing: var(--space-8);
+  --timeline-content-padding: var(--space-4);
+  
+  // Content
+  --timeline-title-font-size: var(--fs-5);
+  --timeline-title-font-weight: var(--font-weight-semibold);
+  --timeline-date-font-size: var(--fs-2);
+  --timeline-date-color: var(--color-text-muted);
+  --timeline-description-font-size: var(--fs-3);
+  
+  // Position (vertical)
+  --timeline-vertical-dot-left: 0;
+  --timeline-vertical-content-left: 40px;
+  --timeline-vertical-content-width: calc(100% - 40px);
+  
+  // Alternating
+  --timeline-alternate-width: 45%;
+  
+  // Transition
+  --timeline-transition: all 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 🎯 PROJECT CARD
+  // ============================================
+  
+  // Image
+  --project-card-image-aspect-ratio: 16 / 10;
+  --project-card-image-radius: var(--radius-lg);
+  
+  // Overlay
+  --project-card-overlay-bg: rgba(0, 0, 0, 0.8);
+  --project-card-overlay-padding: var(--space-6);
+  
+  // Content
+  --project-card-content-padding: var(--space-6);
+  
+  // Title
+  --project-card-title-font-size: var(--fs-6);
+  --project-card-title-font-weight: var(--font-weight-bold);
+  --project-card-title-color: white;
+  
+  // Description
+  --project-card-description-font-size: var(--fs-3);
+  --project-card-description-color: var(--color-text-muted);
+  
+  // Categories
+  --project-card-categories-gap: var(--space-2);
+  
+  // Link
+  --project-card-link-color: var(--color-primary);
+  --project-card-link-font-weight: var(--font-weight-semibold);
+  
+  // Shadow
+  --project-card-shadow: var(--shadow-md);
+  --project-card-hover-shadow: var(--shadow-xl);
+  
+  // Transition
+  --project-card-transition: all 0.4s var(--ease-out);
+  --project-card-overlay-transition: opacity 0.4s var(--ease-out), backdrop-filter 0.4s var(--ease-out);
+  
+  
+  // ============================================
+  // 🖼️ IMAGE COMPARISON
+  // ============================================
+  
+  // Container
+  --image-comparison-border-radius: var(--radius-lg);
+  --image-comparison-height: 400px;
+  --image-comparison-overflow: hidden;
+  
+  // Handle
+  --image-comparison-handle-size: 48px;
+  --image-comparison-handle-bg: white;
+  --image-comparison-handle-border: 2px solid var(--color-primary);
+  --image-comparison-handle-shadow: var(--shadow-lg);
+  
+  // Line
+  --image-comparison-line-width: 3px;
+  --image-comparison-line-color: var(--color-primary);
+  
+  // Labels
+  --image-comparison-label-bg: rgba(0, 0, 0, 0.7);
+  --image-comparison-label-color: white;
+  --image-comparison-label-padding: var(--space-2) var(--space-4);
+  --image-comparison-label-font-size: var(--fs-3);
+  --image-comparison-label-border-radius: var(--radius-md);
+  
+  // Shadows
+  --image-comparison-shadow-left: linear-gradient(to right, rgba(0,0,0,0.3), transparent);
+  --image-comparison-shadow-right: linear-gradient(to left, rgba(0,0,0,0.3), transparent);
+  
+  // Transition
+  --image-comparison-transition: transform 0.1s ease-out;
+  
+  
+  // ============================================
+  // 🎥 VIDEO PLAYER
+  // ============================================
+  
+  // Container
+  --video-player-border-radius: var(--radius-lg);
+  --video-player-bg: var(--color-neutral-900);
+  --video-player-aspect-ratio: 16 / 9;
+  
+  // Thumbnail
+  --video-player-thumbnail-overlay: rgba(0, 0, 0, 0.5);
+  
+  // Play button
+  --video-player-play-button-size: 80px;
+  --video-player-play-button-bg: rgba(0, 0, 0, 0.8);
+  --video-player-play-button-color: white;
+  --video-player-play-button-border-radius: var(--radius-full);
+  
+  // Controls
+  --video-player-controls-height: 50px;
+  --video-player-controls-bg: rgba(0, 0, 0, 0.8);
+  
+  // Shadow
+  --video-player-shadow: var(--shadow-xl);
+  
+  // Transition
+  --video-player-transition: all 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 🔍 LIGHTBOX
+  // ============================================
+  
+  // Backdrop
+  --lightbox-backdrop-bg: rgba(0, 0, 0, 0.9);
+  --lightbox-backdrop-blur: blur(8px);
+  
+  // Content
+  --lightbox-content-padding: var(--space-4);
+  --lightbox-content-max-width: 90vw;
+  --lightbox-content-max-height: 90vh;
+  
+  // Image
+  --lightbox-image-max-width: 100%;
+  --lightbox-image-max-height: 80vh;
+  --lightbox-image-radius: var(--radius-lg);
+  
+  // Navigation buttons
+  --lightbox-nav-size: 48px;
+  --lightbox-nav-color: white;
+  --lightbox-nav-bg: rgba(255, 255, 255, 0.1);
+  --lightbox-nav-hover-bg: rgba(255, 255, 255, 0.2);
+  
+  // Close button
+  --lightbox-close-size: 40px;
+  --lightbox-close-top: var(--space-4);
+  --lightbox-close-right: var(--space-4);
+  
+  // Counter
+  --lightbox-counter-color: white;
+  --lightbox-counter-font-size: var(--fs-3);
+  
+  // Caption
+  --lightbox-caption-color: white;
+  --lightbox-caption-font-size: var(--fs-4);
+  --lightbox-caption-bg: rgba(0, 0, 0, 0.7);
+  --lightbox-caption-padding: var(--space-4);
+  --lightbox-caption-radius: var(--radius-md);
+  
+  // Thumbnails
+  --lightbox-thumbnail-size: 80px;
+  --lightbox-thumbnail-gap: var(--space-2);
+  --lightbox-thumbnail-border-radius: var(--radius-md);
+  --lightbox-thumbnail-border: 2px solid transparent;
+  --lightbox-thumbnail-active-border: 2px solid var(--color-primary);
+  
+  // Zoom
+  --lightbox-zoom-scale: 2;
+  
+  // Transition
+  --lightbox-transition: all 0.3s var(--ease-out);
+  
+  
+  // ============================================
+  // 🎬 HERO SECTION
+  // ============================================
+  
+  // Container
+  --hero-section-min-height: 500px;
+  --hero-section-fullscreen-height: 100vh;
+  --hero-section-padding: var(--space-16);
+  --hero-section-padding-mobile: var(--space-8);
+  
+  // Background
+  --hero-section-bg-overlay: rgba(0, 0, 0, 0.4);
+  
+  // Content
+  --hero-section-content-max-width: 1200px;
+  --hero-section-content-gap: var(--space-6);
+  
+  // Title
+  --hero-section-title-font-size: var(--fs-10);
+  --hero-section-title-font-weight: var(--font-weight-bold);
+  --hero-section-title-color: var(--color-text);
+  --hero-section-title-line-height: var(--leading-tight);
+  
+  // Subtitle
+  --hero-section-subtitle-font-size: var(--fs-5);
+  --hero-section-subtitle-color: var(--color-text-muted);
+  
+  // CTA
+  --hero-section-cta-gap: var(--space-4);
+  
+  // Scroll indicator
+  --hero-section-scroll-indicator-size: 40px;
+  --hero-section-scroll-indicator-color: white;
+  
+  // Shadow
+  --hero-section-shadow: var(--shadow-2xl);
+  
+  // Transition
+  --hero-section-transition: all 0.5s var(--ease-out);
+  
+  
+  // ============================================
+  // 💬 CHAT WIDGET
+  // ============================================
+  
+  // Toggle button
+  --chat-widget-toggle-size: 60px;
+  --chat-widget-toggle-bg: var(--color-primary);
+  --chat-widget-toggle-color: white;
+  --chat-widget-toggle-border-radius: var(--radius-full);
+  --chat-widget-toggle-shadow: var(--shadow-xl);
+  
+  // Window
+  --chat-widget-window-width: 360px;
+  --chat-widget-window-height: 500px;
+  --chat-widget-window-bg: var(--color-surface);
+  --chat-widget-window-border-radius: var(--radius-lg);
+  --chat-widget-window-shadow: var(--shadow-2xl);
+  
+  // Header
+  --chat-widget-header-padding: var(--space-4);
+  --chat-widget-header-bg: var(--color-primary);
+  --chat-widget-header-color: white;
+  --chat-widget-title-font-size: var(--fs-5);
+  
+  // Messages
+  --chat-widget-messages-padding: var(--space-4);
+  --chat-widget-messages-gap: var(--space-3);
+  --chat-widget-message-border-radius: var(--radius-md);
+  --chat-widget-message-max-width: 80%;
+  
+  // Bot message
+  --chat-widget-bot-bg: var(--color-neutral-100);
+  --chat-widget-bot-color: var(--color-text);
+  
+  // User message
+  --chat-widget-user-bg: var(--color-primary);
+  --chat-widget-user-color: white;
+  
+  // Input
+  --chat-widget-input-padding: var(--space-4);
+  --chat-widget-input-border-radius: var(--radius-md);
+  --chat-widget-input-border: 1px solid var(--color-border);
+  
+  // Send button
+  --chat-widget-send-size: 40px;
+  --chat-widget-send-bg: var(--color-primary);
+  --chat-widget-send-color: white;
+  
+  // Position
+  --chat-widget-position-offset: var(--space-6);
+  
+  // Transition
+  --chat-widget-transition: all 0.3s var(--ease-out);
+}
+
+// ============================================
+// 🌙 DARK MODE - Component Tokens
+// ============================================
+
+[data-theme="dark"] {
+  // Les tokens de composants héritent automatiquement des tokens globaux
+  // Mais on peut les surcharger si besoin spécifique
+  
+  // Exemple : Card avec fond légèrement différent en dark mode
+  --card-bg: var(--color-surface);
+  --card-hover-bg: rgba(255, 255, 255, 0.05);
+  
+  // Modal backdrop plus sombre
+  --modal-backdrop-bg: rgba(0, 0, 0, 0.7);
+  
+  // Table colors pour dark mode
+  --table-header-bg: var(--color-neutral-800);
+  --table-row-hover-bg: rgba(255, 255, 255, 0.05);
+  --table-striped-bg: rgba(255, 255, 255, 0.03);
+}
+

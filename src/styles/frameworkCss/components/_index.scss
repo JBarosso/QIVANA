@@ -1,0 +1,40 @@
+// ============================================
+// 📦 COMPONENTS INDEX
+// ============================================
+// Fichier central qui forward tous les composants
+// Permet d'importer tous les composants avec un seul @use 'components'
+
+@forward 'accordion';
+@forward 'alert';
+@forward 'badge';
+@forward 'button';
+@forward 'card';
+@forward 'cart-summary';
+@forward 'chat-widget';
+@forward 'checkbox';
+@forward 'custom-select';
+@forward 'filter-sidebar';
+@forward 'gallery';
+@forward 'hero-section';
+@forward 'icon';
+@forward 'image-comparison';
+@forward 'input';
+@forward 'lightbox';
+@forward 'modal';
+@forward 'navigation';
+@forward 'price-display';
+@forward 'product-card';
+@forward 'progress-bar';
+@forward 'project-card';
+@forward 'radio';
+@forward 'rating';
+@forward 'select';
+@forward 'social-share';
+@forward 'table';
+@forward 'tabs';
+@forward 'testimonial';
+@forward 'textarea';
+@forward 'theme-toggle';
+@forward 'timeline';
+@forward 'video-player';
+

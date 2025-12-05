@@ -1,0 +1,34 @@
+// ============================================
+// 💰 PRICE DISPLAY
+// ============================================
+// Note: Layout (display, flex, gap) géré par les classes utilities CSS
+
+.price-display__current {
+  font-size: var(--fs-5);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.price-display__original {
+  font-size: var(--fs-3);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.price-display__discount {
+  font-size: var(--fs-2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-error);
+  background: hsl(var(--color-error-hsl), 0.1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.price-display--sm .price-display__current {
+  font-size: var(--fs-3);
+}
+
+.price-display--lg .price-display__current {
+  font-size: var(--fs-7);
+}
+

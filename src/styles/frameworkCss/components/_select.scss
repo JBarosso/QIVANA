@@ -1,0 +1,253 @@
+// ============================================
+// 🔽 SELECT COMPONENT STYLES
+// ============================================
+// Tous les styles du composant Select
+// Utilise les component tokens de _component-tokens.scss
+
+@use '../tokens' as *;
+
+// ============================================
+// BASE STYLES
+// ============================================
+
+.select-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+// Label
+.select-label {
+  display: inline-block;
+  font-size: var(--select-label-font-size);
+  font-weight: var(--select-label-font-weight);
+  color: var(--color-text);
+  margin-bottom: var(--select-label-margin-bottom);
+  
+  // Visually hidden (pour accessibilité)
+  &.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+// Required indicator
+.select-required {
+  color: var(--select-required-color);
+  margin-left: 0.25rem;
+  font-weight: 600;
+}
+
+// Container (pour positionner l'icône)
+.select-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+// Select field
+.select {
+  // Layout
+  width: 100%;
+  min-height: var(--select-min-height);
+  display: block;
+  
+  // Spacing
+  padding-inline: var(--select-padding-x);
+  padding-block: var(--select-padding-y);
+  padding-right: calc(var(--select-padding-x) + var(--select-icon-size) + var(--select-icon-spacing));
+  
+  // Typography
+  font-family: inherit;
+  font-size: var(--select-font-size);
+  font-weight: var(--select-font-weight);
+  line-height: var(--select-line-height);
+  
+  // Apparence
+  background: var(--select-bg);
+  color: var(--select-text);
+  border: var(--select-border-width) solid var(--select-border);
+  border-radius: var(--select-border-radius);
+  
+  // Reset de l'apparence native
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  
+  // Curseur
+  cursor: pointer;
+  
+  // Animation
+  transition: var(--select-transition);
+  
+  // Focus state
+  &:focus {
+    outline: none;
+    border-color: var(--select-focus-border);
+    box-shadow: var(--select-focus-ring);
+  }
+  
+  // Focus visible (navigation clavier)
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  
+  // Disabled state
+  &:disabled {
+    background: var(--select-disabled-bg);
+    color: var(--select-disabled-text);
+    border-color: var(--select-disabled-border);
+    cursor: not-allowed;
+    opacity: var(--select-disabled-opacity);
+  }
+  
+  // Multiple select
+  &.select-multiple {
+    padding-right: var(--select-padding-x);  // Pas besoin d'espace pour l'icône
+    min-height: auto;
+    cursor: default;
+    
+    // Options dans le select multiple
+    option {
+      padding: var(--space-2);
+      
+      &:checked {
+        background: var(--select-option-selected-bg);
+        color: var(--select-option-selected-color);
+      }
+    }
+  }
+  
+  // ========== STATES ==========
+  
+  // Error state
+  &.select-error {
+    border-color: var(--select-error-border);
+    
+    &:focus {
+      border-color: var(--select-error-border);
+      box-shadow: var(--select-error-ring);
+    }
+  }
+  
+  // Success state
+  &.select-success {
+    border-color: var(--select-success-border);
+    
+    &:focus {
+      border-color: var(--select-success-border);
+      box-shadow: var(--select-success-ring);
+    }
+  }
+  
+  // ========== SIZES ==========
+  
+  &.select-sm {
+    padding-inline: var(--select-padding-x-sm);
+    padding-block: var(--select-padding-y-sm);
+    padding-right: calc(var(--select-padding-x-sm) + var(--select-icon-size-sm) + var(--select-icon-spacing));
+    font-size: var(--select-font-size-sm);
+    border-radius: var(--select-border-radius-sm);
+    min-height: var(--select-min-height-sm);
+    
+    &.select-multiple {
+      padding-right: var(--select-padding-x-sm);
+    }
+  }
+  
+  &.select-lg {
+    padding-inline: var(--select-padding-x-lg);
+    padding-block: var(--select-padding-y-lg);
+    padding-right: calc(var(--select-padding-x-lg) + var(--select-icon-size-lg) + var(--select-icon-spacing));
+    font-size: var(--select-font-size-lg);
+    border-radius: var(--select-border-radius-lg);
+    min-height: var(--select-min-height-lg);
+    
+    &.select-multiple {
+      padding-right: var(--select-padding-x-lg);
+    }
+  }
+}
+
+// Dropdown icon (chevron)
+.select-icon {
+  position: absolute;
+  right: var(--select-padding-x);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--select-icon-size);
+  height: var(--select-icon-size);
+  color: var(--select-icon-color);
+  pointer-events: none;                      // Permet de cliquer à travers l'icône
+  transition: transform 200ms ease;
+  
+  // Rotation au focus
+  .select:focus ~ & {
+    transform: translateY(-50%) rotate(180deg);
+  }
+  
+  // Size variants
+  .select-wrapper-sm & {
+    width: var(--select-icon-size-sm);
+    height: var(--select-icon-size-sm);
+    right: var(--select-padding-x-sm);
+  }
+  
+  .select-wrapper-lg & {
+    width: var(--select-icon-size-lg);
+    height: var(--select-icon-size-lg);
+    right: var(--select-padding-x-lg);
+  }
+  
+  // Disabled state
+  .select:disabled ~ & {
+    opacity: 0.5;
+  }
+}
+
+// ============================================
+// HELPER TEXT
+// ============================================
+
+.select-helper {
+  font-size: var(--select-helper-font-size);
+  color: var(--color-text-muted);
+  margin-top: var(--select-helper-margin-top);
+  line-height: 1.4;
+  
+  // Error state
+  &.select-helper-error {
+    color: var(--select-error-text);
+  }
+  
+  // Success state
+  &.select-helper-success {
+    color: var(--select-success-text);
+  }
+}
+
+// ============================================
+// OPTIONS STYLING (limité avec native select)
+// ============================================
+
+option {
+  padding: var(--select-option-padding-y) var(--select-option-padding-x);
+  
+  &:disabled {
+    opacity: var(--select-option-disabled-opacity);
+  }
+}
+
+optgroup {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
