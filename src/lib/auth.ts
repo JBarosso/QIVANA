@@ -127,19 +127,27 @@ export async function signOut(supabase: SupabaseClient<Database>) {
 
 /**
  * Check if user is authenticated (server-side)
+ * Redirects to /auth/login if not authenticated
+ * To be used in Astro pages: const { user, profile } = await requireAuth(Astro);
  */
-export async function requireAuth(supabase: SupabaseClient<Database>) {
+export async function requireAuth(Astro: any) {
+  const supabase = Astro.locals.supabase;
+  
+  if (!supabase) {
+    throw new Error('Supabase client not found in Astro.locals. Make sure middleware is configured.');
+  }
+
   const user = await getUser(supabase);
 
   if (!user) {
-    return {
-      authenticated: false,
-      user: null,
-    };
+    return Astro.redirect('/auth/login');
   }
 
+  // Also fetch profile
+  const profile = await getProfile(supabase, user.id);
+
   return {
-    authenticated: true,
     user,
+    profile,
   };
 }

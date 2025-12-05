@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAuth } from '../../lib/auth';
+import { getQuizSession } from '../../lib/quiz';
+import QuizPlayer from '../../components/quiz/QuizPlayer';
+
+// Protection de la route
+const { user } = await requireAuth(Astro);
+
+// Récupérer l'ID de session
+const sessionId = Astro.url.searchParams.get('session');
+
+if (!sessionId) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Charger la session
+const session = await getQuizSession(Astro.locals.supabase, sessionId);
+
+if (!session) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Vérifier que la session appartient à l'utilisateur
+if (session.user_id !== user.id) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Si la session est déjà terminée, rediriger vers les résultats
+if (session.completed_at) {
+  return Astro.redirect(`/quiz/results?session=${sessionId}`);
+}
+
+// Charger les questions
+const { data: questions, error } = await Astro.locals.supabase
+  .from('questions')
+  .select('*')
+  .in('id', session.questions_ids);
+
+if (error || !questions) {
+  console.error('Error loading questions:', error);
+  return Astro.redirect('/quiz/setup');
+}
+
+// Ordonner les questions selon l'ordre de questions_ids
+const orderedQuestions = session.questions_ids
+  .map((id) => questions.find((q) => q.id === id))
+  .filter(Boolean);
+---
+
+<BaseLayout title="Quiz en cours - Qivana">
+  <div class="quiz-play">
+    <QuizPlayer
+      client:load
+      sessionId={sessionId}
+      questions={orderedQuestions}
+      currentAnswers={session.answers}
+    />
+  </div>
+</BaseLayout>
+
+<style lang="scss">
+@use '../../styles/pages/quiz' as *;
+</style>

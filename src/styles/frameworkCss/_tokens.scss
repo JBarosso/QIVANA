@@ -331,18 +331,49 @@ $z-tooltip: 700 !default;
   --color-success-l: #{$color-success-l};
   --color-success-hsl: var(--color-success-h), var(--color-success-s), var(--color-success-l);
   --color-success: hsl(var(--color-success-hsl));
+  --color-success-s-light: #{$color-success-s-light};
+  --color-success-l-light: #{$color-success-l-light};
+  --color-success-light: hsl(var(--color-success-h), var(--color-success-s-light), var(--color-success-l-light));
+  --color-success-s-lighter: #{$color-success-s-lighter};
+  --color-success-l-lighter: #{$color-success-l-lighter};
+  --color-success-lighter: hsl(var(--color-success-h), var(--color-success-s-lighter), var(--color-success-l-lighter));
   
   --color-warning-h: #{$color-warning-h};
   --color-warning-s: #{$color-warning-s};
   --color-warning-l: #{$color-warning-l};
   --color-warning-hsl: var(--color-warning-h), var(--color-warning-s), var(--color-warning-l);
   --color-warning: hsl(var(--color-warning-hsl));
+  --color-warning-s-light: #{$color-warning-s-light};
+  --color-warning-l-light: #{$color-warning-l-light};
+  --color-warning-light: hsl(var(--color-warning-h), var(--color-warning-s-light), var(--color-warning-l-light));
+  --color-warning-s-lighter: #{$color-warning-s-lighter};
+  --color-warning-l-lighter: #{$color-warning-l-lighter};
+  --color-warning-lighter: hsl(var(--color-warning-h), var(--color-warning-s-lighter), var(--color-warning-l-lighter));
   
   --color-error-h: #{$color-error-h};
   --color-error-s: #{$color-error-s};
   --color-error-l: #{$color-error-l};
   --color-error-hsl: var(--color-error-h), var(--color-error-s), var(--color-error-l);
   --color-error: hsl(var(--color-error-hsl));
+  --color-error-s-light: #{$color-error-s-light};
+  --color-error-l-light: #{$color-error-l-light};
+  --color-error-light: hsl(var(--color-error-h), var(--color-error-s-light), var(--color-error-l-light));
+  --color-error-s-lighter: #{$color-error-s-lighter};
+  --color-error-l-lighter: #{$color-error-l-lighter};
+  --color-error-lighter: hsl(var(--color-error-h), var(--color-error-s-lighter), var(--color-error-l-lighter));
+  
+  // Alias: danger = error
+  --color-danger-h: var(--color-error-h);
+  --color-danger-s: var(--color-error-s);
+  --color-danger-l: var(--color-error-l);
+  --color-danger-hsl: var(--color-error-hsl);
+  --color-danger: var(--color-error);
+  --color-danger-s-light: var(--color-error-s-light);
+  --color-danger-l-light: var(--color-error-l-light);
+  --color-danger-light: var(--color-error-light);
+  --color-danger-s-lighter: var(--color-error-s-lighter);
+  --color-danger-l-lighter: var(--color-error-l-lighter);
+  --color-danger-lighter: var(--color-error-lighter);
   
   --color-info-h: #{$color-info-h};
   --color-info-s: #{$color-info-s};

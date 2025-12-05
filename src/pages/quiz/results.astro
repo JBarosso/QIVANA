@@ -1,0 +1,151 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAuth } from '../../lib/auth';
+import { getQuizSession, completeQuizSession } from '../../lib/quiz';
+
+// Protection de la route
+const { user, profile } = await requireAuth(Astro);
+
+// Récupérer l'ID de session
+const sessionId = Astro.url.searchParams.get('session');
+
+if (!sessionId) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Charger la session
+const session = await getQuizSession(Astro.locals.supabase, sessionId);
+
+if (!session) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Vérifier que la session appartient à l'utilisateur
+if (session.user_id !== user.id) {
+  return Astro.redirect('/quiz/setup');
+}
+
+// Si pas encore terminée, marquer comme complétée
+if (!session.completed_at) {
+  await completeQuizSession(Astro.locals.supabase, sessionId);
+}
+
+// Charger les questions pour afficher les détails
+const { data: questions } = await Astro.locals.supabase
+  .from('questions')
+  .select('*')
+  .in('id', session.questions_ids);
+
+// Calculer les stats
+const totalQuestions = session.questions_ids.length;
+const answeredQuestions = session.answers.filter((a) => a !== null).length;
+const correctAnswers = session.answers.filter((answer, index) => {
+  if (answer === null) return false;
+  const question = questions?.find((q) => q.id === session.questions_ids[index]);
+  return question && answer === question.correct_index;
+}).length;
+
+const incorrectAnswers = answeredQuestions - correctAnswers;
+const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+const finalScore = Math.round(session.score * 100) / 100;
+
+// Déterminer le rank basé sur le score
+let rank = '🥉 Bronze';
+let rankClass = 'bronze';
+if (accuracy >= 90) {
+  rank = '🏆 Légende';
+  rankClass = 'legend';
+} else if (accuracy >= 75) {
+  rank = '🥇 Or';
+  rankClass = 'gold';
+} else if (accuracy >= 50) {
+  rank = '🥈 Argent';
+  rankClass = 'silver';
+}
+---
+
+<BaseLayout title="Résultats du Quiz - Qivana">
+  <div class="quiz-results">
+    <div class="quiz-results__container">
+      {/* Header avec rank */}
+      <div class={`quiz-results__header quiz-results__header--${rankClass}`}>
+        <div class="quiz-results__rank">{rank}</div>
+        <h1 class="quiz-results__title">Quiz Terminé !</h1>
+        <p class="quiz-results__subtitle">
+          {session.universe.toUpperCase()} • {session.difficulty === 'easy' ? 'Facile' : session.difficulty === 'medium' ? 'Moyen' : 'Difficile'}
+        </p>
+      </div>
+
+      {/* Score principal */}
+      <div class="quiz-results__score-card">
+        <div class="quiz-results__score-value">{finalScore}</div>
+        <div class="quiz-results__score-label">Points totaux</div>
+      </div>
+
+      {/* Stats grid */}
+      <div class="quiz-results__stats">
+        <div class="stat-card stat-card--success">
+          <div class="stat-card__icon">✓</div>
+          <div class="stat-card__value">{correctAnswers}</div>
+          <div class="stat-card__label">Bonnes réponses</div>
+        </div>
+
+        <div class="stat-card stat-card--danger">
+          <div class="stat-card__icon">✗</div>
+          <div class="stat-card__value">{incorrectAnswers}</div>
+          <div class="stat-card__label">Mauvaises réponses</div>
+        </div>
+
+        <div class="stat-card stat-card--primary">
+          <div class="stat-card__icon">🎯</div>
+          <div class="stat-card__value">{accuracy}%</div>
+          <div class="stat-card__label">Précision</div>
+        </div>
+      </div>
+
+      {/* Messages motivants */}
+      <div class="quiz-results__message">
+        {accuracy >= 90 && (
+          <p>🔥 Incroyable ! Tu es un véritable expert de {session.universe} !</p>
+        )}
+        {accuracy >= 75 && accuracy < 90 && (
+          <p>👏 Excellent travail ! Continue comme ça !</p>
+        )}
+        {accuracy >= 50 && accuracy < 75 && (
+          <p>💪 Pas mal ! Encore un peu de pratique et ce sera parfait !</p>
+        )}
+        {accuracy < 50 && (
+          <p>😊 Bon début ! Recommence pour améliorer ton score !</p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div class="quiz-results__actions">
+        <a href="/quiz/setup" class="btn btn--primary btn--large">
+          Nouveau Quiz 🚀
+        </a>
+        <a href="/profile" class="btn btn--secondary btn--large">
+          Mon Profil
+        </a>
+      </div>
+
+      {/* Share (optionnel pour plus tard) */}
+      <div class="quiz-results__share">
+        <p class="quiz-results__share-label">Partage ton score !</p>
+        <div class="quiz-results__share-buttons">
+          <button class="share-btn share-btn--twitter" disabled>
+            🐦 Twitter
+          </button>
+          <button class="share-btn share-btn--discord" disabled>
+            💬 Discord
+          </button>
+        </div>
+        <p class="quiz-results__share-note">(Bientôt disponible)</p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style lang="scss">
+@use '../../styles/pages/quiz' as *;
+</style>

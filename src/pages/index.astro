@@ -30,7 +30,10 @@ const user = await getUser(Astro.locals.supabase);
           </div>
         ) : (
           <div class="hero__cta">
-            <a href="/profile" class="btn btn--primary">
+            <a href="/quiz/setup" class="btn btn--primary">
+              <span class="btn__text">🎮 Jouer</span>
+            </a>
+            <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
             </a>
             <a href="/auth/logout" class="btn btn--outline">
@@ -41,7 +44,8 @@ const user = await getUser(Astro.locals.supabase);
 
         <p class="hero__status">
           ✅ Milestone 1 - Database Schema Complete<br>
-          ✅ Milestone 2 - Authentication Complete
+          ✅ Milestone 2 - Authentication Complete<br>
+          ✅ Milestone 3 - Core Quiz Engine (DB Quizzes)
         </p>
       </section>
     </div>
@@ -56,11 +60,7 @@ const user = await getUser(Astro.locals.supabase);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(
-      135deg,
-      hsl(var(--color-background-h), var(--color-background-s), 8%) 0%,
-      hsl(var(--color-background-h), var(--color-background-s), 12%) 100%
-    );
+    background: linear-gradient(135deg, var(--color-neutral-900) 0%, var(--color-neutral-800) 100%);
   }
 
   .container {

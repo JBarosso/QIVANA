@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAuth } from '../../lib/auth';
+
+// Protection de la route
+const { user, profile } = await requireAuth(Astro);
+
+// Définir les univers et difficultés disponibles
+const universes = [
+  { id: 'anime', label: '🎌 Anime', icon: '🎌' },
+  { id: 'manga', label: '📚 Manga', icon: '📚' },
+  { id: 'comics', label: '🦸 Comics', icon: '🦸' },
+  { id: 'games', label: '🎮 Jeux Vidéo', icon: '🎮' },
+  { id: 'movies', label: '🎬 Films', icon: '🎬' },
+  { id: 'series', label: '📺 Séries', icon: '📺' },
+  { id: 'other', label: '🌟 Autre', icon: '🌟' },
+];
+
+const difficulties = [
+  { id: 'easy', label: 'Facile', description: 'Pour débuter', color: 'success' },
+  { id: 'medium', label: 'Moyen', description: 'Un peu de challenge', color: 'warning' },
+  { id: 'hard', label: 'Difficile', description: 'Pour les experts', color: 'danger' },
+];
+---
+
+<BaseLayout title="Nouveau Quiz - Qivana">
+  <div class="quiz-setup">
+    <div class="quiz-setup__container">
+      <header class="quiz-setup__header">
+        <h1 class="quiz-setup__title">Nouveau Quiz</h1>
+        <p class="quiz-setup__subtitle">Choisis ton univers et ta difficulté</p>
+      </header>
+
+      <form method="POST" action="/api/quiz/start" class="quiz-setup__form">
+        <!-- Sélection Univers -->
+        <section class="quiz-setup__section">
+          <h2 class="quiz-setup__section-title">
+            <span class="quiz-setup__section-icon">🌍</span>
+            Univers
+          </h2>
+          <div class="quiz-setup__grid">
+            {universes.map((universe) => (
+              <label class="quiz-card">
+                <input
+                  type="radio"
+                  name="universe"
+                  value={universe.id}
+                  required
+                  class="quiz-card__input"
+                />
+                <div class="quiz-card__content">
+                  <span class="quiz-card__icon">{universe.icon}</span>
+                  <span class="quiz-card__label">{universe.label}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Sélection Difficulté -->
+        <section class="quiz-setup__section">
+          <h2 class="quiz-setup__section-title">
+            <span class="quiz-setup__section-icon">⚡</span>
+            Difficulté
+          </h2>
+          <div class="quiz-setup__difficulty-grid">
+            {difficulties.map((difficulty) => (
+              <label class={`difficulty-card difficulty-card--${difficulty.color}`}>
+                <input
+                  type="radio"
+                  name="difficulty"
+                  value={difficulty.id}
+                  required
+                  class="difficulty-card__input"
+                />
+                <div class="difficulty-card__content">
+                  <span class="difficulty-card__label">{difficulty.label}</span>
+                  <span class="difficulty-card__description">{difficulty.description}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Info Plan -->
+        <div class="quiz-setup__info">
+          <div class="quiz-setup__info-icon">ℹ️</div>
+          <div class="quiz-setup__info-content">
+            <strong>Mode Freemium</strong>
+            <p>10 questions • Timer 10s • Step-by-step</p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="quiz-setup__actions">
+          <a href="/" class="btn btn--secondary">Annuler</a>
+          <button type="submit" class="btn btn--primary">
+            Lancer le Quiz 🚀
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</BaseLayout>
+
+<style lang="scss">
+@use '../../styles/pages/quiz' as *;
+</style>
