@@ -1,13 +1,13 @@
 ---
 // ============================================
 // HOME PAGE
-// Temporary placeholder for Milestone 0
 // ============================================
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getUser } from '@/lib/auth';
 
-// Astro 5: Prerender cette page en static (SSG)
-export const prerender = true;
+// Check if user is authenticated
+const user = await getUser(Astro.locals.supabase);
 ---
 
 <BaseLayout title="Qivana - Accueil">
@@ -18,8 +18,30 @@ export const prerender = true;
         <p class="hero__subtitle">
           La plateforme de quiz geek alimentée par l'IA
         </p>
+        
+        {!user ? (
+          <div class="hero__cta">
+            <a href="/auth/signup" class="btn btn--primary">
+              <span class="btn__text">Créer un compte</span>
+            </a>
+            <a href="/auth/login" class="btn btn--secondary">
+              <span class="btn__text">Se connecter</span>
+            </a>
+          </div>
+        ) : (
+          <div class="hero__cta">
+            <a href="/profile" class="btn btn--primary">
+              <span class="btn__text">Mon profil</span>
+            </a>
+            <a href="/auth/logout" class="btn btn--outline">
+              <span class="btn__text">Se déconnecter</span>
+            </a>
+          </div>
+        )}
+
         <p class="hero__status">
-          🚧 Milestone 0 - Project Initialization Complete
+          ✅ Milestone 1 - Database Schema Complete<br>
+          ✅ Milestone 2 - Authentication Complete
         </p>
       </section>
     </div>
@@ -27,11 +49,24 @@ export const prerender = true;
 </BaseLayout>
 
 <style lang="scss">
+  @use '@/styles/pages/auth';
+
   .home {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--color-background-h), var(--color-background-s), 8%) 0%,
+      hsl(var(--color-background-h), var(--color-background-s), 12%) 100%
+    );
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--space-4);
   }
 
   .hero {
@@ -40,7 +75,10 @@ export const prerender = true;
     &__title {
       font-family: var(--font-secondary);
       font-size: var(--fs-10);
-      color: var(--color-primary);
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin-bottom: var(--space-4);
       font-weight: var(--font-weight-bold);
     }
@@ -52,10 +90,19 @@ export const prerender = true;
       margin-bottom: var(--space-8);
     }
 
+    &__cta {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: center;
+      margin-bottom: var(--space-8);
+      flex-wrap: wrap;
+    }
+
     &__status {
-      font-size: var(--fs-3);
-      color: var(--color-accent);
+      font-size: var(--fs-2);
+      color: var(--color-text-muted);
       font-weight: var(--font-weight-medium);
+      line-height: 1.6;
     }
   }
 </style>

@@ -1,0 +1,269 @@
+---
+// ============================================
+// PROFILE PAGE (Protected)
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getUser, getProfile } from '@/lib/auth';
+
+// Require authentication
+const user = await getUser(Astro.locals.supabase);
+if (!user) {
+  return Astro.redirect('/auth/login');
+}
+
+// Fetch user profile
+const profile = await getProfile(Astro.locals.supabase, user.id);
+
+if (!profile) {
+  return Astro.redirect('/auth/login?error=Profil+introuvable');
+}
+---
+
+<BaseLayout
+  title={`${profile.pseudo} - Profile`}
+  description="Votre profil Qivana"
+>
+  <main class="profile-page">
+    <div class="container">
+      <div class="profile-card">
+        <div class="profile-card__header">
+          <div class="profile-avatar">
+            {profile.avatar ? (
+              <img
+                src={profile.avatar}
+                alt={`Avatar de ${profile.pseudo}`}
+                class="profile-avatar__img"
+              />
+            ) : (
+              <div class="profile-avatar__placeholder">
+                {profile.pseudo.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div class="profile-info">
+            <h1 class="profile-info__name">{profile.pseudo}</h1>
+            <p class="profile-info__email">{user.email}</p>
+            <div class="profile-badge">
+              <span class="profile-badge__label">
+                {profile.plan === 'freemium' && '🆓 Freemium'}
+                {profile.plan === 'premium' && '⭐ Premium'}
+                {profile.plan === 'premium+' && '💎 Premium+'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-card__stats">
+          <div class="stat-card">
+            <div class="stat-card__icon">🏆</div>
+            <div class="stat-card__value">{profile.points}</div>
+            <div class="stat-card__label">Points</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card__icon">🎯</div>
+            <div class="stat-card__value">{profile.ai_quizzes_used_this_month}</div>
+            <div class="stat-card__label">Quiz AI ce mois</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card__icon">🎮</div>
+            <div class="stat-card__value">-</div>
+            <div class="stat-card__label">Quiz joués</div>
+          </div>
+        </div>
+
+        <div class="profile-card__actions">
+          <a href="/" class="btn btn--secondary">
+            <span class="btn__text">Retour à l'accueil</span>
+          </a>
+          <a href="/auth/logout" class="btn btn--outline">
+            <span class="btn__text">Se déconnecter</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h2 class="profile-section__title">Informations du compte</h2>
+        <div class="info-list">
+          <div class="info-item">
+            <span class="info-item__label">Inscrit le</span>
+            <span class="info-item__value">
+              {new Date(profile.created_at).toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="info-item__label">Plan</span>
+            <span class="info-item__value capitalize">{profile.plan}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-item__label">Quota AI</span>
+            <span class="info-item__value">
+              {profile.plan === 'freemium' && '0 quiz AI/mois'}
+              {profile.plan === 'premium' && '10 quiz AI/mois'}
+              {profile.plan === 'premium+' && 'Illimité'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .profile-page {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+  }
+
+  .profile-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--space-6);
+  }
+
+  .profile-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .profile-avatar {
+    flex-shrink: 0;
+  }
+
+  .profile-avatar__img,
+  .profile-avatar__placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .profile-avatar__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: var(--color-text-on-primary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .profile-info__name {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-7);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .profile-info__email {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  .profile-badge {
+    display: inline-flex;
+  }
+
+  .profile-badge__label {
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-accent);
+    color: var(--color-text);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-1);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .profile-card__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .stat-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-4);
+    text-align: center;
+  }
+
+  .stat-card__icon {
+    font-size: var(--fs-8);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat-card__value {
+    font-size: var(--fs-7);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    margin-bottom: var(--space-1);
+  }
+
+  .stat-card__label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .profile-card__actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .profile-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+
+  .profile-section__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-5);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+  }
+
+  .info-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3);
+    background: var(--color-background);
+    border-radius: var(--radius-2);
+  }
+
+  .info-item__label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .info-item__value {
+    font-size: var(--fs-2);
+    color: var(--color-text);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .capitalize {
+    text-transform: capitalize;
+  }
+</style>

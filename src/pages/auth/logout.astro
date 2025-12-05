@@ -1,0 +1,18 @@
+---
+// ============================================
+// LOGOUT PAGE
+// ============================================
+// Signs out the user and redirects to home
+
+import { signOut } from '@/lib/auth';
+
+// Sign out the user
+try {
+  await signOut(Astro.locals.supabase);
+} catch (error) {
+  console.error('Logout error:', error);
+}
+
+// Redirect to home
+return Astro.redirect('/');
+---

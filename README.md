@@ -75,6 +75,7 @@ Documentation complète dans le dossier `/docs/` :
 ### Technical Documentation
 - **docs/DATABASE_SCHEMA.md** → Database architecture & relations
 - **docs/RLS_POLICIES.md** → Row Level Security policies
+- **docs/AUTH_SETUP.md** → Authentication & OAuth configuration
 - **docs/ASTRO_5_MIGRATION.md** → Astro 5 migration notes
 
 ### Auxiliary

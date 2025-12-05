@@ -1,0 +1,135 @@
+---
+// ============================================
+// LOGIN PAGE
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import OAuthButtons from '@/components/auth/OAuthButtons.astro';
+import { getUser } from '@/lib/auth';
+
+// Redirect if already authenticated
+const user = await getUser(Astro.locals.supabase);
+if (user) {
+  return Astro.redirect('/profile');
+}
+
+let error = Astro.url.searchParams.get('error');
+const success = Astro.url.searchParams.get('success');
+
+// Handle form submission (server-side)
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const email = formData.get('email')?.toString();
+  const password = formData.get('password')?.toString();
+
+  if (email && password) {
+    const { error: signInError } = await Astro.locals.supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      error = signInError.message;
+    } else {
+      // Success: redirect to profile
+      return Astro.redirect('/profile');
+    }
+  } else {
+    error = 'Email et mot de passe requis';
+  }
+}
+---
+
+<BaseLayout
+  title="Connexion - Qivana"
+  description="Connectez-vous à votre compte Qivana"
+>
+  <main class="auth-page">
+    <div class="container">
+      <div class="auth-card">
+        <div class="auth-card__header">
+          <h1 class="auth-card__title">Bienvenue sur Qivana</h1>
+          <p class="auth-card__subtitle">
+            Connectez-vous pour jouer à des quiz geek
+          </p>
+        </div>
+
+        {success && (
+          <div class="auth-card__success" role="alert">
+            <p>✅ {success}</p>
+          </div>
+        )}
+
+        {error && (
+          <div class="auth-card__error" role="alert">
+            <p>❌ {error}</p>
+          </div>
+        )}
+
+        <form class="auth-form" method="post">
+          <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-input"
+              placeholder="ton.email@exemple.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Mot de passe</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            />
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block">
+            <span class="btn__text">Se connecter</span>
+          </button>
+
+          <div class="auth-form__footer">
+            <a href="/auth/reset-password" class="auth-link auth-link--small">
+              Mot de passe oublié ?
+            </a>
+          </div>
+        </form>
+
+        <div class="auth-divider">
+          <span class="auth-divider__text">ou continuer avec</span>
+        </div>
+
+        <OAuthButtons redirectTo="/profile" />
+
+        <div class="auth-card__footer">
+          <p class="auth-card__footer-text">
+            Pas encore de compte ?
+            <a href="/auth/signup" class="auth-link">Créer un compte</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @use '@/styles/pages/auth';
+
+  .auth-form__footer {
+    margin-top: var(--space-3);
+    text-align: center;
+  }
+
+  .auth-link--small {
+    font-size: var(--fs-1);
+  }
+</style>

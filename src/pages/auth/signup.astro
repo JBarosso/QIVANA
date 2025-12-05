@@ -1,0 +1,165 @@
+---
+// ============================================
+// SIGNUP PAGE
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import OAuthButtons from '@/components/auth/OAuthButtons.astro';
+import { getUser } from '@/lib/auth';
+
+// Redirect if already authenticated
+const user = await getUser(Astro.locals.supabase);
+if (user) {
+  return Astro.redirect('/profile');
+}
+
+let error = Astro.url.searchParams.get('error');
+let success = Astro.url.searchParams.get('success');
+
+// Handle form submission (server-side)
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const pseudo = formData.get('pseudo')?.toString();
+  const email = formData.get('email')?.toString();
+  const password = formData.get('password')?.toString();
+  const passwordConfirm = formData.get('password-confirm')?.toString();
+
+  if (!pseudo || !email || !password || !passwordConfirm) {
+    error = 'Tous les champs sont requis';
+  } else if (password !== passwordConfirm) {
+    error = 'Les mots de passe ne correspondent pas';
+  } else {
+    const { error: signUpError } = await Astro.locals.supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          pseudo,
+        },
+      },
+    });
+
+    if (signUpError) {
+      error = signUpError.message;
+    } else {
+      // Success: show success message
+      success = 'true';
+    }
+  }
+}
+---
+
+<BaseLayout
+  title="Inscription - Qivana"
+  description="Créez votre compte Qivana"
+>
+  <main class="auth-page">
+    <div class="container">
+      <div class="auth-card">
+        <div class="auth-card__header">
+          <h1 class="auth-card__title">Rejoins la communauté Qivana</h1>
+          <p class="auth-card__subtitle">
+            Crée ton compte et défie tes amis sur des quiz geek
+          </p>
+        </div>
+
+        {success && (
+          <div class="auth-card__success" role="alert">
+            <p>✅ Compte créé ! Vérifie ton email pour confirmer ton inscription.</p>
+          </div>
+        )}
+
+        {error && (
+          <div class="auth-card__error" role="alert">
+            <p>❌ {error}</p>
+          </div>
+        )}
+
+        <form class="auth-form" method="post">
+          <div class="form-group">
+            <label for="pseudo" class="form-label">Pseudo</label>
+            <input
+              type="text"
+              id="pseudo"
+              name="pseudo"
+              class="form-input"
+              placeholder="NeoGamer42"
+              required
+              minlength="3"
+              maxlength="20"
+              pattern="[a-zA-Z0-9_-]+"
+              title="Lettres, chiffres, tirets et underscores uniquement"
+              autocomplete="username"
+            />
+            <small class="form-hint">3-20 caractères, lettres et chiffres uniquement</small>
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-input"
+              placeholder="ton.email@exemple.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Mot de passe</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input"
+              placeholder="••••••••"
+              required
+              minlength="8"
+              autocomplete="new-password"
+            />
+            <small class="form-hint">Minimum 8 caractères</small>
+          </div>
+
+          <div class="form-group">
+            <label for="password-confirm" class="form-label">
+              Confirme ton mot de passe
+            </label>
+            <input
+              type="password"
+              id="password-confirm"
+              name="password-confirm"
+              class="form-input"
+              placeholder="••••••••"
+              required
+              minlength="8"
+              autocomplete="new-password"
+            />
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block">
+            <span class="btn__text">Créer mon compte</span>
+          </button>
+        </form>
+
+        <div class="auth-divider">
+          <span class="auth-divider__text">ou continuer avec</span>
+        </div>
+
+        <OAuthButtons redirectTo="/profile" />
+
+        <div class="auth-card__footer">
+          <p class="auth-card__footer-text">
+            Déjà un compte ?
+            <a href="/auth/login" class="auth-link">Se connecter</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @use '@/styles/pages/auth';
+</style>

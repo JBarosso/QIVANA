@@ -1,0 +1,19 @@
+---
+// ============================================
+// OAUTH CALLBACK
+// ============================================
+// Handles OAuth redirect after authentication
+
+import { getUser } from '@/lib/auth';
+
+// Get session after OAuth redirect
+const user = await getUser(Astro.locals.supabase);
+
+if (user) {
+  // Success: redirect to profile
+  return Astro.redirect('/profile');
+} else {
+  // Error: redirect to login with error message
+  return Astro.redirect('/auth/login?error=Erreur+d\'authentification');
+}
+---

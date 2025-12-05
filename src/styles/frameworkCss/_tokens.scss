@@ -379,14 +379,26 @@ $z-tooltip: 700 !default;
   --color-text: var(--color-neutral-50);
   --color-text-muted: var(--color-neutral-400);
   --color-text-subtle: var(--color-neutral-500);
+  --color-text-on-primary: hsl(0, 0%, 100%);
   --color-bg: var(--color-neutral-900);
   --color-bg-elevated: var(--color-neutral-800);
+  --color-background: var(--color-neutral-900);
   --color-surface: var(--color-neutral-800);
   --color-surface-hover: var(--color-neutral-700);
   --color-border: var(--color-neutral-700);
   --color-border-hover: var(--color-neutral-600);
   --color-focus: var(--color-accent);
   --color-focus-ring: hsla(var(--color-accent-hsl), 0.4);
+  
+  // TRANSITIONS
+  --transition-fast: all #{$duration-fast} #{$ease-standard};
+  --transition-base: all #{$duration-base} #{$ease-standard};
+  --transition-slow: all #{$duration-slow} #{$ease-standard};
+  
+  // GLOWS
+  --glow-primary: #{$glow-violet};
+  --glow-secondary: #{$glow-violet};
+  --glow-accent: #{$glow-cyan};
   
   // SPACING FLUIDE
   @each $key, $values in $space-scale-fluid {
@@ -429,6 +441,11 @@ $z-tooltip: 700 !default;
   --radius-xl: #{$radius-xl};
   --radius-2xl: #{$radius-2xl};
   --radius-full: #{$radius-full};
+  
+  // Alias pour Qivana (12-24px)
+  --radius-2: #{$radius-sm};
+  --radius-3: #{$radius-md};
+  --radius-4: #{$radius-lg};
   
   // SHADOWS & GLOWS
   --shadow-sm: #{$shadow-sm};
