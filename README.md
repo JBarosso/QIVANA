@@ -4,7 +4,7 @@ Plateforme de quiz geek alimentée par l'IA.
 
 ## 📋 Status
 
-**Current Milestone:** Milestone 0 - Project Initialization ✅
+**Current Milestone:** Milestone 1 - Database Schema ✅ (avec RLS sécurisé)
 
 ## 🛠 Tech Stack
 
@@ -67,18 +67,27 @@ The app will be available at [http://localhost:4321](http://localhost:4321)
 
 Documentation complète dans le dossier `/docs/` :
 
+### Core Documentation
 - **docs/AI_GUIDE_FRONT.md** → Development guide & formatting rules
 - **docs/context.md** → Functional specification
 - **docs/roadmap.md** → Development milestones
+
+### Technical Documentation
+- **docs/DATABASE_SCHEMA.md** → Database architecture & relations
+- **docs/RLS_POLICIES.md** → Row Level Security policies
+- **docs/ASTRO_5_MIGRATION.md** → Astro 5 migration notes
+
+### Auxiliary
 - **docs/badges.md** → Gamification system (optional reference)
+- **SECURITY.md** → Security advisories & npm audit tracking
 
 ## 🎨 Design System
 
 All design tokens (colors, typography, spacing, animations) are defined in:
 
-- `src/styles/design-system/_variables.scss`
-- `src/styles/design-system/_mixins.scss`
-- `src/styles/design-system/_animations.scss`
+- `src/styles/frameworkCss/_tokens.scss` (Qivana colors + fluid spacing)
+- `src/styles/frameworkCss/_mixins.scss` (Responsive, animations, a11y)
+- `src/styles/frameworkCss/utilities/` (Tailwind-style utilities)
 
 **Visual Identity:** Neo-Pop-Geek Minimalist
 
@@ -101,12 +110,20 @@ npm run lint:fix    # Lint and auto-fix
 npm run format      # Format with Prettier
 ```
 
-## 📦 Next Milestones
+## 📦 Milestones Progress
 
 - ✅ Milestone 0: Project Initialization
-- ⏳ Milestone 1: Database Schema
+- ✅ Milestone 1: Database Schema
 - ⏳ Milestone 2: Authentication
 - ⏳ Milestone 3: Core Quiz Engine
+- ⏳ Milestone 4: AI Quiz Generator
+- ⏳ Milestone 5: Prompt Libre AI Mode
+- ⏳ Milestone 6: Advanced Quiz UX
+- ⏳ Milestone 7: Salons & Duels
+- ⏳ Milestone 8: Profile, Badges, Streaks
+- ⏳ Milestone 9: Admin Panel
+- ⏳ Milestone 10: Monetization (Stripe)
+- ⏳ Milestone 11: Polish & QA
 
 ---
 
