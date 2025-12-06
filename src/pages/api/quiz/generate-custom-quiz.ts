@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import { generateQuiz } from '../../../lib/ai';
+import { getRecentUserQuestions } from '../../../lib/quiz';
 import type { Difficulty } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -37,7 +38,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response('Non autorisé', { status: 401 });
   }
 
-  // Récupérer le profil pour vérifier le plan et le quota
+  // ⚠️ SÉCURITÉ FREEMIUM : Récupérer le profil AVANT toute logique
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan, ai_quizzes_used_this_month, ai_quota_reset_date')
@@ -48,7 +49,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response('Profil introuvable', { status: 404 });
   }
 
-  // Vérifier que l'utilisateur est Premium ou Premium+
+  // ⚠️ SÉCURITÉ FREEMIUM : Double vérification du plan
   if (profile.plan === 'freemium') {
     return new Response(
       JSON.stringify({ error: 'Plan Premium ou Premium+ requis pour le mode Quiz Custom' }),
@@ -94,7 +95,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const maxQuestions = profile.plan === 'premium' ? 10 : 30;
     const requestedQuestions = Math.min(numberOfQuestions, maxQuestions);
 
-    // Générer le quiz via IA avec le prompt custom
+    // Récupérer les questions récentes pour injection de contexte (éviter duplicates)
+    // Pour Custom Quiz, on récupère depuis 'other' universe car c'est là que sont stockées les questions custom
+    const contextQuestions = await getRecentUserQuestions(supabase, user.id, 'other', 20);
+    console.log(`📝 Context: ${contextQuestions.length} recent custom questions for injection`);
+
+    // Générer le quiz via IA avec le prompt custom + contexte
     console.log('🎨 Generating CUSTOM quiz:', { prompt: prompt.substring(0, 50), difficulty, numberOfQuestions: requestedQuestions });
     
     const aiResponse = await generateQuiz({
@@ -102,6 +108,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       difficulty: difficulty as Difficulty,
       numberOfQuestions: requestedQuestions,
       customPrompt: prompt, // Le prompt custom de l'utilisateur
+      contextQuestions: contextQuestions.length > 0 ? contextQuestions : undefined, // Injection de contexte
     });
 
     console.log('✅ Generated', aiResponse.questions.length, 'questions for custom quiz');

@@ -14,6 +14,7 @@ export interface AIQuizRequest {
   numberOfQuestions: number;
   provider?: AIProvider;
   customPrompt?: string; // Pour le mode "prompt libre"
+  contextQuestions?: string[]; // Questions récentes de l'utilisateur pour éviter les duplicates (20-50 questions)
 }
 
 export interface AIQuizQuestion {
@@ -30,13 +31,14 @@ export interface AIQuizResponse {
 /**
  * Template de prompt pour génération de quiz
  * Strict JSON - pas de markdown, pas de commentaires
+ * @param request - Requête avec contexte optionnel
  */
 function buildPrompt(request: AIQuizRequest): string {
-  const { universe, difficulty, numberOfQuestions, customPrompt } = request;
+  const { universe, difficulty, numberOfQuestions, customPrompt, contextQuestions } = request;
 
   // Si un prompt custom est fourni, l'utiliser (mode prompt libre)
   if (customPrompt) {
-    return buildCustomPrompt(customPrompt, difficulty, numberOfQuestions);
+    return buildCustomPrompt(customPrompt, difficulty, numberOfQuestions, contextQuestions);
   }
 
   const difficultyDescriptions = {
@@ -55,7 +57,19 @@ function buildPrompt(request: AIQuizRequest): string {
     other: 'culture geek générale',
   };
 
-  return `Tu es un expert en culture geek. Génère ${numberOfQuestions} questions de quiz sur l'univers "${universeDescriptions[universe]}" avec une difficulté "${difficultyDescriptions[difficulty]}".
+  // Construire la section de contexte si des questions récentes sont fournies
+  let contextSection = '';
+  if (contextQuestions && contextQuestions.length > 0) {
+    const contextExamples = contextQuestions.slice(0, 30).join('\n- ');
+    contextSection = `\n\n⚠️ IMPORTANT - ÉVITE CES SUJETS/QUESTIONS :
+Voici des exemples de questions déjà créées pour cet utilisateur dans cet univers. Génère des questions NOUVELLES et DIFFÉRENTES sur d'autres sujets, aspects ou angles d'approche :
+
+- ${contextExamples}
+
+Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS de ceux listés ci-dessus.`;
+  }
+
+  return `Tu es un expert en culture geek. Génère ${numberOfQuestions} questions de quiz sur l'univers "${universeDescriptions[universe]}" avec une difficulté "${difficultyDescriptions[difficulty]}".${contextSection}
 
 RÈGLES STRICTES:
 1. Chaque question doit avoir exactement 4 réponses possibles (A, B, C, D)
@@ -67,7 +81,7 @@ RÈGLES STRICTES:
    - Pas trivialement fausses
 4. Inclure une explication claire de 1-2 phrases
 5. Questions variées (pas de répétitions)
-6. Réponse en JSON STRICT (pas de markdown, pas de commentaires)
+6. ${contextQuestions && contextQuestions.length > 0 ? 'Questions NOUVELLES sur des sujets différents de ceux listés ci-dessus. ' : ''}RÉPONSE EN JSON STRICT (pas de markdown, pas de commentaires)
 
 FORMAT JSON ATTENDU:
 {
@@ -86,19 +100,40 @@ Génère maintenant ${numberOfQuestions} questions en JSON STRICT.`;
 
 /**
  * Construit un prompt custom pour le mode "prompt libre"
+ * @param userPrompt - Prompt de l'utilisateur
+ * @param difficulty - Difficulté
+ * @param numberOfQuestions - Nombre de questions
+ * @param contextQuestions - Questions récentes optionnelles (pour éviter duplicates)
  */
-function buildCustomPrompt(userPrompt: string, difficulty: Difficulty, numberOfQuestions: number): string {
+function buildCustomPrompt(
+  userPrompt: string,
+  difficulty: Difficulty,
+  numberOfQuestions: number,
+  contextQuestions?: string[]
+): string {
   const difficultyDescriptions = {
     easy: 'facile (accessible, culture populaire)',
     medium: 'moyen (connaissances intermédiaires)',
     hard: 'difficile (expert, détails précis)',
   };
 
+  // Construire la section de contexte si des questions récentes sont fournies
+  let contextSection = '';
+  if (contextQuestions && contextQuestions.length > 0) {
+    const contextExamples = contextQuestions.slice(0, 20).join('\n- ');
+    contextSection = `\n\n⚠️ IMPORTANT - ÉVITE CES SUJETS/QUESTIONS :
+Voici des exemples de questions déjà créées. Génère des questions NOUVELLES et DIFFÉRENTES :
+
+- ${contextExamples}
+
+Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS.`;
+  }
+
   return `Tu es un expert en culture geek. L'utilisateur demande le quiz suivant:
 
 "${userPrompt}"
 
-Génère ${numberOfQuestions} questions basées sur cette demande, avec une difficulté "${difficultyDescriptions[difficulty]}".
+Génère ${numberOfQuestions} questions basées sur cette demande, avec une difficulté "${difficultyDescriptions[difficulty]}".${contextSection}
 
 RÈGLES STRICTES:
 1. Respecte EXACTEMENT la demande de l'utilisateur
@@ -107,7 +142,7 @@ RÈGLES STRICTES:
 4. Les 3 fausses réponses doivent être plausibles
 5. Inclure une explication claire de 1-2 phrases
 6. Questions variées (pas de répétitions)
-7. Réponse en JSON STRICT (pas de markdown, pas de commentaires)
+7. ${contextQuestions && contextQuestions.length > 0 ? 'Questions NOUVELLES sur des sujets différents. ' : ''}RÉPONSE EN JSON STRICT (pas de markdown, pas de commentaires)
 
 FORMAT JSON ATTENDU:
 {

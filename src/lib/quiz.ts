@@ -290,6 +290,64 @@ export async function getSeenQuestionIds(
 }
 
 /**
+ * Récupère les 20-50 dernières questions vues par l'utilisateur dans un univers
+ * Utilisé pour l'injection de contexte dans les prompts IA
+ * @param supabase - Client Supabase
+ * @param userId - ID de l'utilisateur
+ * @param universe - Univers ciblé
+ * @param limit - Nombre de questions à récupérer (défaut: 30)
+ * @returns Array de textes de questions (pour injection dans prompt)
+ */
+export async function getRecentUserQuestions(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  universe: Universe,
+  limit: number = 30
+): Promise<string[]> {
+  // Récupérer les sessions complétées de cet univers, triées par date (plus récentes en premier)
+  const { data: sessions, error } = await supabase
+    .from('quiz_sessions')
+    .select('questions_ids')
+    .eq('user_id', userId)
+    .eq('universe', universe)
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(10); // Limiter à 10 sessions récentes pour éviter trop de données
+
+  if (error || !sessions) {
+    return [];
+  }
+
+  // Récupérer les IDs de questions des sessions récentes
+  const questionIds: string[] = [];
+  for (const session of sessions) {
+    if (session.questions_ids && Array.isArray(session.questions_ids)) {
+      questionIds.push(...session.questions_ids);
+    }
+  }
+
+  // Limiter le nombre d'IDs
+  const limitedIds = questionIds.slice(0, limit);
+
+  if (limitedIds.length === 0) {
+    return [];
+  }
+
+  // Récupérer les textes des questions depuis la DB
+  const { data: questions, error: questionsError } = await supabase
+    .from('questions')
+    .select('question')
+    .in('id', limitedIds);
+
+  if (questionsError || !questions) {
+    return [];
+  }
+
+  // Retourner uniquement les textes des questions
+  return questions.map((q) => q.question).filter((q): q is string => typeof q === 'string');
+}
+
+/**
  * Utility: Shuffle array
  */
 function shuffleArray<T>(array: T[]): T[] {
@@ -299,4 +357,48 @@ function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+/**
+ * Vérifie le stock de questions disponibles pour un utilisateur
+ * @param supabase - Client Supabase
+ * @param userId - ID de l'utilisateur
+ * @param universe - Univers
+ * @param difficulty - Difficulté
+ * @param requestedCount - Nombre de questions demandées
+ * @returns Nombre de questions disponibles (non vues par l'utilisateur)
+ */
+export async function checkQuestionStock(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  universe: Universe,
+  difficulty: Difficulty,
+  requestedCount: number
+): Promise<number> {
+  // Récupérer les IDs déjà vus
+  const seenIds = await getSeenQuestionIds(supabase, userId, universe, difficulty);
+
+  // Récupérer toutes les questions disponibles
+  const { data, error } = await supabase
+    .from('questions')
+    .select('id')
+    .eq('universe', universe)
+    .eq('difficulty', difficulty)
+    .eq('type', 'predefined');
+
+  if (error) {
+    console.error('Error checking question stock:', error);
+    return 0;
+  }
+
+  if (!data) {
+    return 0;
+  }
+
+  // Filtrer les questions déjà vues côté code
+  const availableQuestions = seenIds.length > 0
+    ? data.filter((q) => !seenIds.includes(q.id))
+    : data;
+
+  return availableQuestions.length;
 }

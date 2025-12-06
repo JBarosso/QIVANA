@@ -38,7 +38,18 @@ const difficulties = [
         <p class="quiz-setup__subtitle">Choisis ton univers et ta difficulté</p>
       </header>
 
-      <form method="POST" action="/api/quiz/start" class="quiz-setup__form">
+      <!-- Message d'erreur (si stock insuffisant pour Freemium) -->
+      {Astro.url.searchParams.get('error') === 'stock_insufficient' && (
+        <div class="quiz-setup__error">
+          <div class="quiz-setup__error-icon">⚠️</div>
+          <div class="quiz-setup__error-content">
+            <strong>Stock insuffisant</strong>
+            <p>Passe Premium pour débloquer la génération IA automatique</p>
+          </div>
+        </div>
+      )}
+
+      <form method="POST" action="/api/quiz/start" class="quiz-setup__form" id="quizSetupForm">
         <!-- Sélection Univers -->
         <section class="quiz-setup__section">
           <h2 class="quiz-setup__section-title">
@@ -93,8 +104,19 @@ const difficulties = [
         <div class="quiz-setup__info">
           <div class="quiz-setup__info-icon">ℹ️</div>
           <div class="quiz-setup__info-content">
-            <strong>Mode Freemium</strong>
-            <p>10 questions • Timer 10s • Step-by-step</p>
+            {profile.plan === 'freemium' ? (
+              <>
+                <strong>Mode Freemium</strong>
+                <p>10 questions • Timer 10s • Step-by-step</p>
+                <p class="quiz-setup__info-note">💡 Passe Premium pour débloquer la génération IA automatique</p>
+              </>
+            ) : (
+              <>
+                <strong>Mode {profile.plan === 'premium' ? 'Premium' : 'Premium+'}</strong>
+                <p>10 questions • Timer {profile.plan === 'premium' ? '5/10/15s' : '3-20s'} • {profile.plan === 'premium+' ? 'All-in-one disponible' : 'Step-by-step'}</p>
+                <p class="quiz-setup__info-note">✨ Génération IA automatique si stock insuffisant</p>
+              </>
+            )}
           </div>
         </div>
 
@@ -112,4 +134,106 @@ const difficulties = [
 
 <style lang="scss">
 @use '../../styles/pages/quiz' as *;
+
+.quiz-setup__error {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: hsl(45, 100%, 95%);
+  border: 1px solid hsl(45, 100%, 60%);
+  border-radius: var(--radius-3);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.quiz-setup__error-icon {
+  font-size: var(--fs-5);
+  flex-shrink: 0;
+}
+
+.quiz-setup__error-content {
+  flex: 1;
+
+  strong {
+    display: block;
+    font-weight: var(--font-weight-bold);
+    color: hsl(45, 100%, 20%);
+    margin-bottom: var(--space-1);
+  }
+
+  p {
+    font-size: var(--fs-2);
+    color: hsl(45, 100%, 30%);
+    margin: 0;
+  }
+}
+
+.quiz-setup__info-note {
+  margin-top: var(--space-2);
+  font-size: var(--fs-1);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
 </style>
+
+<script>
+  // Gestion des erreurs depuis l'API (pour les réponses JSON uniquement)
+  // Les redirects Astro fonctionnent automatiquement avec les formulaires POST
+  const form = document.getElementById('quizSetupForm') as HTMLFormElement;
+  
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      // Intercepter seulement pour gérer les erreurs JSON
+      // Les redirects fonctionnent automatiquement
+      const formData = new FormData(form);
+      
+      try {
+        const response = await fetch('/api/quiz/start', {
+          method: 'POST',
+          body: formData,
+          redirect: 'manual', // Ne pas suivre automatiquement pour pouvoir gérer les erreurs
+        });
+
+        // Si redirection (status 302/303), suivre manuellement
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('Location');
+          if (location) {
+            window.location.href = location;
+            return;
+          }
+        }
+
+        // Si erreur JSON (status 4xx/5xx), afficher le message
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+            
+            if (data.requiresPremium) {
+              // Rediriger avec paramètre d'erreur pour afficher le message
+              window.location.href = '/quiz/setup?error=stock_insufficient';
+              return;
+            }
+            
+            alert(data.message || data.error || 'Erreur lors du démarrage du quiz');
+            return;
+          }
+          
+          // Erreur non-JSON
+          const text = await response.text();
+          alert(text || 'Erreur lors du démarrage du quiz');
+          return;
+        }
+
+        // Succès : devrait être un redirect normalement
+        const location = response.headers.get('Location');
+        if (location) {
+          window.location.href = location;
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('Erreur lors du démarrage du quiz');
+      }
+    });
+  }
+</script>

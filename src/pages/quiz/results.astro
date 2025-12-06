@@ -67,17 +67,40 @@ if (session.quiz_type !== 'ai-custom-quiz') {
 
 // Calculer les stats
 const totalQuestions = session.questions_ids.length;
-const answeredQuestions = Array.isArray(session.answers) ? session.answers.filter((a) => a !== null).length : 0;
+const answers = (session.answers as Answers) || [];
+const answeredQuestions = answers.filter((a) => a !== null && a !== undefined).length;
 
 // Pour les correctAnswers, on ne peut pas les calculer précisément pour custom-quiz car les questions ne sont pas en DB
 // On utilise le score comme proxy
-const correctAnswers = session.quiz_type === 'ai-custom-quiz' 
-  ? Math.round(session.score / 10) // Estimation basée sur score (10 pts/question max)
-  : (session.answers as Answers).filter((answer, index) => {
-      if (answer === null) return false;
-      const question = questions?.find((q: Question) => q.id === session.questions_ids[index]);
-      return question && answer === question.correct_index;
-    }).length;
+let correctAnswers = 0;
+
+if (session.quiz_type === 'ai-custom-quiz') {
+  // Estimation basée sur score (10 pts/question max)
+  correctAnswers = Math.round(session.score / 10);
+} else {
+  // Pour les quiz normaux, vérifier chaque réponse
+  // On s'assure que toutes les questions sont chargées avant de calculer
+  if (questions && questions.length === session.questions_ids.length) {
+    correctAnswers = answers.reduce((count, answer, index) => {
+      if (answer === null || answer === undefined) return count;
+      const questionId = session.questions_ids[index];
+      const question = questions.find((q: Question) => q.id === questionId);
+      // Si la question n'est pas trouvée, on ne la compte pas (ne devrait pas arriver)
+      if (!question) {
+        console.warn(`Question ${questionId} not found for index ${index}`);
+        return count;
+      }
+      if (answer === question.correct_index) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+  } else {
+    // Fallback : si les questions ne sont pas toutes chargées, utiliser le score comme estimation
+    console.warn('Not all questions loaded, using score estimation');
+    correctAnswers = Math.round(session.score / 10);
+  }
+}
 
 const incorrectAnswers = answeredQuestions - correctAnswers;
 const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;

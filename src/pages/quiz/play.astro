@@ -110,7 +110,7 @@ if (sessionId) {
     .in('id', ids);
 
   if (error || !questionsData) {
-    return Astro.redirect('/quiz/ai-setup?error=questions_not_found');
+    return Astro.redirect('/quiz/setup?error=questions_not_found');
   }
 
   // Convertir les données Supabase (Json) en Question[] (string[])
@@ -139,7 +139,7 @@ if (sessionId) {
 
   if (sessionError || !newSession) {
     console.error('Error creating AI quiz session:', sessionError);
-    return Astro.redirect('/quiz/ai-setup?error=session_creation_failed');
+    return Astro.redirect('/quiz/setup?error=session_creation_failed');
   }
 
   session = newSession as QuizSession;

@@ -1,6 +1,18 @@
+// ============================================
+// API ROUTE - START QUIZ (Unified System)
+// ============================================
+// Système unifié : vérifie stock DB → génère IA si insuffisant (Premium/Premium+)
+// Sécurité Freemium : bloque toute génération IA
+
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
-import { fetchRandomQuestions, createQuizSession, getSeenQuestionIds } from '../../../lib/quiz';
+import {
+  fetchRandomQuestions,
+  createQuizSession,
+  getSeenQuestionIds,
+  checkQuestionStock,
+} from '../../../lib/quiz';
+import { generateControlledAIQuestions } from '../../../lib/ai-generation';
 import type { Universe, Difficulty } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -25,10 +37,23 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   // Vérifier l'auth
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+
   if (authError || !user) {
     return redirect('/auth/login');
   }
+
+  // ⚠️ SÉCURITÉ FREEMIUM : Récupérer le profil AVANT toute logique
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return new Response('Profil introuvable', { status: 404 });
+  }
+
+  const userPlan = profile.plan;
 
   try {
     // Parser le formulaire
@@ -40,13 +65,72 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       return new Response('Univers et difficulté requis', { status: 400 });
     }
 
-    // Récupérer les questions déjà vues (duplicate prevention)
-    const seenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
-
-    // Fetch questions aléatoires (max 10, mais accepte minimum 3)
     const questionsRequested = 10;
     const questionsMinimum = 3;
-    
+
+    // ============================================
+    // ÉTAPE 1 : Vérifier le stock DB disponible
+    // ============================================
+    const seenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
+    const availableStock = await checkQuestionStock(
+      supabase,
+      user.id,
+      universe,
+      difficulty,
+      questionsRequested
+    );
+
+    console.log(`📊 Stock disponible: ${availableStock} questions (demandé: ${questionsRequested})`);
+
+    // ============================================
+    // ÉTAPE 2 : Si stock insuffisant
+    // ============================================
+    if (availableStock < questionsRequested) {
+      // ⚠️ SÉCURITÉ FREEMIUM : Double vérification avant génération IA
+      if (userPlan === 'freemium') {
+        return new Response(
+          JSON.stringify({
+            error: 'Stock insuffisant',
+            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
+            requiresPremium: true,
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // Pour Premium/Premium+ : génération IA contrôlée
+      const missingCount = questionsRequested - availableStock;
+      console.log(`🤖 Stock insuffisant. Génération IA contrôlée: ${missingCount} questions manquantes`);
+
+      try {
+        // Génération contrôlée (1 batch, pas de boucle)
+        const generationResult = await generateControlledAIQuestions(
+          supabase,
+          user.id,
+          universe,
+          difficulty,
+          missingCount,
+          1 // Buffer de 1 question
+        );
+
+        console.log(
+          `✅ Génération IA: ${generationResult.questionIds.length} questions insérées, ${generationResult.duplicatesSkipped} duplicates`
+        );
+
+        // Logging pour analytics (à implémenter dans une table dédiée si nécessaire)
+        console.log(`📊 AI Generation logged: user=${user.id}, universe=${universe}, count=${generationResult.questionIds.length}`);
+      } catch (generationError) {
+        console.error('❌ Erreur lors de la génération IA:', generationError);
+        // Continuer même si génération échoue (on utilisera ce qui est disponible en DB)
+      }
+    }
+
+    // ============================================
+    // ÉTAPE 3 : Recharger depuis la DB (après génération si applicable)
+    // ============================================
     const questions = await fetchRandomQuestions(
       supabase,
       universe,
@@ -55,14 +139,37 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       seenIds
     );
 
+    // Si toujours insuffisant après génération, accepter ce qui est disponible
     if (questions.length < questionsMinimum) {
-      return new Response(
-        `Pas assez de questions disponibles (${questions.length}/${questionsMinimum} minimum). Essaie une autre difficulté ou univers.`,
-        { status: 400 }
-      );
+      // ⚠️ SÉCURITÉ FREEMIUM : Message différent selon le plan
+      if (userPlan === 'freemium') {
+        return new Response(
+          JSON.stringify({
+            error: 'Stock insuffisant',
+            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
+            requiresPremium: true,
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // Pour Premium/Premium+ : accepter moins de questions si nécessaire
+      if (questions.length === 0) {
+        return new Response(
+          `Impossible de générer un quiz. Stock insuffisant même après génération IA.`,
+          { status: 400 }
+        );
+      }
+
+      console.log(`⚠️ Moins de questions que demandé: ${questions.length}/${questionsRequested}`);
     }
 
-    // Créer la session de quiz
+    // ============================================
+    // ÉTAPE 4 : Créer la session de quiz
+    // ============================================
     const sessionId = await createQuizSession(
       supabase,
       user.id,

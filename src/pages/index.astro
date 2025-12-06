@@ -32,17 +32,12 @@ const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
         ) : (
           <div class="hero__cta">
             <a href="/quiz/setup" class="btn btn--primary">
-              <span class="btn__text">🎮 Quiz DB</span>
+              <span class="btn__text">🎮 Nouveau Quiz</span>
             </a>
             {profile && profile.plan !== 'freemium' && (
-              <>
-                <a href="/quiz/ai-setup" class="btn btn--primary btn--ai-quiz">
-                  <span class="btn__text">🤖 Quiz IA</span>
-                </a>
-                <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
-                  <span class="btn__text">✨ Quiz Custom</span>
-                </a>
-              </>
+              <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
+                <span class="btn__text">✨ Quiz Custom</span>
+              </a>
             )}
             <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
