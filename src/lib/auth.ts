@@ -95,21 +95,42 @@ export async function signIn(
 
 /**
  * Sign in with OAuth provider
+ * Uses PKCE flow (recommended by Supabase)
  */
 export async function signInWithOAuth(
   supabase: SupabaseClient<Database>,
   provider: 'google' | 'discord' | 'facebook',
   redirectTo?: string
 ) {
+  // Get current origin (handles both localhost and production)
+  const origin = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (redirectTo ? new URL(redirectTo).origin : 'http://localhost:4321');
+  
+  // Build callback URL with next parameter
+  const callbackUrl = redirectTo 
+    ? `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
+    : `${origin}/auth/callback`;
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: redirectTo || `${window.location.origin}/auth/callback`,
+      redirectTo: callbackUrl,
+      // Force PKCE flow (recommended for security)
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   });
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // If we have a URL, redirect to it (browser will handle the OAuth flow)
+  if (data.url && typeof window !== 'undefined') {
+    window.location.href = data.url;
   }
 
   return data;

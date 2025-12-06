@@ -3,15 +3,16 @@
 // OAUTH CALLBACK
 // ============================================
 // Handles OAuth redirect after authentication
-// Exchanges OAuth code for session (PKCE flow)
+// Supports PKCE flow (code) - recommended by Supabase
 
 import { createServerClient } from '@supabase/ssr';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
-// Get the code from URL query params
+// Get URL parameters
 const requestUrl = new URL(Astro.request.url);
 const code = requestUrl.searchParams.get('code');
+const error = requestUrl.searchParams.get('error');
+const errorDescription = requestUrl.searchParams.get('error_description');
 const next = requestUrl.searchParams.get('next') || '/';
 
 // Create Supabase client with cookie handling
@@ -33,20 +34,30 @@ const supabase = createServerClient(
   }
 );
 
-if (code) {
-  // Exchange the code for a session
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+// Handle OAuth errors from provider
+if (error) {
+  console.error('OAuth error:', error, errorDescription);
+  return Astro.redirect(
+    `/auth/login?error=${encodeURIComponent(errorDescription || error || 'Erreur d\'authentification')}`
+  );
+}
 
-  if (!error) {
-    // Success: redirect to the next page or profile
+// PKCE flow: exchange code for session
+if (code) {
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (!exchangeError) {
+    // Success: redirect to the next page
     return Astro.redirect(next);
   } else {
-    console.error('OAuth callback error:', error);
-    // Error: redirect to login with error message
-    return Astro.redirect(`/auth/login?error=${encodeURIComponent(error.message || 'Erreur d\'authentification')}`);
+    console.error('OAuth callback exchange error:', exchangeError);
+    return Astro.redirect(
+      `/auth/login?error=${encodeURIComponent(exchangeError.message || 'Erreur lors de l\'échange du code')}`
+    );
   }
-} else {
-  // No code in URL: redirect to login
-  return Astro.redirect('/auth/login?error=Code+OAuth+manquant');
 }
+
+// No code: redirect to login with error
+console.error('OAuth callback: No code found in URL');
+return Astro.redirect('/auth/login?error=Code+OAuth+manquant');
 ---
