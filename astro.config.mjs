@@ -2,6 +2,11 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import vercel from '@astrojs/vercel';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // https://astro.build/config
 export default defineConfig({
@@ -16,16 +21,11 @@ export default defineConfig({
       },
     },
   },
-  // ⚠️ IMPORTANT: Mettre à jour cette URL après le premier déploiement Vercel
-  // Vercel définit automatiquement VERCEL_URL en production
-  // Pour le développement local, utiliser localhost
-  // Note: VERCEL_URL est disponible au runtime, pas au build time
-  // On utilise une valeur par défaut qui sera remplacée dynamiquement
-  site: process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : (process.env.VERCEL 
-      ? 'https://qivana.vercel.app' // URL de production par défaut
-      : 'http://localhost:4321'),
+  // ⚠️ IMPORTANT: La propriété 'site' est optionnelle avec Vercel adapter
+  // Vercel gère automatiquement les URLs. On la définit seulement pour le dev local.
+  // En production, Vercel utilisera automatiquement la bonne URL.
+  // Note: On peut omettre 'site' complètement, mais on la garde pour le dev local
+  site: 'http://localhost:4321',
   output: 'server',
   adapter: vercel({
     // Configuration pour les fonctions serverless
