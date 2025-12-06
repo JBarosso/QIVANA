@@ -2,10 +2,5 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "astro",
-  "functions": {
-    ".astro/output/server/entry.mjs": {
-      "maxDuration": 30
-    }
-  }
+  "framework": "astro"
 }

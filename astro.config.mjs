@@ -15,6 +15,8 @@ export default defineConfig({
     // Configuration pour les fonctions serverless
     functionPerRoute: false, // Une seule fonction pour toutes les routes (plus rapide)
     isr: false, // Pas de ISR pour l'instant (peut être activé plus tard)
+    // Timeout pour les appels IA (30 secondes)
+    maxDuration: 30,
   }),
   integrations: [
     react({
