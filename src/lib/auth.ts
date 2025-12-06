@@ -103,11 +103,15 @@ export async function signInWithOAuth(
   redirectTo?: string
 ) {
   // Get current origin (handles both localhost and production)
-  const origin = typeof window !== 'undefined' 
-    ? window.location.origin 
-    : (redirectTo ? new URL(redirectTo).origin : 'http://localhost:4321');
+  // This function is only called client-side, so window should be available
+  if (typeof window === 'undefined') {
+    throw new Error('signInWithOAuth can only be called from the client-side');
+  }
+
+  const origin = window.location.origin;
   
   // Build callback URL with next parameter
+  // redirectTo can be a relative path (e.g., '/profile') or undefined
   const callbackUrl = redirectTo 
     ? `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
     : `${origin}/auth/callback`;
@@ -129,7 +133,7 @@ export async function signInWithOAuth(
   }
 
   // If we have a URL, redirect to it (browser will handle the OAuth flow)
-  if (data.url && typeof window !== 'undefined') {
+  if (data.url) {
     window.location.href = data.url;
   }
 

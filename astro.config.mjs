@@ -19,9 +19,13 @@ export default defineConfig({
   // ⚠️ IMPORTANT: Mettre à jour cette URL après le premier déploiement Vercel
   // Vercel définit automatiquement VERCEL_URL en production
   // Pour le développement local, utiliser localhost
-  site: import.meta.env.VERCEL 
-    ? `https://${import.meta.env.VERCEL_URL || 'votre-projet.vercel.app'}` 
-    : 'http://localhost:4321',
+  // Note: VERCEL_URL est disponible au runtime, pas au build time
+  // On utilise une valeur par défaut qui sera remplacée dynamiquement
+  site: process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : (process.env.VERCEL 
+      ? 'https://qivana.vercel.app' // URL de production par défaut
+      : 'http://localhost:4321'),
   output: 'server',
   adapter: vercel({
     // Configuration pour les fonctions serverless
