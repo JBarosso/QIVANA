@@ -1,38 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database } from '../types/supabase';
+import type {
+  Universe,
+  Difficulty,
+  QuizMode,
+  Question,
+  QuizSession,
+  TempQuestion,
+  Answers,
+} from '../types';
 
-export type Universe = 'anime' | 'manga' | 'comics' | 'games' | 'movies' | 'series' | 'other';
-export type Difficulty = 'easy' | 'medium' | 'hard';
-export type QuizMode = 'db' | 'ai' | 'prompt-free';
-
-export interface Question {
-  id: string;
-  question: string;
-  choices: string[];
-  correct_index: number;
-  explanation: string;
-  difficulty: Difficulty;
-  universe: Universe;
-  type: 'predefined' | 'prompt-free';
-  created_by: 'ia' | 'admin';
-  created_at: string;
-}
-
-export interface QuizSession {
-  id: string;
-  user_id: string;
-  quiz_type: 'db' | 'ai-predefined' | 'ai-custom-quiz';
-  quiz_mode: 'step-by-step' | 'all-in-one';
-  universe: Universe;
-  difficulty: Difficulty;
-  questions_ids: string[];
-  answers: any; // jsonb in DB
-  score: number;
-  max_score: number;
-  started_at: string;
-  completed_at: string | null;
-  temp_questions?: any; // JSONB - Questions temporaires pour mode quiz custom (non stockées en DB)
-}
+// Ré-exporter les types pour la compatibilité
+export type { Universe, Difficulty, QuizMode, Question, QuizSession, TempQuestion, Answers };
 
 export interface QuizAnswer {
   questionId: string;
@@ -108,8 +87,8 @@ export async function createQuizSession(
     .from('quiz_sessions')
     .insert({
       user_id: userId,
-      quiz_type: 'db', // db, ia, prompt-free
-      quiz_mode: mode === 'db' ? 'step-by-step' : 'step-by-step', // step-by-step or all-in-one
+      quiz_type: 'db', // db, ai-predefined, ai-custom-quiz
+      quiz_mode: mode, // step-by-step, all-in-one, infinite
       universe,
       difficulty,
       questions_ids: questionIds,
@@ -151,8 +130,8 @@ export async function updateQuizAnswer(
   }
 
   // Mettre à jour answers et score
-  const currentAnswers = Array.isArray(session.answers) ? session.answers : [];
-  const newAnswers = [...currentAnswers];
+  const currentAnswers: Answers = Array.isArray(session.answers) ? (session.answers as Answers) : [];
+  const newAnswers: Answers = [...currentAnswers];
   newAnswers[questionIndex] = answer;
 
   // Arrondir le score pour éviter les erreurs de type integer

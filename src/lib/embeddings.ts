@@ -5,7 +5,7 @@
 // + Anti-duplicate check avec pgvector
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import type { Database } from '../types/supabase';
 
 /**
  * Génère un embedding pour une question via OpenAI
@@ -49,11 +49,15 @@ export async function checkDuplicate(
   threshold: number = 0.85
 ): Promise<boolean> {
   // Utiliser la fonction pgvector pour trouver les questions similaires
-  const { data, error } = await supabase.rpc('match_questions', {
+  // @ts-ignore - match_questions est une fonction SQL personnalisée non typée
+  const result = await supabase.rpc('match_questions', {
     query_embedding: embedding,
     match_threshold: threshold,
     match_count: 1,
   });
+
+  const data = result.data as any[] | null;
+  const error = result.error;
 
   if (error) {
     console.error('Error checking duplicates:', error);
@@ -62,7 +66,7 @@ export async function checkDuplicate(
   }
 
   // Si au moins un match trouvé avec similarité > threshold
-  return data && data.length > 0;
+  return data !== null && data.length > 0;
 }
 
 /**
@@ -73,9 +77,12 @@ export async function saveEmbedding(
   questionId: string,
   embedding: number[]
 ): Promise<void> {
+  // Convertir le tableau de nombres en string pour pgvector
+  const embeddingString = `[${embedding.join(',')}]`;
+  
   const { error } = await supabase.from('embeddings').insert({
     question_id: questionId,
-    embedding,
+    embedding: embeddingString,
   });
 
   if (error) {

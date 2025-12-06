@@ -3,7 +3,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { requireAuth } from '../../lib/auth';
 
 // Protection de la route
-const { user, profile } = await requireAuth(Astro);
+const authResult = await requireAuth(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
 
 // Définir les univers et difficultés disponibles
 const universes = [

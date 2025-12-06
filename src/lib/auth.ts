@@ -5,6 +5,7 @@
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
+import type { AstroContext, AuthResult } from '../types';
 
 /**
  * Get current authenticated user from Supabase session
@@ -130,8 +131,8 @@ export async function signOut(supabase: SupabaseClient<Database>) {
  * Redirects to /auth/login if not authenticated
  * To be used in Astro pages: const { user, profile } = await requireAuth(Astro);
  */
-export async function requireAuth(Astro: any) {
-  const supabase = Astro.locals.supabase;
+export async function requireAuth(Astro: AstroContext): Promise<AuthResult | Response> {
+  const supabase = (Astro.locals as { supabase?: SupabaseClient<Database> }).supabase;
   
   if (!supabase) {
     throw new Error('Supabase client not found in Astro.locals. Make sure middleware is configured.');
@@ -145,6 +146,10 @@ export async function requireAuth(Astro: any) {
 
   // Also fetch profile
   const profile = await getProfile(supabase, user.id);
+
+  if (!profile) {
+    throw new Error('Profile not found for authenticated user');
+  }
 
   return {
     user,

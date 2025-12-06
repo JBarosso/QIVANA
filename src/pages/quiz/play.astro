@@ -3,21 +3,37 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { requireAuth } from '../../lib/auth';
 import { getQuizSession } from '../../lib/quiz';
 import QuizPlayer from '../../components/quiz/QuizPlayer';
+import type { TempQuestion, QuizSession, Question } from '../../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../../types/supabase';
 
 // Protection de la route
-const { user } = await requireAuth(Astro);
+const authResult = await requireAuth(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user } = authResult;
 
 // Récupérer les paramètres
 const sessionId = Astro.url.searchParams.get('session');
 const questionIds = Astro.url.searchParams.get('ids');
 
-let session;
-let questions;
-let orderedQuestions;
+// Cast pour accéder à supabase
+const supabase = (Astro.locals as { supabase?: SupabaseClient<Database> }).supabase;
+if (!supabase) {
+  return Astro.redirect('/quiz/setup');
+}
+
+let session: QuizSession | null = null;
+let questions: Question[] | null = null;
+let orderedQuestions: Question[] = [];
 
 if (sessionId) {
   // Mode classique: charger depuis une session existante
-  session = await getQuizSession(Astro.locals.supabase, sessionId);
+  session = await getQuizSession(supabase, sessionId);
 
   if (!session) {
     return Astro.redirect('/quiz/setup');
@@ -33,22 +49,26 @@ if (sessionId) {
     return Astro.redirect(`/quiz/results?session=${sessionId}`);
   }
 
+  // À ce stade, session est garanti non-null
+  const currentSession = session;
+
   // ============================================
   // MODE QUIZ CUSTOM: Questions stockées dans temp_questions
   // ============================================
-  if (session.quiz_type === 'ai-custom-quiz' && session.temp_questions) {
+  if (currentSession.quiz_type === 'ai-custom-quiz' && currentSession.temp_questions) {
     console.log('🎨 Loading custom-quiz questions from session.temp_questions');
     
     // Créer des objets Question à partir de temp_questions
-    orderedQuestions = (session.temp_questions as any[]).map((q: any, index: number) => ({
-      id: session.questions_ids[index] || `temp-${index}`,
+    const tempQuestions = currentSession.temp_questions as TempQuestion[];
+    orderedQuestions = tempQuestions.map((q, index) => ({
+      id: currentSession.questions_ids[index] || `temp-${index}`,
       question: q.question,
       choices: q.choices,
       correct_index: q.correct_index,
       explanation: q.explanation,
-      difficulty: session.difficulty || 'medium',
-      universe: session.universe || 'other',
-      type: 'custom-quiz',
+      difficulty: currentSession.difficulty || 'medium',
+      universe: currentSession.universe || 'other',
+      type: 'custom-quiz' as const,
       created_by: 'ia',
       created_at: new Date().toISOString(),
     }));
@@ -58,29 +78,33 @@ if (sessionId) {
     // ============================================
     // MODE NORMAL: Charger les questions depuis la DB
     // ============================================
-    const { data: questionsData, error } = await Astro.locals.supabase
+    const { data: questionsData, error } = await supabase
       .from('questions')
       .select('*')
-      .in('id', session.questions_ids);
+      .in('id', currentSession.questions_ids);
 
     if (error || !questionsData) {
       console.error('Error loading questions:', error);
       return Astro.redirect('/quiz/setup');
     }
 
-    questions = questionsData;
+    // Convertir les données Supabase (Json) en Question[] (string[])
+    questions = questionsData.map((q) => ({
+      ...q,
+      choices: Array.isArray(q.choices) ? q.choices as string[] : [],
+    })) as Question[];
 
     // Ordonner les questions selon l'ordre de questions_ids
-    orderedQuestions = session.questions_ids
-      .map((id) => questions.find((q) => q.id === id))
-      .filter(Boolean);
+    orderedQuestions = currentSession.questions_ids
+      .map((id) => questions?.find((q: Question) => q.id === id))
+      .filter((q): q is Question => q !== undefined);
   }
 } else if (questionIds) {
   // Mode quiz IA: créer une session à la volée avec les IDs fournis
   const ids = questionIds.split(',');
 
   // Charger les questions
-  const { data: questionsData, error } = await Astro.locals.supabase
+  const { data: questionsData, error } = await supabase
     .from('questions')
     .select('*')
     .in('id', ids);
@@ -89,10 +113,14 @@ if (sessionId) {
     return Astro.redirect('/quiz/ai-setup?error=questions_not_found');
   }
 
-  questions = questionsData;
+  // Convertir les données Supabase (Json) en Question[] (string[])
+  questions = questionsData.map((q) => ({
+    ...q,
+    choices: Array.isArray(q.choices) ? q.choices as string[] : [],
+  })) as Question[];
 
   // Créer une session
-  const { data: newSession, error: sessionError } = await Astro.locals.supabase
+  const { data: newSession, error: sessionError } = await supabase
     .from('quiz_sessions')
     .insert({
       user_id: user.id,
@@ -114,26 +142,28 @@ if (sessionId) {
     return Astro.redirect('/quiz/ai-setup?error=session_creation_failed');
   }
 
-  session = newSession;
+  session = newSession as QuizSession;
   
   // Ordonner les questions selon l'ordre des IDs
   orderedQuestions = ids
-    .map((id) => questions.find((q) => q.id === id))
-    .filter(Boolean);
+    .map((id) => questions?.find((q: Question) => q.id === id))
+    .filter((q): q is Question => q !== undefined);
 } else {
   return Astro.redirect('/quiz/setup');
 }
 ---
 
 <BaseLayout title="Quiz en cours - Qivana">
-  <div class="quiz-play">
-    <QuizPlayer
-      client:load
-      sessionId={session.id}
-      questions={orderedQuestions}
-      currentAnswers={session.answers}
-    />
-  </div>
+  {session && (
+    <div class="quiz-play">
+      <QuizPlayer
+        client:load
+        sessionId={session.id}
+        questions={orderedQuestions}
+        currentAnswers={session.answers}
+      />
+    </div>
+  )}
 </BaseLayout>
 
 <style lang="scss">

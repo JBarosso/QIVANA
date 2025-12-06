@@ -2,9 +2,19 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { requireAuth } from '../../lib/auth';
 import { getQuizSession, completeQuizSession } from '../../lib/quiz';
+import type { Answers, Question } from '../../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../../types/supabase';
 
 // Protection de la route
-const { user, profile } = await requireAuth(Astro);
+const authResult = await requireAuth(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
 
 // Récupérer l'ID de session
 const sessionId = Astro.url.searchParams.get('session');
@@ -13,8 +23,14 @@ if (!sessionId) {
   return Astro.redirect('/quiz/setup');
 }
 
+// Cast pour accéder à supabase
+const supabase = (Astro.locals as { supabase?: SupabaseClient<Database> }).supabase;
+if (!supabase) {
+  return Astro.redirect('/quiz/setup');
+}
+
 // Charger la session
-const session = await getQuizSession(Astro.locals.supabase, sessionId);
+const session = await getQuizSession(supabase, sessionId);
 
 if (!session) {
   return Astro.redirect('/quiz/setup');
@@ -27,19 +43,26 @@ if (session.user_id !== user.id) {
 
 // Si pas encore terminée, marquer comme complétée
 if (!session.completed_at) {
-  await completeQuizSession(Astro.locals.supabase, sessionId);
+  await completeQuizSession(supabase, sessionId);
 }
 
 // Charger les questions pour afficher les détails
 // ⚠️ Pour le mode custom-quiz, les questions n'existent pas en DB (IDs temporaires)
-let questions = null;
+let questions: Question[] | null = null;
 
 if (session.quiz_type !== 'ai-custom-quiz') {
-  const { data: questionsData } = await Astro.locals.supabase
+  const { data: questionsData } = await supabase
     .from('questions')
     .select('*')
     .in('id', session.questions_ids);
-  questions = questionsData;
+  
+  // Convertir les données Supabase (Json) en Question[] (string[])
+  if (questionsData) {
+    questions = questionsData.map((q) => ({
+      ...q,
+      choices: Array.isArray(q.choices) ? q.choices as string[] : [],
+    })) as Question[];
+  }
 }
 
 // Calculer les stats
@@ -50,9 +73,9 @@ const answeredQuestions = Array.isArray(session.answers) ? session.answers.filte
 // On utilise le score comme proxy
 const correctAnswers = session.quiz_type === 'ai-custom-quiz' 
   ? Math.round(session.score / 10) // Estimation basée sur score (10 pts/question max)
-  : (session.answers as any[]).filter((answer, index) => {
+  : (session.answers as Answers).filter((answer, index) => {
       if (answer === null) return false;
-      const question = questions?.find((q) => q.id === session.questions_ids[index]);
+      const question = questions?.find((q: Question) => q.id === session.questions_ids[index]);
       return question && answer === question.correct_index;
     }).length;
 

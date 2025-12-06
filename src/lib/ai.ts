@@ -230,18 +230,21 @@ async function generateWithAnthropic(request: AIQuizRequest): Promise<AIQuizResp
 
 /**
  * Validation du JSON retourné par l'IA
+ * @param response - Unknown JSON response from AI (type-safe validation)
  */
-export function validateAIResponse(response: any): AIQuizResponse {
+export function validateAIResponse(response: unknown): AIQuizResponse {
   if (!response || typeof response !== 'object') {
     throw new Error('Invalid AI response: not an object');
   }
 
-  if (!Array.isArray(response.questions)) {
+  const responseObj = response as Record<string, unknown>;
+
+  if (!Array.isArray(responseObj.questions)) {
     throw new Error('Invalid AI response: questions is not an array');
   }
 
-  for (let i = 0; i < response.questions.length; i++) {
-    const q = response.questions[i];
+  for (let i = 0; i < responseObj.questions.length; i++) {
+    const q = responseObj.questions[i] as Record<string, unknown>;
 
     if (!q.question || typeof q.question !== 'string') {
       throw new Error(`Question ${i}: missing or invalid question`);
@@ -260,7 +263,7 @@ export function validateAIResponse(response: any): AIQuizResponse {
     }
   }
 
-  return response as AIQuizResponse;
+  return response as unknown as AIQuizResponse;
 }
 
 /**

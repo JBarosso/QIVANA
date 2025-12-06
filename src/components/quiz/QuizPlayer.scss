@@ -2,7 +2,7 @@
 // QUIZ PLAYER COMPONENT (React)
 // ============================================
 
-@use '../styles/frameworkCss/tokens' as *;
+@use '../../styles/frameworkCss/tokens' as *;
 
 .quiz-player {
   max-width: var(--container-lg);

@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const sessionId = await createQuizSession(
       supabase,
       user.id,
-      'db',
+      'step-by-step',
       universe,
       difficulty,
       questions.map((q) => q.id)
