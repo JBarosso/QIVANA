@@ -4,6 +4,9 @@
 // Main layout wrapper for all pages
 // ============================================
 
+// Import des styles (Astro compile automatiquement SCSS → CSS)
+import '../styles/main.scss';
+
 interface Props {
   title: string;
   description?: string;
@@ -56,7 +59,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     />
 
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="/src/styles/main.scss" />
+    <!-- Styles importés dans le frontmatter, Astro les compile automatiquement -->
   </head>
   <body>
     <slot />
