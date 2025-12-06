@@ -171,21 +171,60 @@ export async function updateQuizAnswer(
 }
 
 /**
- * Termine une session de quiz
+ * Termine une session de quiz et ajoute les points au profil
  */
 export async function completeQuizSession(
   supabase: SupabaseClient<Database>,
   sessionId: string
 ): Promise<void> {
-  const { error } = await supabase
+  // Récupérer la session pour obtenir le score et l'user_id
+  const { data: session, error: fetchError } = await supabase
+    .from('quiz_sessions')
+    .select('score, user_id')
+    .eq('id', sessionId)
+    .single();
+
+  if (fetchError || !session) {
+    throw new Error('Session introuvable');
+  }
+
+  // Marquer la session comme complétée
+  const { error: updateError } = await supabase
     .from('quiz_sessions')
     .update({
       completed_at: new Date().toISOString(),
     })
     .eq('id', sessionId);
 
-  if (error) {
+  if (updateError) {
     throw new Error('Impossible de terminer la session');
+  }
+
+  // Récupérer les points actuels du profil
+  const { data: profile, error: profileFetchError } = await supabase
+    .from('profiles')
+    .select('points')
+    .eq('id', session.user_id)
+    .single();
+
+  if (profileFetchError || !profile) {
+    console.error('Error fetching profile:', profileFetchError);
+    return; // Ne pas bloquer si le profil n'existe pas
+  }
+
+  // Ajouter les points du quiz au profil
+  const newPoints = (profile.points || 0) + session.score;
+
+  const { error: profileUpdateError } = await supabase
+    .from('profiles')
+    .update({
+      points: newPoints,
+    })
+    .eq('id', session.user_id);
+
+  if (profileUpdateError) {
+    console.error('Error updating profile points:', profileUpdateError);
+    // Ne pas bloquer si l'ajout de points échoue
   }
 }
 
