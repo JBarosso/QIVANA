@@ -21,15 +21,17 @@ export interface Question {
 export interface QuizSession {
   id: string;
   user_id: string;
-  quiz_type: 'db' | 'ia' | 'prompt-free';
+  quiz_type: 'db' | 'ai-predefined' | 'ai-custom-quiz';
   quiz_mode: 'step-by-step' | 'all-in-one';
   universe: Universe;
   difficulty: Difficulty;
   questions_ids: string[];
   answers: any; // jsonb in DB
   score: number;
+  max_score: number;
   started_at: string;
   completed_at: string | null;
+  temp_questions?: any; // JSONB - Questions temporaires pour mode quiz custom (non stockées en DB)
 }
 
 export interface QuizAnswer {
@@ -99,8 +101,8 @@ export async function createQuizSession(
   questionIds: string[]
 ): Promise<string> {
   // Calculer le score maximum basé sur le nombre de questions
-  // Points de base (50) + bonus temps max (50) = 100 points par question
-  const maxScore = questionIds.length * 100;
+  // Points de base (10) + bonus temps max (10) = 20 points par question
+  const maxScore = questionIds.length * 10;
 
   const { data, error } = await supabase
     .from('quiz_sessions')
@@ -254,7 +256,7 @@ export async function getQuizSession(
  * @param isCorrect - La réponse est-elle correcte
  * @param timeRemaining - Temps restant en secondes
  * @param totalTime - Temps total en secondes (défaut: 10s)
- * @returns Points gagnés
+ * @returns Points gagnés (0-20 points)
  */
 export function calculateScore(
   isCorrect: boolean,
@@ -263,8 +265,11 @@ export function calculateScore(
 ): number {
   if (!isCorrect) return 0;
   
-  const basePoints = 1;
-  const timeBonus = timeRemaining / totalTime;
+  // Base : 10 points pour une bonne réponse
+  const basePoints = 10;
+  
+  // Bonus temps : jusqu'à 10 points supplémentaires selon la vitesse
+  const timeBonus = (timeRemaining / totalTime) * 10;
   
   return basePoints + timeBonus;
 }

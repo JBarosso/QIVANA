@@ -4,7 +4,7 @@ Plateforme de quiz geek alimentée par l'IA.
 
 ## 📋 Status
 
-**Current Milestone:** Milestone 3 - Core Quiz Engine ✅
+**Current Milestone:** Milestone 5 - Quiz Custom (IA) ✅
 
 ## 🛠 Tech Stack
 
@@ -77,11 +77,9 @@ Documentation complète dans le dossier `/docs/` :
 - **docs/RLS_POLICIES.md** → Row Level Security policies
 - **docs/AUTH_SETUP.md** → Authentication & OAuth configuration
 - **docs/SEED_QUESTIONS.md** → Seed questions for quiz testing
-- **docs/ASTRO_5_MIGRATION.md** → Astro 5 migration notes
-
-### Validation Checklists
-- **docs/MILESTONE_2_VALIDATION.md** → Authentication validation tests
-- **docs/MILESTONE_3_VALIDATION.md** → Quiz engine validation tests
+- **docs/MILESTONE_4_SETUP.md** → AI Quiz Generator configuration
+- **docs/MILESTONE_5_SETUP.md** → Prompt Libre AI Quiz guide
+- **docs/BACKLOG.md** → Future improvements & optimizations
 
 ### Auxiliary
 - **docs/badges.md** → Gamification system (optional reference)
@@ -122,8 +120,8 @@ npm run format      # Format with Prettier
 - ✅ Milestone 1: Database Schema
 - ✅ Milestone 2: Authentication
 - ✅ Milestone 3: Core Quiz Engine (DB Quizzes)
-- ⏳ Milestone 4: AI Quiz Generator
-- ⏳ Milestone 5: Prompt Libre AI Mode
+- ✅ Milestone 4: AI Quiz Generator (Predefined Universes)
+- ✅ Milestone 5: Quiz Custom (IA)
 - ⏳ Milestone 6: Advanced Quiz UX
 - ⏳ Milestone 7: Salons & Duels
 - ⏳ Milestone 8: Profile, Badges, Streaks

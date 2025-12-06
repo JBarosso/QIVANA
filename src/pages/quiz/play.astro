@@ -7,7 +7,7 @@ import QuizPlayer from '../../components/quiz/QuizPlayer';
 // Protection de la route
 const { user } = await requireAuth(Astro);
 
-// Récupérer l'ID de session OU la liste d'IDs de questions (pour quiz IA)
+// Récupérer les paramètres
 const sessionId = Astro.url.searchParams.get('session');
 const questionIds = Astro.url.searchParams.get('ids');
 
@@ -33,23 +33,48 @@ if (sessionId) {
     return Astro.redirect(`/quiz/results?session=${sessionId}`);
   }
 
-  // Charger les questions
-  const { data: questionsData, error } = await Astro.locals.supabase
-    .from('questions')
-    .select('*')
-    .in('id', session.questions_ids);
+  // ============================================
+  // MODE QUIZ CUSTOM: Questions stockées dans temp_questions
+  // ============================================
+  if (session.quiz_type === 'ai-custom-quiz' && session.temp_questions) {
+    console.log('🎨 Loading custom-quiz questions from session.temp_questions');
+    
+    // Créer des objets Question à partir de temp_questions
+    orderedQuestions = (session.temp_questions as any[]).map((q: any, index: number) => ({
+      id: session.questions_ids[index] || `temp-${index}`,
+      question: q.question,
+      choices: q.choices,
+      correct_index: q.correct_index,
+      explanation: q.explanation,
+      difficulty: session.difficulty || 'medium',
+      universe: session.universe || 'other',
+      type: 'custom-quiz',
+      created_by: 'ia',
+      created_at: new Date().toISOString(),
+    }));
 
-  if (error || !questionsData) {
-    console.error('Error loading questions:', error);
-    return Astro.redirect('/quiz/setup');
+    console.log('✅ Loaded', orderedQuestions.length, 'custom-quiz questions');
+  } else {
+    // ============================================
+    // MODE NORMAL: Charger les questions depuis la DB
+    // ============================================
+    const { data: questionsData, error } = await Astro.locals.supabase
+      .from('questions')
+      .select('*')
+      .in('id', session.questions_ids);
+
+    if (error || !questionsData) {
+      console.error('Error loading questions:', error);
+      return Astro.redirect('/quiz/setup');
+    }
+
+    questions = questionsData;
+
+    // Ordonner les questions selon l'ordre de questions_ids
+    orderedQuestions = session.questions_ids
+      .map((id) => questions.find((q) => q.id === id))
+      .filter(Boolean);
   }
-
-  questions = questionsData;
-
-  // Ordonner les questions selon l'ordre de questions_ids
-  orderedQuestions = session.questions_ids
-    .map((id) => questions.find((q) => q.id === id))
-    .filter(Boolean);
 } else if (questionIds) {
   // Mode quiz IA: créer une session à la volée avec les IDs fournis
   const ids = questionIds.split(',');
@@ -78,7 +103,7 @@ if (sessionId) {
       questions_ids: ids,
       answers: [],
       score: 0,
-      max_score: ids.length * 100,
+      max_score: ids.length * 10,
       started_at: new Date().toISOString(),
     })
     .select()

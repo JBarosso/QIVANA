@@ -1,0 +1,613 @@
+---
+// ============================================
+// CUSTOM QUIZ AI PAGE (Premium/Premium+)
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAuth } from '../../lib/auth';
+
+// Protection de la route
+const { user, profile } = await requireAuth(Astro);
+
+// Vérifier que l'utilisateur est Premium ou Premium+
+if (profile.plan === 'freemium') {
+  return Astro.redirect('/?error=premium_required');
+}
+
+// Récupérer le quota actuel
+const quotaLimits = {
+  premium: 5,
+  'premium+': 200,
+};
+
+const currentQuota = profile.ai_quizzes_used_this_month || 0;
+const maxQuota = quotaLimits[profile.plan as keyof typeof quotaLimits] || 0;
+const remainingQuota = maxQuota - currentQuota;
+
+// Nombre de questions selon le plan
+const maxQuestions = profile.plan === 'premium' ? 10 : 30;
+const minQuestions = 5;
+---
+
+<BaseLayout
+  title="Quiz Custom - Qivana"
+  description="Crée un quiz personnalisé avec ton propre prompt"
+>
+  <main class="custom-quiz-page">
+    <div class="container">
+      <div class="custom-quiz-header">
+        <h1 class="custom-quiz-header__title">✨ Quiz Custom</h1>
+        <p class="custom-quiz-header__subtitle">
+          Laisse libre cours à ton imagination et génère un quiz unique
+        </p>
+        <div class="custom-quiz-header__quota">
+          <span class="quota-badge">
+            {remainingQuota > 0 ? (
+              <>✨ {remainingQuota} / {maxQuota} quiz IA restants ce mois</>
+            ) : (
+              <>⚠️ Quota mensuel épuisé ({currentQuota}/{maxQuota})</>
+            )}
+          </span>
+        </div>
+      </div>
+
+      <form class="custom-quiz-form" id="customQuizForm">
+        <!-- Prompt personnalisé -->
+        <div class="form-section">
+          <h2 class="form-section__title">📝 Ton prompt créatif</h2>
+          <p class="form-section__description">
+            Décris le quiz que tu veux. Sois précis et créatif !
+          </p>
+
+          <div class="prompt-examples">
+            <p class="prompt-examples__title">💡 Exemples de prompts :</p>
+            <button type="button" class="prompt-example" data-prompt="Crée un quiz sur les easter eggs cachés dans les films Marvel">
+              🎬 Easter eggs Marvel
+            </button>
+            <button type="button" class="prompt-example" data-prompt="Quiz sur l'histoire de Nintendo et ses consoles légendaires">
+              🎮 Histoire de Nintendo
+            </button>
+            <button type="button" class="prompt-example" data-prompt="Questions sur les personnages secondaires méconnus dans One Piece">
+              🏴‍☠️ Personnages One Piece
+            </button>
+          </div>
+
+          <textarea
+            name="prompt"
+            id="promptInput"
+            class="prompt-input"
+            placeholder="Ex: Crée un quiz sur les répliques cultes de Breaking Bad"
+            rows="6"
+            maxlength="500"
+            required
+          ></textarea>
+          
+          <div class="prompt-counter">
+            <span id="charCount">0</span> / 500 caractères
+          </div>
+
+          <!-- Message d'erreur -->
+          <div class="prompt-error" id="promptError" style="display: none;">
+            ⚠️ Le prompt doit contenir au moins 10 caractères
+          </div>
+        </div>
+
+        <!-- Difficulté -->
+        <div class="form-section">
+          <h2 class="form-section__title">2️⃣ Difficulté</h2>
+          <div class="difficulty-grid">
+            <label class="difficulty-card difficulty-card--easy">
+              <input type="radio" name="difficulty" value="easy" required />
+              <div class="difficulty-card__content">
+                <div class="difficulty-card__icon">🟢</div>
+                <div class="difficulty-card__title">Facile</div>
+                <div class="difficulty-card__desc">Accessible</div>
+              </div>
+            </label>
+
+            <label class="difficulty-card difficulty-card--medium">
+              <input type="radio" name="difficulty" value="medium" checked />
+              <div class="difficulty-card__content">
+                <div class="difficulty-card__icon">🟡</div>
+                <div class="difficulty-card__title">Moyen</div>
+                <div class="difficulty-card__desc">Équilibré</div>
+              </div>
+            </label>
+
+            <label class="difficulty-card difficulty-card--hard">
+              <input type="radio" name="difficulty" value="hard" />
+              <div class="difficulty-card__content">
+                <div class="difficulty-card__icon">🔴</div>
+                <div class="difficulty-card__title">Difficile</div>
+                <div class="difficulty-card__desc">Expert</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Nombre de questions -->
+        <div class="form-section">
+          <h2 class="form-section__title">3️⃣ Nombre de questions</h2>
+          <div class="slider-container">
+            <input 
+              type="range" 
+              name="numberOfQuestions" 
+              min={minQuestions}
+              max={maxQuestions}
+              value="10" 
+              class="slider"
+              id="questionSlider"
+            />
+            <div class="slider-value">
+              <span id="questionCount">10</span> questions
+            </div>
+          </div>
+          {profile.plan === 'premium' && (
+            <p class="plan-hint">💡 Passe Premium+ pour générer jusqu'à 30 questions</p>
+          )}
+        </div>
+
+        <!-- Avertissement quiz custom -->
+        <div class="info-box info-box--warning">
+          <div class="info-box__icon">⚠️</div>
+          <div class="info-box__content">
+            <strong>Mode Quiz Custom :</strong> Les questions générées ne seront pas sauvegardées dans la base de données et ne pourront pas être rejouées plus tard.
+          </div>
+        </div>
+
+        <!-- Bouton de génération -->
+        <button 
+          type="submit" 
+          class="btn btn--primary btn--block btn--large"
+          disabled={remainingQuota <= 0}
+        >
+          <span class="btn__text">🚀 Générer mon Quiz</span>
+        </button>
+
+        {remainingQuota <= 0 && (
+          <p class="quota-warning">
+            ⚠️ Tu as atteint ton quota mensuel. Renouvellement automatique le 1er du mois prochain.
+          </p>
+        )}
+      </form>
+
+      <!-- Loading overlay -->
+      <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p class="loading-text">✨ L'IA crée ton quiz personnalisé...</p>
+          <p class="loading-subtext">Cela peut prendre 10-30 secondes</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @import '../../styles/pages/_quiz.scss';
+
+  .custom-quiz-page {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+  }
+
+  .custom-quiz-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .custom-quiz-header__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    color: var(--color-text);
+    margin-bottom: var(--space-3);
+  }
+
+  .custom-quiz-header__subtitle {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .quota-badge {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    color: var(--color-text-on-primary);
+    border-radius: var(--radius-3);
+    font-size: var(--fs-2);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .custom-quiz-form {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .form-section {
+    margin-bottom: var(--space-6);
+  }
+
+  .form-section__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-5);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .form-section__description {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .prompt-examples {
+    margin-bottom: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    border: 1px solid var(--color-border);
+  }
+
+  .prompt-examples__title {
+    font-size: var(--fs-2);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+  }
+
+  .prompt-example {
+    display: inline-block;
+    margin: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-1);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--color-primary);
+      color: var(--color-text-on-primary);
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+  }
+
+  .prompt-input {
+    width: 100%;
+    padding: var(--space-4);
+    font-size: var(--fs-2);
+    font-family: var(--font-primary);
+    color: var(--color-text);
+    background: var(--color-background);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-3);
+    resize: vertical;
+    transition: all var(--transition-base);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px hsla(var(--color-primary-h), var(--color-primary-s), var(--color-primary-l), 0.1);
+    }
+
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+  }
+
+  .prompt-counter {
+    text-align: right;
+    font-size: var(--fs-1);
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+  }
+
+  .prompt-error {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: hsl(0, 100%, 95%);
+    border: 1px solid hsl(0, 100%, 60%);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-1);
+    color: hsl(0, 100%, 30%);
+  }
+
+  .difficulty-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .difficulty-card {
+    position: relative;
+    cursor: pointer;
+
+    input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &:has(input:checked) .difficulty-card__content {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  .difficulty-card__content {
+    padding: var(--space-4);
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    border: 2px solid var(--color-border);
+    text-align: center;
+    transition: all var(--transition-base);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+
+  .difficulty-card--easy:has(input:checked) .difficulty-card__content {
+    border-color: var(--color-success);
+    background: var(--color-success-lighter);
+  }
+
+  .difficulty-card--medium:has(input:checked) .difficulty-card__content {
+    border-color: var(--color-warning);
+    background: var(--color-warning-lighter);
+  }
+
+  .difficulty-card--hard:has(input:checked) .difficulty-card__content {
+    border-color: var(--color-danger);
+    background: var(--color-danger-lighter);
+  }
+
+  .difficulty-card__icon {
+    font-size: var(--fs-6);
+    margin-bottom: var(--space-2);
+  }
+
+  .difficulty-card__title {
+    font-size: var(--fs-3);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-1);
+  }
+
+  .difficulty-card__desc {
+    font-size: var(--fs-1);
+    color: var(--color-text-muted);
+  }
+
+  .slider-container {
+    text-align: center;
+  }
+
+  .slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--color-background);
+    outline: none;
+    margin-bottom: var(--space-3);
+    cursor: pointer;
+  }
+
+  .slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .slider-value {
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+  }
+
+  .plan-hint {
+    text-align: center;
+    font-size: var(--fs-1);
+    color: var(--color-text-muted);
+    margin-top: var(--space-3);
+  }
+
+  .info-box {
+    padding: var(--space-4);
+    border-radius: var(--radius-3);
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .info-box--warning {
+    background: hsl(45, 100%, 95%);
+    border: 1px solid hsl(45, 100%, 60%);
+  }
+
+  .info-box__icon {
+    font-size: var(--fs-5);
+    flex-shrink: 0;
+  }
+
+  .info-box__content {
+    font-size: var(--fs-2);
+    color: hsl(45, 100%, 20%);
+
+    strong {
+      font-weight: var(--font-weight-bold);
+    }
+  }
+
+  .btn--large {
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--fs-4);
+  }
+
+  .quota-warning {
+    text-align: center;
+    color: var(--color-danger);
+    margin-top: var(--space-4);
+    font-size: var(--fs-2);
+  }
+
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .loading-spinner {
+    text-align: center;
+  }
+
+  .spinner {
+    width: 64px;
+    height: 64px;
+    border: 6px solid var(--color-surface);
+    border-top-color: #ec4899;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--space-4);
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-size: var(--fs-5);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .loading-subtext {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+</style>
+
+<script>
+  // Compteur de caractères
+  const promptInput = document.getElementById('promptInput') as HTMLTextAreaElement;
+  const charCount = document.getElementById('charCount');
+  const promptError = document.getElementById('promptError');
+
+  if (promptInput && charCount) {
+    promptInput.addEventListener('input', () => {
+      charCount.textContent = promptInput.value.length.toString();
+      
+      // Masquer l'erreur si elle était visible et que l'utilisateur tape
+      if (promptError && promptError.style.display === 'block') {
+        promptError.style.display = 'none';
+      }
+    });
+  }
+
+  // Exemples de prompts cliquables
+  const promptExamples = document.querySelectorAll('.prompt-example');
+  promptExamples.forEach((example) => {
+    example.addEventListener('click', () => {
+      const prompt = example.getAttribute('data-prompt');
+      if (prompt && promptInput) {
+        promptInput.value = prompt;
+        charCount!.textContent = prompt.length.toString();
+        promptInput.focus();
+      }
+    });
+  });
+
+  // Slider de questions
+  const slider = document.getElementById('questionSlider') as HTMLInputElement;
+  const countDisplay = document.getElementById('questionCount');
+
+  if (slider && countDisplay) {
+    slider.addEventListener('input', () => {
+      countDisplay.textContent = slider.value;
+    });
+  }
+
+  // Gestion du formulaire
+  const form = document.getElementById('customQuizForm') as HTMLFormElement;
+  const loadingOverlay = document.getElementById('loadingOverlay');
+
+  if (form && loadingOverlay) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const prompt = formData.get('prompt') as string;
+      const difficulty = formData.get('difficulty') as string;
+      const numberOfQuestions = parseInt(formData.get('numberOfQuestions') as string);
+
+      // Validation basique
+      if (!prompt || prompt.trim().length < 10) {
+        promptError!.style.display = 'block';
+        promptInput.focus();
+        return;
+      }
+
+      if (!difficulty || !numberOfQuestions) {
+        // Ces champs sont required, pas besoin d'alert
+        return;
+      }
+
+      // Afficher le loading
+      loadingOverlay.style.display = 'flex';
+
+      try {
+        const response = await fetch('/api/quiz/generate-custom-quiz', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            difficulty,
+            numberOfQuestions,
+          }),
+        });
+
+        const data = await response.json();
+
+        console.log('✅ API Response:', data);
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la génération');
+        }
+
+        if (!data.sessionId) {
+          throw new Error('Aucune session créée');
+        }
+
+        console.log('✅ Session créée:', data.sessionId);
+
+        // Rediriger vers le quiz avec l'ID de session (comme pour les autres quiz)
+        window.location.href = `/quiz/play?session=${data.sessionId}`;
+      } catch (error) {
+        console.error('❌ Erreur:', error);
+        loadingOverlay.style.display = 'none';
+        alert(error instanceof Error ? error.message : 'Erreur lors de la génération du quiz');
+      }
+    });
+  }
+</script>

@@ -16,7 +16,7 @@
 
 .auth-card {
   width: 100%;
-  max-width: 480px;
+  max-width: var(--container-sm);
   background: var(--color-surface);
   border-radius: var(--radius-4);
   padding: var(--space-6);
@@ -186,7 +186,7 @@
   &::after {
     content: '';
     flex: 1;
-    height: 1px;
+    height: var(--border-width-thin);
     background: var(--color-border);
   }
 }
@@ -234,8 +234,8 @@
 }
 
 .oauth-button__icon {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
   flex-shrink: 0;
 }
 

@@ -1,0 +1,25 @@
+// ============================================
+// HOME PAGE STYLES
+// ============================================
+
+@use '../frameworkCss/tokens' as *;
+
+// ============================================
+// HOME BUTTONS - Special gradients
+// ============================================
+
+.btn--ai-quiz {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent2)) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent2-light)) !important;
+  }
+}
+
+.btn--custom-quiz {
+  background: linear-gradient(135deg, var(--color-accent2), hsl(24, 95%, 53%)) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, var(--color-accent2-light), hsl(24, 95%, 63%)) !important;
+  }
+}

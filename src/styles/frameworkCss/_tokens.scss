@@ -160,6 +160,7 @@ $text-scale-fluid: (
   8: (32, 44),
   9: (40, 52),
   10: (48, 64),
+  11: (64, 96),  // Display size - Pour hero numbers, scores géants
 ) !default;
 
 $leading-tight: 1.2 !default;
@@ -519,8 +520,11 @@ $z-tooltip: 700 !default;
   --z-popover: #{$z-popover};
   --z-tooltip: #{$z-tooltip};
   
-  // SITE
+  // SITE & CONTAINERS
   --site-container: 1280px;
+  --container-sm: 480px;   // Auth cards, modals
+  --container-md: 700px;   // Quiz results, single column content
+  --container-lg: 900px;   // Quiz setup, forms
 }
 
 // LIGHT THEME (optionnel)

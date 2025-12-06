@@ -31,19 +31,30 @@ if (!session.completed_at) {
 }
 
 // Charger les questions pour afficher les détails
-const { data: questions } = await Astro.locals.supabase
-  .from('questions')
-  .select('*')
-  .in('id', session.questions_ids);
+// ⚠️ Pour le mode custom-quiz, les questions n'existent pas en DB (IDs temporaires)
+let questions = null;
+
+if (session.quiz_type !== 'ai-custom-quiz') {
+  const { data: questionsData } = await Astro.locals.supabase
+    .from('questions')
+    .select('*')
+    .in('id', session.questions_ids);
+  questions = questionsData;
+}
 
 // Calculer les stats
 const totalQuestions = session.questions_ids.length;
-const answeredQuestions = session.answers.filter((a) => a !== null).length;
-const correctAnswers = session.answers.filter((answer, index) => {
-  if (answer === null) return false;
-  const question = questions?.find((q) => q.id === session.questions_ids[index]);
-  return question && answer === question.correct_index;
-}).length;
+const answeredQuestions = Array.isArray(session.answers) ? session.answers.filter((a) => a !== null).length : 0;
+
+// Pour les correctAnswers, on ne peut pas les calculer précisément pour custom-quiz car les questions ne sont pas en DB
+// On utilise le score comme proxy
+const correctAnswers = session.quiz_type === 'ai-custom-quiz' 
+  ? Math.round(session.score / 10) // Estimation basée sur score (10 pts/question max)
+  : (session.answers as any[]).filter((answer, index) => {
+      if (answer === null) return false;
+      const question = questions?.find((q) => q.id === session.questions_ids[index]);
+      return question && answer === question.correct_index;
+    }).length;
 
 const incorrectAnswers = answeredQuestions - correctAnswers;
 const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;

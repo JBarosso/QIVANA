@@ -35,9 +35,14 @@ const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
               <span class="btn__text">🎮 Quiz DB</span>
             </a>
             {profile && profile.plan !== 'freemium' && (
-              <a href="/quiz/ai-setup" class="btn btn--primary" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">
-                <span class="btn__text">🤖 Quiz IA</span>
-              </a>
+              <>
+                <a href="/quiz/ai-setup" class="btn btn--primary btn--ai-quiz">
+                  <span class="btn__text">🤖 Quiz IA</span>
+                </a>
+                <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
+                  <span class="btn__text">✨ Quiz Custom</span>
+                </a>
+              </>
             )}
             <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
@@ -52,7 +57,8 @@ const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
           ✅ Milestone 1 - Database Schema Complete<br>
           ✅ Milestone 2 - Authentication Complete<br>
           ✅ Milestone 3 - Core Quiz Engine (DB Quizzes)<br>
-          ✅ Milestone 4 - AI Quiz Generator (Predefined Universes)
+          ✅ Milestone 4 - AI Quiz Generator (Predefined Universes)<br>
+          ✅ Milestone 5 - Quiz Custom (IA)
         </p>
       </section>
     </div>
@@ -61,6 +67,7 @@ const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
 
 <style lang="scss">
   @use '@/styles/pages/auth';
+  @use '@/styles/pages/home';
 
   .home {
     min-height: 100vh;

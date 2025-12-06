@@ -13,6 +13,7 @@ export interface AIQuizRequest {
   difficulty: Difficulty;
   numberOfQuestions: number;
   provider?: AIProvider;
+  customPrompt?: string; // Pour le mode "prompt libre"
 }
 
 export interface AIQuizQuestion {
@@ -31,7 +32,12 @@ export interface AIQuizResponse {
  * Strict JSON - pas de markdown, pas de commentaires
  */
 function buildPrompt(request: AIQuizRequest): string {
-  const { universe, difficulty, numberOfQuestions } = request;
+  const { universe, difficulty, numberOfQuestions, customPrompt } = request;
+
+  // Si un prompt custom est fourni, l'utiliser (mode prompt libre)
+  if (customPrompt) {
+    return buildCustomPrompt(customPrompt, difficulty, numberOfQuestions);
+  }
 
   const difficultyDescriptions = {
     easy: 'facile (culture populaire, références connues)',
@@ -62,6 +68,46 @@ RÈGLES STRICTES:
 4. Inclure une explication claire de 1-2 phrases
 5. Questions variées (pas de répétitions)
 6. Réponse en JSON STRICT (pas de markdown, pas de commentaires)
+
+FORMAT JSON ATTENDU:
+{
+  "questions": [
+    {
+      "question": "Quelle est la question?",
+      "choices": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
+      "correct_index": 0,
+      "explanation": "Explication claire de la bonne réponse."
+    }
+  ]
+}
+
+Génère maintenant ${numberOfQuestions} questions en JSON STRICT.`;
+}
+
+/**
+ * Construit un prompt custom pour le mode "prompt libre"
+ */
+function buildCustomPrompt(userPrompt: string, difficulty: Difficulty, numberOfQuestions: number): string {
+  const difficultyDescriptions = {
+    easy: 'facile (accessible, culture populaire)',
+    medium: 'moyen (connaissances intermédiaires)',
+    hard: 'difficile (expert, détails précis)',
+  };
+
+  return `Tu es un expert en culture geek. L'utilisateur demande le quiz suivant:
+
+"${userPrompt}"
+
+Génère ${numberOfQuestions} questions basées sur cette demande, avec une difficulté "${difficultyDescriptions[difficulty]}".
+
+RÈGLES STRICTES:
+1. Respecte EXACTEMENT la demande de l'utilisateur
+2. Chaque question doit avoir exactement 4 réponses possibles (A, B, C, D)
+3. Une seule réponse correcte
+4. Les 3 fausses réponses doivent être plausibles
+5. Inclure une explication claire de 1-2 phrases
+6. Questions variées (pas de répétitions)
+7. Réponse en JSON STRICT (pas de markdown, pas de commentaires)
 
 FORMAT JSON ATTENDU:
 {
