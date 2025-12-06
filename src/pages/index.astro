@@ -4,10 +4,11 @@
 // ============================================
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { getUser } from '@/lib/auth';
+import { getUser, getProfile } from '@/lib/auth';
 
 // Check if user is authenticated
 const user = await getUser(Astro.locals.supabase);
+const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
 ---
 
 <BaseLayout title="Qivana - Accueil">
@@ -31,8 +32,13 @@ const user = await getUser(Astro.locals.supabase);
         ) : (
           <div class="hero__cta">
             <a href="/quiz/setup" class="btn btn--primary">
-              <span class="btn__text">🎮 Jouer</span>
+              <span class="btn__text">🎮 Quiz DB</span>
             </a>
+            {profile && profile.plan !== 'freemium' && (
+              <a href="/quiz/ai-setup" class="btn btn--primary" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">
+                <span class="btn__text">🤖 Quiz IA</span>
+              </a>
+            )}
             <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
             </a>
@@ -45,7 +51,8 @@ const user = await getUser(Astro.locals.supabase);
         <p class="hero__status">
           ✅ Milestone 1 - Database Schema Complete<br>
           ✅ Milestone 2 - Authentication Complete<br>
-          ✅ Milestone 3 - Core Quiz Engine (DB Quizzes)
+          ✅ Milestone 3 - Core Quiz Engine (DB Quizzes)<br>
+          ✅ Milestone 4 - AI Quiz Generator (Predefined Universes)
         </p>
       </section>
     </div>

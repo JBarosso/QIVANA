@@ -7,52 +7,104 @@ import QuizPlayer from '../../components/quiz/QuizPlayer';
 // Protection de la route
 const { user } = await requireAuth(Astro);
 
-// Récupérer l'ID de session
+// Récupérer l'ID de session OU la liste d'IDs de questions (pour quiz IA)
 const sessionId = Astro.url.searchParams.get('session');
+const questionIds = Astro.url.searchParams.get('ids');
 
-if (!sessionId) {
+let session;
+let questions;
+let orderedQuestions;
+
+if (sessionId) {
+  // Mode classique: charger depuis une session existante
+  session = await getQuizSession(Astro.locals.supabase, sessionId);
+
+  if (!session) {
+    return Astro.redirect('/quiz/setup');
+  }
+
+  // Vérifier que la session appartient à l'utilisateur
+  if (session.user_id !== user.id) {
+    return Astro.redirect('/quiz/setup');
+  }
+
+  // Si la session est déjà terminée, rediriger vers les résultats
+  if (session.completed_at) {
+    return Astro.redirect(`/quiz/results?session=${sessionId}`);
+  }
+
+  // Charger les questions
+  const { data: questionsData, error } = await Astro.locals.supabase
+    .from('questions')
+    .select('*')
+    .in('id', session.questions_ids);
+
+  if (error || !questionsData) {
+    console.error('Error loading questions:', error);
+    return Astro.redirect('/quiz/setup');
+  }
+
+  questions = questionsData;
+
+  // Ordonner les questions selon l'ordre de questions_ids
+  orderedQuestions = session.questions_ids
+    .map((id) => questions.find((q) => q.id === id))
+    .filter(Boolean);
+} else if (questionIds) {
+  // Mode quiz IA: créer une session à la volée avec les IDs fournis
+  const ids = questionIds.split(',');
+
+  // Charger les questions
+  const { data: questionsData, error } = await Astro.locals.supabase
+    .from('questions')
+    .select('*')
+    .in('id', ids);
+
+  if (error || !questionsData) {
+    return Astro.redirect('/quiz/ai-setup?error=questions_not_found');
+  }
+
+  questions = questionsData;
+
+  // Créer une session
+  const { data: newSession, error: sessionError } = await Astro.locals.supabase
+    .from('quiz_sessions')
+    .insert({
+      user_id: user.id,
+      quiz_type: 'ai-predefined',
+      quiz_mode: 'step-by-step',
+      universe: questions[0]?.universe || 'other',
+      difficulty: questions[0]?.difficulty || 'medium',
+      questions_ids: ids,
+      answers: [],
+      score: 0,
+      max_score: ids.length * 100,
+      started_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (sessionError || !newSession) {
+    console.error('Error creating AI quiz session:', sessionError);
+    return Astro.redirect('/quiz/ai-setup?error=session_creation_failed');
+  }
+
+  session = newSession;
+  
+  // Ordonner les questions selon l'ordre des IDs
+  orderedQuestions = ids
+    .map((id) => questions.find((q) => q.id === id))
+    .filter(Boolean);
+} else {
   return Astro.redirect('/quiz/setup');
 }
-
-// Charger la session
-const session = await getQuizSession(Astro.locals.supabase, sessionId);
-
-if (!session) {
-  return Astro.redirect('/quiz/setup');
-}
-
-// Vérifier que la session appartient à l'utilisateur
-if (session.user_id !== user.id) {
-  return Astro.redirect('/quiz/setup');
-}
-
-// Si la session est déjà terminée, rediriger vers les résultats
-if (session.completed_at) {
-  return Astro.redirect(`/quiz/results?session=${sessionId}`);
-}
-
-// Charger les questions
-const { data: questions, error } = await Astro.locals.supabase
-  .from('questions')
-  .select('*')
-  .in('id', session.questions_ids);
-
-if (error || !questions) {
-  console.error('Error loading questions:', error);
-  return Astro.redirect('/quiz/setup');
-}
-
-// Ordonner les questions selon l'ordre de questions_ids
-const orderedQuestions = session.questions_ids
-  .map((id) => questions.find((q) => q.id === id))
-  .filter(Boolean);
 ---
 
 <BaseLayout title="Quiz en cours - Qivana">
   <div class="quiz-play">
     <QuizPlayer
       client:load
-      sessionId={sessionId}
+      sessionId={session.id}
       questions={orderedQuestions}
       currentAnswers={session.answers}
     />
