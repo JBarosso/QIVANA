@@ -1,9 +1,21 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import vercel from '@astrojs/vercel';
+import path from 'path';
 
 // https://astro.build/config
 export default defineConfig({
+  vite: {
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '@components': path.resolve(__dirname, './src/components'),
+        '@layouts': path.resolve(__dirname, './src/layouts'),
+        '@lib': path.resolve(__dirname, './src/lib'),
+        '@styles': path.resolve(__dirname, './src/styles'),
+      },
+    },
+  },
   // ⚠️ IMPORTANT: Mettre à jour cette URL après le premier déploiement Vercel
   // Vercel définit automatiquement VERCEL_URL en production
   // Pour le développement local, utiliser localhost

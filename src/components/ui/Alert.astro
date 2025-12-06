@@ -1,0 +1,76 @@
+---
+// ============================================
+// ALERT COMPONENT - Qivana
+// ============================================
+// Composant réutilisable pour afficher des messages
+// (success, error, warning, info)
+// Utilise les styles du frameworkCss
+
+import '../../styles/frameworkCss/components/_alert.scss';
+
+interface Props {
+  type?: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  dismissible?: boolean;
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  id?: string;
+}
+
+const {
+  type = 'info',
+  message,
+  dismissible = true,
+  position = 'top-right',
+  id = `alert-${Math.random().toString(36).substr(2, 9)}`,
+} = Astro.props;
+
+const icons = {
+  success: '✅',
+  error: '❌',
+  warning: '⚠️',
+  info: 'ℹ️',
+};
+
+const typeClass = `alert--${type}`;
+const positionClass = `alert--${position}`;
+---
+
+<div class={`alert ${typeClass} ${positionClass}`} id={id} role="alert">
+  <div class="alert__content">
+    <span class="alert__icon" aria-hidden="true">{icons[type]}</span>
+    <p class="alert__message">{message}</p>
+  </div>
+  {dismissible && (
+    <button
+      class="alert__close"
+      aria-label="Fermer"
+      data-alert-id={id}
+    >
+      <span aria-hidden="true">×</span>
+    </button>
+  )}
+</div>
+
+<script>
+  // Auto-dismiss après 5 secondes pour success/info
+  const alert = document.getElementById('{id}');
+  if (alert) {
+    const isAutoDismiss = alert.classList.contains('alert--success') || alert.classList.contains('alert--info');
+    
+    if (isAutoDismiss) {
+      setTimeout(() => {
+        alert.setAttribute('data-exiting', 'true');
+        setTimeout(() => alert.remove(), 300);
+      }, 5000);
+    }
+
+    // Dismiss button
+    const closeBtn = alert.querySelector('.alert__close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        alert.setAttribute('data-exiting', 'true');
+        setTimeout(() => alert.remove(), 300);
+      });
+    }
+  }
+</script>

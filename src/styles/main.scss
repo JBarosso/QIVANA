@@ -10,6 +10,9 @@
 // 1. Import du frameworkCss (base du Design System Qivana)
 @use 'frameworkCss/base';
 
+// 2. Import des composants UI
+@use 'frameworkCss/components/alert';
+
 // 2. Layout styles personnalisés (à créer dans Milestone 2+)
 // @import './layout/...';
 

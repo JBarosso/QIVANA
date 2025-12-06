@@ -3,17 +3,50 @@
 // OAUTH CALLBACK
 // ============================================
 // Handles OAuth redirect after authentication
+// Exchanges OAuth code for session (PKCE flow)
 
-import { getUser } from '@/lib/auth';
+import { createServerClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-// Get session after OAuth redirect
-const user = await getUser(Astro.locals.supabase);
+// Get the code from URL query params
+const requestUrl = new URL(Astro.request.url);
+const code = requestUrl.searchParams.get('code');
+const next = requestUrl.searchParams.get('next') || '/';
 
-if (user) {
-  // Success: redirect to profile
-  return Astro.redirect('/profile');
+// Create Supabase client with cookie handling
+const supabase = createServerClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  {
+    cookies: {
+      get(key) {
+        return Astro.cookies.get(key)?.value;
+      },
+      set(key, value, options) {
+        Astro.cookies.set(key, value, options);
+      },
+      remove(key, options) {
+        Astro.cookies.delete(key, options);
+      },
+    },
+  }
+);
+
+if (code) {
+  // Exchange the code for a session
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (!error) {
+    // Success: redirect to the next page or profile
+    return Astro.redirect(next);
+  } else {
+    console.error('OAuth callback error:', error);
+    // Error: redirect to login with error message
+    return Astro.redirect(`/auth/login?error=${encodeURIComponent(error.message || 'Erreur d\'authentification')}`);
+  }
 } else {
-  // Error: redirect to login with error message
-  return Astro.redirect('/auth/login?error=Erreur+d\'authentification');
+  // No code in URL: redirect to login
+  return Astro.redirect('/auth/login?error=Code+OAuth+manquant');
 }
 ---

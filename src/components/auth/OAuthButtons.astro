@@ -88,9 +88,14 @@ const { redirectTo } = Astro.props;
         await signInWithOAuth(supabase, provider, redirectTo);
       } catch (error) {
         console.error('OAuth error:', error);
-        alert(
-          `Erreur de connexion ${provider}. Veuillez réessayer.`
-        );
+        
+        // Afficher une alerte au lieu d'un alert() natif
+        const { showAlert } = await import('@lib/showAlert');
+        showAlert({
+          type: 'error',
+          message: `Erreur de connexion ${provider}. Veuillez réessayer ou contacter le support si le problème persiste.`,
+          duration: 8000,
+        });
       }
     });
   });
