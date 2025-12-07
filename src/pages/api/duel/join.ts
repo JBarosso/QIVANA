@@ -132,17 +132,42 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       const { error: updateError } = await supabase
         .from('duel_sessions')
         .update({ participants: updatedParticipants })
-        .eq('id', salonId);
+        .eq('id', salonId)
+        .eq('status', 'lobby'); // S'assurer que le salon est toujours en lobby
 
       if (updateError) {
-        console.error('Error adding participant:', updateError);
+        console.error('❌ Error adding participant:', updateError);
+        console.error('Update error details:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+        });
         return new Response(
-          JSON.stringify({ error: 'Erreur lors de l\'ajout au salon' }),
+          JSON.stringify({ 
+            error: 'Erreur lors de l\'ajout au salon: ' + updateError.message,
+            details: updateError.details,
+            code: updateError.code
+          }),
           {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
           }
         );
+      }
+      
+      // Vérifier que la mise à jour a bien fonctionné
+      const { data: updatedSalon, error: verifyError } = await supabase
+        .from('duel_sessions')
+        .select('participants')
+        .eq('id', salonId)
+        .single();
+      
+      if (verifyError) {
+        console.error('❌ Error verifying update:', verifyError);
+      } else {
+        console.log('✅ Participant added successfully:', newParticipant);
+        console.log('✅ Updated participants:', updatedSalon?.participants);
       }
     }
 

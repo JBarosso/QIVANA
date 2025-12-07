@@ -19,10 +19,12 @@ const salonId = Astro.url.searchParams.get('salon');
 let salon = null;
 let salonCode = null;
 
+// Récupérer supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 if (salonId) {
   // Récupérer le salon par ID (via code si nécessaire)
   // Pour l'instant, on récupère directement depuis la DB
-  const supabase = (Astro.locals as { supabase?: any }).supabase;
   if (supabase) {
     const { data, error } = await supabase
       .from('duel_sessions')
@@ -49,9 +51,32 @@ if (salon.status !== 'lobby') {
 // Vérifier si l'utilisateur est le chef
 const isChef = salon.chef_id === user.id;
 
+// Récupérer le pseudo du chef
+let chefPseudo = profile.pseudo; // Par défaut, si c'est le chef actuel
+if (!isChef && supabase) {
+  const { data: chefProfile } = await supabase
+    .from('profiles')
+    .select('pseudo')
+    .eq('id', salon.chef_id)
+    .single();
+  if (chefProfile) {
+    chefPseudo = chefProfile.pseudo;
+  }
+}
+
 // Créer un client Supabase côté client pour le Realtime
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+// Récupérer le token d'accès depuis la session serveur pour l'initialiser côté client
+let accessToken = null;
+if (supabase) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    accessToken = session.access_token;
+  }
+}
+
 // URL du site : utilise PUBLIC_SITE_URL si défini, sinon l'origine de la requête
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || Astro.url.origin;
 const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
@@ -127,6 +152,9 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
               currentUserId={user.id}
               currentUserPseudo={profile.pseudo}
               isChef={isChef}
+              chefId={salon.chef_id}
+              chefPseudo={chefPseudo}
+              accessToken={accessToken}
             />
           </section>
 
