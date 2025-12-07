@@ -6,9 +6,14 @@
 
 import { signOut } from '@/lib/auth';
 
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 // Sign out the user
 try {
-  await signOut(Astro.locals.supabase);
+  if (supabase) {
+    await signOut(supabase);
+  }
 } catch (error) {
   console.error('Logout error:', error);
 }

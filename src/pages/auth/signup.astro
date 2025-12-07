@@ -7,8 +7,11 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import OAuthButtons from '@/components/auth/OAuthButtons.astro';
 import { getUser } from '@/lib/auth';
 
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 // Redirect if already authenticated
-const user = await getUser(Astro.locals.supabase);
+const user = await getUser(supabase);
 if (user) {
   return Astro.redirect('/profile');
 }
@@ -28,13 +31,13 @@ if (Astro.request.method === 'POST') {
     error = 'Tous les champs sont requis';
   } else if (password !== passwordConfirm) {
     error = 'Les mots de passe ne correspondent pas';
-  } else {
+  } else if (supabase) {
     // ⚠️ IMPORTANT : Utiliser l'URL de production pour la confirmation d'email
     // Astro.url.origin sera automatiquement l'URL de production en prod (Vercel)
     const origin = Astro.url.origin;
     const redirectTo = `${origin}/auth/callback?type=email-confirmation`;
     
-    const { error: signUpError } = await Astro.locals.supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {

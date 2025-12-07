@@ -7,8 +7,11 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import OAuthButtons from '@/components/auth/OAuthButtons.astro';
 import { getUser } from '@/lib/auth';
 
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 // Redirect if already authenticated
-const user = await getUser(Astro.locals.supabase);
+const user = await getUser(supabase);
 if (user) {
   return Astro.redirect('/profile');
 }
@@ -22,8 +25,8 @@ if (Astro.request.method === 'POST') {
   const email = formData.get('email')?.toString();
   const password = formData.get('password')?.toString();
 
-  if (email && password) {
-    const { error: signInError } = await Astro.locals.supabase.auth.signInWithPassword({
+  if (email && password && supabase) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });

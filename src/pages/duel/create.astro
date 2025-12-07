@@ -1,0 +1,285 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requirePremiumPlus } from '../../lib/auth';
+import '../../styles/pages/_duel.scss';
+
+// Protection de la route - Premium+ uniquement
+const authResult = await requirePremiumPlus(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Définir les univers et difficultés disponibles
+const universes = [
+  { id: 'anime', label: '🎌 Anime', icon: '🎌' },
+  { id: 'manga', label: '📚 Manga', icon: '📚' },
+  { id: 'comics', label: '🦸 Comics', icon: '🦸' },
+  { id: 'games', label: '🎮 Jeux Vidéo', icon: '🎮' },
+  { id: 'movies', label: '🎬 Films', icon: '🎬' },
+  { id: 'series', label: '📺 Séries', icon: '📺' },
+  { id: 'other', label: '🌟 Autre', icon: '🌟' },
+];
+
+const difficulties = [
+  { id: 'easy', label: 'Facile', description: 'Pour débuter', color: 'success' },
+  { id: 'medium', label: 'Moyen', description: 'Un peu de challenge', color: 'warning' },
+  { id: 'hard', label: 'Difficile', description: 'Pour les experts', color: 'danger' },
+];
+
+const gameModes = [
+  { id: 'classic', label: 'Classic', description: 'Mode classique avec questions synchronisées', available: true },
+  { id: 'deathmatch', label: 'Deathmatch', description: 'Mode compétitif (bientôt disponible)', available: false },
+];
+
+const questionCounts = [5, 10, 15, 20, 25, 30];
+---
+
+<BaseLayout title="Créer un Salon - Qivana">
+  <div class="duel-create">
+    <div class="duel-create__container">
+      <header class="duel-create__header">
+        <h1 class="duel-create__title">Créer un Salon</h1>
+        <p class="duel-create__subtitle">Organise un duel multijoueur avec tes amis</p>
+      </header>
+
+      <form method="POST" action="/api/duel/create" class="duel-create__form" id="duelCreateForm">
+        <!-- Nom du salon -->
+        <section class="duel-create__section">
+          <label for="salon_name" class="duel-create__label">
+            <span class="duel-create__label-icon">🏷️</span>
+            Nom du salon
+          </label>
+          <input
+            type="text"
+            id="salon_name"
+            name="salon_name"
+            required
+            minlength="3"
+            maxlength="50"
+            placeholder="Ex: Duel Anime du Samedi"
+            class="duel-create__input"
+          />
+          <p class="duel-create__hint">Entre 3 et 50 caractères</p>
+        </section>
+
+        <!-- Mode de jeu -->
+        <section class="duel-create__section">
+          <h2 class="duel-create__section-title">
+            <span class="duel-create__section-icon">🎮</span>
+            Mode de jeu
+          </h2>
+          <div class="duel-create__grid">
+            {gameModes.map((mode) => (
+              <label class={`duel-create__mode-card ${!mode.available ? 'duel-create__mode-card--disabled' : ''}`}>
+                <input
+                  type="radio"
+                  name="game_mode"
+                  value={mode.id}
+                  required
+                  disabled={!mode.available}
+                  checked={mode.id === 'classic'}
+                  class="duel-create__mode-card__input"
+                />
+                <div class="duel-create__mode-card__content">
+                  <span class="duel-create__mode-card__label">{mode.label}</span>
+                  <span class="duel-create__mode-card__description">{mode.description}</span>
+                  {!mode.available && (
+                    <span class="duel-create__mode-card__badge">Bientôt</span>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Source des questions (DB ou IA) -->
+        <section class="duel-create__section">
+          <h2 class="duel-create__section-title">
+            <span class="duel-create__section-icon">📚</span>
+            Source des questions
+          </h2>
+          <div class="duel-create__radio-group">
+            <label class="duel-create__radio">
+              <input
+                type="radio"
+                name="mode"
+                value="db"
+                required
+                checked
+                class="duel-create__radio__input"
+              />
+              <span class="duel-create__radio__label">Base de données</span>
+              <span class="duel-create__radio__hint">Questions validées et approuvées</span>
+            </label>
+            <label class="duel-create__radio">
+              <input
+                type="radio"
+                name="mode"
+                value="ai-predefined"
+                class="duel-create__radio__input"
+              />
+              <span class="duel-create__radio__label">IA (prédéfini)</span>
+              <span class="duel-create__radio__hint">Génération IA si stock insuffisant</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Sélection Univers -->
+        <section class="duel-create__section">
+          <h2 class="duel-create__section-title">
+            <span class="duel-create__section-icon">🌍</span>
+            Univers
+          </h2>
+          <div class="duel-create__grid">
+            {universes.map((universe) => (
+              <label class="duel-create__card">
+                <input
+                  type="radio"
+                  name="universe"
+                  value={universe.id}
+                  required
+                  class="duel-create__card__input"
+                />
+                <div class="duel-create__card__content">
+                  <span class="duel-create__card__icon">{universe.icon}</span>
+                  <span class="duel-create__card__label">{universe.label}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Sélection Difficulté -->
+        <section class="duel-create__section">
+          <h2 class="duel-create__section-title">
+            <span class="duel-create__section-icon">⚡</span>
+            Difficulté
+          </h2>
+          <div class="duel-create__difficulty-grid">
+            {difficulties.map((difficulty) => (
+              <label class={`duel-create__difficulty-card duel-create__difficulty-card--${difficulty.color}`}>
+                <input
+                  type="radio"
+                  name="difficulty"
+                  value={difficulty.id}
+                  required
+                  class="duel-create__difficulty-card__input"
+                />
+                <div class="duel-create__difficulty-card__content">
+                  <span class="duel-create__difficulty-card__label">{difficulty.label}</span>
+                  <span class="duel-create__difficulty-card__description">{difficulty.description}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Nombre de questions -->
+        <section class="duel-create__section">
+          <label for="questions_count" class="duel-create__label">
+            <span class="duel-create__label-icon">❓</span>
+            Nombre de questions
+          </label>
+          <select
+            id="questions_count"
+            name="questions_count"
+            required
+            class="duel-create__select"
+          >
+            {questionCounts.map((count) => (
+              <option value={count}>{count} questions</option>
+            ))}
+          </select>
+        </section>
+
+        <!-- Timer -->
+        <section class="duel-create__section">
+          <label for="timer_seconds" class="duel-create__label">
+            <span class="duel-create__label-icon">⏱️</span>
+            Timer (secondes par question)
+          </label>
+          <input
+            type="number"
+            id="timer_seconds"
+            name="timer_seconds"
+            min="3"
+            max="20"
+            value="10"
+            required
+            class="duel-create__input"
+          />
+          <p class="duel-create__hint">Entre 3 et 20 secondes (ou désactiver dans le lobby)</p>
+        </section>
+
+        <!-- Note: Visibilité publique désactivée pour la MVP -->
+        <!-- Tous les salons sont privés (accessibles uniquement via code/link) -->
+
+        <!-- Bouton de soumission -->
+        <div class="duel-create__actions">
+          <button type="submit" class="btn btn--primary btn--block">
+            Créer le salon
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { showAlert } from '../../lib/showAlert';
+
+  const form = document.getElementById('duelCreateForm') as HTMLFormElement;
+  
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(form);
+      const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Création...';
+      }
+
+      try {
+        const response = await fetch('/api/duel/create', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la création du salon');
+        }
+
+        // Rediriger vers le lobby
+        if (data.redirectTo) {
+          window.location.href = data.redirectTo;
+        } else {
+          showAlert({ message: 'Salon créé avec succès !', type: 'success' });
+          // Fallback: rediriger vers le profile
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Error creating salon:', error);
+        showAlert({ 
+          message: error instanceof Error ? error.message : 'Erreur lors de la création du salon', 
+          type: 'error' 
+        });
+        
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Créer le salon';
+        }
+      }
+    });
+  }
+</script>

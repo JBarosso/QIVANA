@@ -1,0 +1,374 @@
+// ============================================
+// DUEL PAGES STYLES
+// ============================================
+
+@use '../frameworkCss/tokens' as *;
+
+// ============================================
+// DUEL CREATE PAGE
+// ============================================
+
+.duel-create {
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+}
+
+.duel-create__container {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+}
+
+.duel-create__header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.duel-create__title {
+  font-family: var(--font-secondary);
+  font-size: var(--fs-8);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.duel-create__subtitle {
+  font-size: var(--fs-4);
+  color: var(--color-text-muted);
+}
+
+.duel-create__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.duel-create__section {
+  background: var(--color-surface);
+  border-radius: var(--radius-4);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+}
+
+.duel-create__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-secondary);
+  font-size: var(--fs-5);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-5);
+}
+
+.duel-create__section-icon {
+  font-size: var(--fs-6);
+}
+
+.duel-create__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-secondary);
+  font-size: var(--fs-4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.duel-create__label-icon {
+  font-size: var(--fs-5);
+}
+
+.duel-create__input,
+.duel-create__select {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-3);
+  color: var(--color-text);
+  background: var(--color-neutral-800);
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--radius-2);
+  transition: all var(--transition-base);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+}
+
+.duel-create__hint {
+  margin-top: var(--space-2);
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+
+// Grid pour les cartes
+.duel-create__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+// Card (univers)
+.duel-create__card {
+  position: relative;
+  cursor: pointer;
+  display: block;
+}
+
+.duel-create__card__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.duel-create__card__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-neutral-800);
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--radius-3);
+  transition: all var(--transition-base);
+  min-height: 100px;
+}
+
+.duel-create__card__input:checked + .duel-create__card__content {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  transform: translateY(-2px);
+}
+
+.duel-create__card__input:focus + .duel-create__card__content {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.duel-create__card__icon {
+  font-size: var(--fs-7);
+}
+
+.duel-create__card__label {
+  font-size: var(--fs-3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  text-align: center;
+}
+
+// Mode Card (game mode)
+.duel-create__mode-card {
+  position: relative;
+  cursor: pointer;
+  display: block;
+}
+
+.duel-create__mode-card--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.duel-create__mode-card__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.duel-create__mode-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-neutral-800);
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--radius-3);
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.duel-create__mode-card__input:checked + .duel-create__mode-card__content {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+  transform: translateY(-2px);
+}
+
+.duel-create__mode-card__input:disabled + .duel-create__mode-card__content {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.duel-create__mode-card__label {
+  font-size: var(--fs-4);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.duel-create__mode-card__description {
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+
+.duel-create__mode-card__badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-1);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  background: var(--color-warning);
+  border-radius: var(--radius-1);
+}
+
+// Difficulty Grid
+.duel-create__difficulty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+// Difficulty Card
+.duel-create__difficulty-card {
+  position: relative;
+  cursor: pointer;
+  display: block;
+}
+
+.duel-create__difficulty-card__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.duel-create__difficulty-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-neutral-800);
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--radius-3);
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.duel-create__difficulty-card__input:checked + .duel-create__difficulty-card__content {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.duel-create__difficulty-card--success {
+  .duel-create__difficulty-card__input:checked + .duel-create__difficulty-card__content {
+    background: var(--color-success);
+    border-color: var(--color-success);
+  }
+}
+
+.duel-create__difficulty-card--warning {
+  .duel-create__difficulty-card__input:checked + .duel-create__difficulty-card__content {
+    background: var(--color-warning);
+    border-color: var(--color-warning);
+  }
+}
+
+.duel-create__difficulty-card--danger {
+  .duel-create__difficulty-card__input:checked + .duel-create__difficulty-card__content {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+  }
+}
+
+.duel-create__difficulty-card__label {
+  font-size: var(--fs-4);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.duel-create__difficulty-card__description {
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+
+// Radio Group
+.duel-create__radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.duel-create__radio {
+  position: relative;
+  cursor: pointer;
+  display: block;
+  padding: var(--space-4);
+  background: var(--color-neutral-800);
+  border: 2px solid var(--color-neutral-700);
+  border-radius: var(--radius-3);
+  transition: all var(--transition-base);
+}
+
+.duel-create__radio__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.duel-create__radio:has(.duel-create__radio__input:checked) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+
+  .duel-create__radio__label {
+    color: var(--color-text);
+  }
+}
+
+.duel-create__radio__label {
+  display: block;
+  font-size: var(--fs-4);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+  transition: color var(--transition-base);
+}
+
+.duel-create__radio__hint {
+  display: block;
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
+
+// Actions
+.duel-create__actions {
+  margin-top: var(--space-4);
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .duel-create {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .duel-create__section {
+    padding: var(--space-4);
+  }
+
+  .duel-create__grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: var(--space-2);
+  }
+
+  .duel-create__difficulty-grid {
+    grid-template-columns: 1fr;
+  }
+}

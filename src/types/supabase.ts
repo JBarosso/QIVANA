@@ -103,6 +103,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
+          game_mode: Database["public"]["Enums"]["duel_game_mode"]
           id: string
           is_public: boolean
           mode: Database["public"]["Enums"]["quiz_type"]
@@ -122,6 +123,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
+          game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
           is_public?: boolean
           mode: Database["public"]["Enums"]["quiz_type"]
@@ -141,6 +143,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           difficulty?: Database["public"]["Enums"]["quiz_difficulty"]
+          game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
           is_public?: boolean
           mode?: Database["public"]["Enums"]["quiz_type"]
@@ -512,6 +515,7 @@ export type Database = {
       }
     }
     Enums: {
+      duel_game_mode: "classic" | "deathmatch"
       duel_status: "lobby" | "in-progress" | "completed" | "cancelled"
       question_source: "ia" | "admin"
       quiz_difficulty: "easy" | "medium" | "hard"
@@ -653,6 +657,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      duel_game_mode: ["classic", "deathmatch"],
       duel_status: ["lobby", "in-progress", "completed", "cancelled"],
       question_source: ["ia", "admin"],
       quiz_difficulty: ["easy", "medium", "hard"],

@@ -181,3 +181,31 @@ export async function requireAuth(Astro: AstroContext): Promise<AuthResult | Res
     profile,
   };
 }
+
+/**
+ * Check if user is authenticated AND has Premium+ plan (server-side)
+ * Redirects to /auth/login if not authenticated
+ * Redirects to /profile with error message if not Premium+
+ * To be used in Astro pages: const { user, profile } = await requirePremiumPlus(Astro);
+ */
+export async function requirePremiumPlus(Astro: AstroContext): Promise<AuthResult | Response> {
+  const authResult = await requireAuth(Astro);
+  
+  // Si c'est une redirection (non authentifié), la retourner
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+  
+  const { user, profile } = authResult;
+  
+  // Vérifier que l'utilisateur a Premium+
+  if (profile.plan !== 'premium+') {
+    // Rediriger vers le profile avec un message d'erreur
+    return Astro.redirect('/profile?error=premium-plus-required');
+  }
+  
+  return {
+    user,
+    profile,
+  };
+}

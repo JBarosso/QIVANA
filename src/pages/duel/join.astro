@@ -1,0 +1,275 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requirePremiumPlus } from '../../lib/auth';
+import { getSalonByCode } from '../../lib/duel';
+
+// Protection de la route - Premium+ uniquement
+const authResult = await requirePremiumPlus(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Récupérer le code du salon depuis l'URL
+const salonCode = Astro.url.searchParams.get('code');
+let salon = null;
+let error = null;
+
+if (salonCode) {
+  const supabase = (Astro.locals as { supabase?: any }).supabase;
+  if (supabase) {
+    salon = await getSalonByCode(supabase, salonCode);
+    
+    if (!salon) {
+      error = 'Salon introuvable. Vérifie le code.';
+    } else if (salon.status !== 'lobby') {
+      error = 'Ce salon n\'est plus en attente de joueurs.';
+    } else if (salon.chef_id === user.id) {
+      // Le chef est déjà dans le salon, rediriger vers le lobby
+      return Astro.redirect(`/duel/lobby?salon=${salon.id}`);
+    }
+  }
+} else {
+  error = 'Code de salon manquant.';
+}
+---
+
+<BaseLayout title="Rejoindre un Salon - Qivana">
+  <div class="duel-join">
+    <div class="duel-join__container">
+      <header class="duel-join__header">
+        <h1 class="duel-join__title">Rejoindre un Salon</h1>
+        <p class="duel-join__subtitle">Entre le code du salon ou utilise le lien partagé</p>
+      </header>
+
+      {error ? (
+        <div class="duel-join__error">
+          <p>{error}</p>
+          <a href="/duel/create" class="btn btn--primary">
+            Créer un salon
+          </a>
+        </div>
+      ) : salon ? (
+        <div class="duel-join__success">
+          <div class="duel-join__salon-info">
+            <h2 class="duel-join__salon-name">{salon.salon_name}</h2>
+            <div class="duel-join__salon-details">
+              <span>🌍 {salon.universe}</span>
+              <span>⚡ {salon.difficulty}</span>
+              <span>❓ {salon.questions_count} questions</span>
+              <span>⏱️ {salon.timer_seconds ? `${salon.timer_seconds}s` : 'Désactivé'}</span>
+            </div>
+          </div>
+          
+          <form method="POST" action="/api/duel/join" class="duel-join__form" id="joinForm">
+            <input type="hidden" name="salon_id" value={salon.id} />
+            <button type="submit" class="btn btn--primary btn--block">
+              Rejoindre le salon
+            </button>
+          </form>
+        </div>
+      ) : (
+        <form method="GET" action="/duel/join" class="duel-join__form" id="codeForm">
+          <label for="code" class="duel-join__label">
+            Code du salon (6 caractères)
+          </label>
+          <input
+            type="text"
+            id="code"
+            name="code"
+            required
+            minlength="6"
+            maxlength="6"
+            pattern="[A-Z0-9]{6}"
+            placeholder="Ex: A3B9K2"
+            class="duel-join__input"
+            style="text-transform: uppercase;"
+          />
+          <button type="submit" class="btn btn--primary btn--block">
+            Rejoindre
+          </button>
+        </form>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { showAlert } from '../../lib/showAlert';
+
+  // Convertir automatiquement en majuscules
+  const codeInput = document.getElementById('code') as HTMLInputElement;
+  if (codeInput) {
+    codeInput.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      target.value = target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+  }
+
+  // Gérer le formulaire de join
+  const joinForm = document.getElementById('joinForm') as HTMLFormElement;
+  if (joinForm) {
+    joinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(joinForm);
+      const submitButton = joinForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Rejoindre...';
+      }
+
+      try {
+        const response = await fetch('/api/duel/join', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la jonction du salon');
+        }
+
+        // Rediriger vers le lobby
+        if (data.redirectTo) {
+          window.location.href = data.redirectTo;
+        } else {
+          showAlert({ message: 'Salon rejoint avec succès !', type: 'success' });
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Error joining salon:', error);
+        showAlert({ 
+          message: error instanceof Error ? error.message : 'Erreur lors de la jonction du salon', 
+          type: 'error' 
+        });
+        
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Rejoindre le salon';
+        }
+      }
+    });
+  }
+</script>
+
+<style>
+  @import '../../styles/pages/_duel.scss';
+
+  .duel-join {
+    min-height: 100vh;
+    padding: var(--space-6) var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .duel-join__container {
+    max-width: var(--container-md);
+    margin: 0 auto;
+  }
+
+  .duel-join__header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .duel-join__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .duel-join__subtitle {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+  }
+
+  .duel-join__form {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .duel-join__label {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+  }
+
+  .duel-join__input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    letter-spacing: 0.2em;
+    color: var(--color-text);
+    background: var(--color-neutral-800);
+    border: 2px solid var(--color-neutral-700);
+    border-radius: var(--radius-2);
+    transition: all var(--transition-base);
+  }
+
+  .duel-join__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+  }
+
+  .duel-join__error {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+    color: var(--color-danger);
+  }
+
+  .duel-join__success {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+
+  .duel-join__salon-info {
+    margin-bottom: var(--space-6);
+  }
+
+  .duel-join__salon-name {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+    text-align: center;
+  }
+
+  .duel-join__salon-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    justify-content: center;
+  }
+
+  .duel-join__salon-details span {
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-neutral-800);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-3);
+    color: var(--color-text);
+  }
+</style>

@@ -1,0 +1,375 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requirePremiumPlus } from '../../lib/auth';
+import { getSalonByCode } from '../../lib/duel';
+import LobbyRealtime from '../../components/duel/LobbyRealtime';
+
+// Protection de la route - Premium+ uniquement
+const authResult = await requirePremiumPlus(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Récupérer le salon depuis l'URL
+const salonId = Astro.url.searchParams.get('salon');
+let salon = null;
+let salonCode = null;
+
+if (salonId) {
+  // Récupérer le salon par ID (via code si nécessaire)
+  // Pour l'instant, on récupère directement depuis la DB
+  const supabase = (Astro.locals as { supabase?: any }).supabase;
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('duel_sessions')
+      .select('*')
+      .eq('id', salonId)
+      .single();
+
+    if (!error && data) {
+      salon = data;
+      salonCode = data.salon_code;
+    }
+  }
+}
+
+// Si le salon n'existe pas ou n'est plus en lobby, rediriger
+if (!salon) {
+  return Astro.redirect('/duel/create?error=salon-not-found');
+}
+
+if (salon.status !== 'lobby') {
+  return Astro.redirect('/duel/join?code=' + salonCode + '&error=salon-not-available');
+}
+
+// Vérifier si l'utilisateur est le chef
+const isChef = salon.chef_id === user.id;
+
+// Créer un client Supabase côté client pour le Realtime
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+// URL du site : utilise PUBLIC_SITE_URL si défini, sinon l'origine de la requête
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || Astro.url.origin;
+const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
+---
+
+<BaseLayout title="Lobby - Qivana">
+  <div class="duel-lobby">
+    <div class="duel-lobby__container">
+      <header class="duel-lobby__header">
+        <h1 class="duel-lobby__title">{salon?.salon_name || 'Salon'}</h1>
+        <p class="duel-lobby__subtitle">En attente de joueurs...</p>
+      </header>
+
+      {salon && (
+        <div class="duel-lobby__content">
+          <!-- Code du salon -->
+          <section class="duel-lobby__section duel-lobby__code-section">
+            <h2 class="duel-lobby__section-title">Code du salon</h2>
+            <div class="duel-lobby__code">
+              <span class="duel-lobby__code-text">{salonCode}</span>
+              <button
+                class="btn btn--secondary"
+                id="copyLinkBtn"
+              >
+                📋 Copier le lien
+              </button>
+            </div>
+            
+            <!-- QR Code -->
+            <div class="duel-lobby__qr-container">
+              <img id="qrCode" class="duel-lobby__qr-code" alt="QR Code" />
+              <p class="duel-lobby__qr-hint">Scanne pour rejoindre rapidement</p>
+            </div>
+            
+            <p class="duel-lobby__hint">
+              Partage ce code ou ce lien avec tes amis pour qu'ils rejoignent le salon
+            </p>
+          </section>
+
+          <!-- Informations du salon -->
+          <section class="duel-lobby__section">
+            <h2 class="duel-lobby__section-title">Paramètres</h2>
+            <div class="duel-lobby__info-grid">
+              <div class="duel-lobby__info-item">
+                <span class="duel-lobby__info-label">Univers</span>
+                <span class="duel-lobby__info-value">{salon.universe}</span>
+              </div>
+              <div class="duel-lobby__info-item">
+                <span class="duel-lobby__info-label">Difficulté</span>
+                <span class="duel-lobby__info-value">{salon.difficulty}</span>
+              </div>
+              <div class="duel-lobby__info-item">
+                <span class="duel-lobby__info-label">Questions</span>
+                <span class="duel-lobby__info-value">{salon.questions_count}</span>
+              </div>
+              <div class="duel-lobby__info-item">
+                <span class="duel-lobby__info-label">Timer</span>
+                <span class="duel-lobby__info-value">
+                  {salon.timer_seconds ? `${salon.timer_seconds}s` : 'Désactivé'}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Liste des joueurs (Realtime) -->
+          <section class="duel-lobby__section">
+            <h2 class="duel-lobby__section-title">Joueurs</h2>
+            <LobbyRealtime
+              client:load
+              supabaseUrl={supabaseUrl}
+              supabaseKey={supabaseAnonKey}
+              salonId={salonId || ''}
+              currentUserId={user.id}
+              currentUserPseudo={profile.pseudo}
+              isChef={isChef}
+            />
+          </section>
+
+          <!-- Actions -->
+          <section class="duel-lobby__actions">
+            {isChef && (
+              <button
+                class="btn btn--primary btn--block"
+                id="startDuelBtn"
+                disabled
+              >
+                Démarrer le duel (min. 2 joueurs)
+              </button>
+            )}
+            <a href="/profile" class="btn btn--secondary btn--block">
+              Retour au profil
+            </a>
+          </section>
+        </div>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @import '../../styles/pages/_duel.scss';
+
+  .duel-lobby {
+    min-height: 100vh;
+    padding: var(--space-6) var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .duel-lobby__container {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+
+  .duel-lobby__header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .duel-lobby__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .duel-lobby__subtitle {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+  }
+
+  .duel-lobby__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .duel-lobby__section {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+
+  .duel-lobby__section-title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+  }
+
+  .duel-lobby__code-section {
+    text-align: center;
+  }
+
+  .duel-lobby__code {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .duel-lobby__code-text {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--fs-7);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    background: var(--color-neutral-800);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-2);
+    letter-spacing: 0.1em;
+  }
+
+  .duel-lobby__hint {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .duel-lobby__info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .duel-lobby__info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .duel-lobby__info-label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .duel-lobby__info-value {
+    font-size: var(--fs-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    text-transform: capitalize;
+  }
+
+  .duel-lobby__players-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .duel-lobby__player {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3);
+    background: var(--color-neutral-800);
+    border-radius: var(--radius-2);
+  }
+
+  .duel-lobby__player-name {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+  }
+
+  .duel-lobby__player-badge {
+    font-size: var(--fs-2);
+    color: var(--color-warning);
+  }
+
+  .duel-lobby__empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: var(--space-4);
+  }
+
+  .duel-lobby__actions {
+    text-align: center;
+  }
+
+  .duel-lobby__note {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-4);
+    font-style: italic;
+  }
+
+  .duel-lobby__qr-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-neutral-800);
+    border-radius: var(--radius-3);
+  }
+
+  .duel-lobby__qr-code {
+    width: 180px;
+    height: 180px;
+    background: white;
+    padding: var(--space-2);
+    border-radius: var(--radius-2);
+    display: block;
+    object-fit: contain;
+  }
+
+  .duel-lobby__qr-hint {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+</style>
+
+<script is:inline define:vars={{ shareUrl }}>
+  // QR Code generation - Utiliser une API externe simple
+  (function() {
+    const qrElement = document.getElementById('qrCode');
+    if (!qrElement || qrElement.tagName !== 'IMG') {
+      return;
+    }
+
+    // Utiliser l'API QR Server (plus fiable que CDN)
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}`;
+    qrElement.src = qrApiUrl;
+    
+    qrElement.onerror = function() {
+      if (qrElement.parentElement) {
+        qrElement.parentElement.innerHTML = '<p style="color: var(--color-text-muted);">Erreur chargement QR code</p>';
+      }
+    };
+  })();
+
+  // Copy link button
+  (function() {
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    if (copyLinkBtn) {
+      copyLinkBtn.addEventListener('click', function() {
+        navigator.clipboard.writeText(shareUrl).then(function() {
+          copyLinkBtn.textContent = '✅ Copié !';
+          setTimeout(function() {
+            copyLinkBtn.textContent = '📋 Copier le lien';
+          }, 2000);
+        }).catch(function(error) {
+          console.error('Error copying to clipboard:', error);
+          copyLinkBtn.textContent = '❌ Erreur';
+          setTimeout(function() {
+            copyLinkBtn.textContent = '📋 Copier le lien';
+          }, 2000);
+        });
+      });
+    }
+  })();
+
+  // Activer le bouton "Démarrer" quand il y a au moins 2 joueurs
+  // Ce sera géré par le composant Realtime qui mettra à jour le compteur
+  // Pour l'instant, on attend le Milestone 7.3 pour implémenter le démarrage
+</script>

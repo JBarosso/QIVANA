@@ -143,7 +143,22 @@ if (sessionId) {
     return Astro.redirect('/quiz/setup?error=session_creation_failed');
   }
 
-  session = newSession as QuizSession;
+  // Convertir le type Supabase en QuizSession
+  session = {
+    id: newSession.id,
+    user_id: newSession.user_id,
+    quiz_type: newSession.quiz_type,
+    quiz_mode: newSession.quiz_mode,
+    universe: newSession.universe,
+    difficulty: newSession.difficulty,
+    questions_ids: newSession.questions_ids,
+    answers: newSession.answers,
+    score: newSession.score,
+    max_score: newSession.max_score,
+    started_at: newSession.started_at,
+    completed_at: newSession.completed_at,
+    timer_seconds: newSession.timer_seconds ?? null,
+  } as QuizSession;
   
   // Ordonner les questions selon l'ordre des IDs
   orderedQuestions = ids

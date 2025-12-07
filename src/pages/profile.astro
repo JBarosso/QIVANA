@@ -6,14 +6,17 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getUser, getProfile } from '@/lib/auth';
 
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 // Require authentication
-const user = await getUser(Astro.locals.supabase);
+const user = await getUser(supabase);
 if (!user) {
   return Astro.redirect('/auth/login');
 }
 
 // Fetch user profile
-const profile = await getProfile(Astro.locals.supabase, user.id);
+const profile = supabase ? await getProfile(supabase, user.id) : null;
 
 if (!profile) {
   return Astro.redirect('/auth/login?error=Profil+introuvable');

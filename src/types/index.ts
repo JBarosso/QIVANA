@@ -65,6 +65,7 @@ export interface QuizSession {
   max_score: number;
   started_at: string;
   completed_at: string | null;
+  timer_seconds?: number | null; // Timer en secondes (optionnel pour compatibilité)
   temp_questions?: TempQuestion[]; // Questions temporaires pour mode quiz custom (non stockées en DB)
 }
 

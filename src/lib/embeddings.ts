@@ -48,10 +48,13 @@ export async function checkDuplicate(
   embedding: number[],
   threshold: number = 0.85
 ): Promise<boolean> {
+  // Convertir l'embedding number[] en string pour pgvector
+  const embeddingString = `[${embedding.join(',')}]`;
+  
   // Utiliser la fonction pgvector pour trouver les questions similaires
   // @ts-ignore - match_questions est une fonction SQL personnalisée non typée
   const result = await supabase.rpc('match_questions', {
-    query_embedding: embedding,
+    query_embedding: embeddingString,
     match_threshold: threshold,
     match_count: 1,
   });

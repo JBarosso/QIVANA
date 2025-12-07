@@ -6,9 +6,12 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getUser, getProfile } from '@/lib/auth';
 
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
 // Check if user is authenticated
-const user = await getUser(Astro.locals.supabase);
-const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
+const user = await getUser(supabase);
+const profile = user && supabase ? await getProfile(supabase, user.id) : null;
 ---
 
 <BaseLayout title="Qivana - Accueil">
@@ -37,6 +40,11 @@ const profile = user ? await getProfile(Astro.locals.supabase, user.id) : null;
             {profile && profile.plan !== 'freemium' && (
               <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
                 <span class="btn__text">✨ Quiz Custom</span>
+              </a>
+            )}
+            {profile && profile.plan === 'premium+' && (
+              <a href="/duel/create" class="btn btn--primary btn--duel">
+                <span class="btn__text">⚔️ Créer un Salon</span>
               </a>
             )}
             <a href="/profile" class="btn btn--secondary">
