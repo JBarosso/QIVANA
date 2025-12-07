@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requirePremiumPlus } from '../../lib/auth';
+import DuelPlayer from '../../components/duel/DuelPlayer';
+import type { Question } from '../../lib/quiz';
+
+// Protection de la route - Premium+ uniquement
+const authResult = await requirePremiumPlus(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Récupérer le salon depuis l'URL
+const salonId = Astro.url.searchParams.get('salon');
+let salon = null;
+
+// Récupérer supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+if (salonId && supabase) {
+  // Récupérer le salon par ID
+  const { data, error } = await supabase
+    .from('duel_sessions')
+    .select('*')
+    .eq('id', salonId)
+    .single();
+
+  if (!error && data) {
+    salon = data;
+  }
+}
+
+// Si le salon n'existe pas, rediriger
+if (!salon) {
+  return Astro.redirect('/duel/create?error=salon-not-found');
+}
+
+// Vérifier que le salon est en cours (in-progress)
+if (salon.status !== 'in-progress') {
+  return Astro.redirect(`/duel/lobby?salon=${salonId}&error=duel-not-started`);
+}
+
+// Vérifier que l'utilisateur fait partie du duel (chef ou participant)
+const participants = Array.isArray(salon.participants) ? salon.participants : [];
+const isChef = salon.chef_id === user.id;
+const isParticipant = participants.some((p: any) => p.id === user.id);
+
+if (!isChef && !isParticipant) {
+  return Astro.redirect('/duel/join?error=not-a-participant');
+}
+
+// Récupérer les questions depuis la DB
+let questions = [];
+if (salon.questions_ids && Array.isArray(salon.questions_ids) && salon.questions_ids.length > 0 && supabase) {
+  const { data: questionsData, error: questionsError } = await supabase
+    .from('questions')
+    .select('*')
+    .in('id', salon.questions_ids);
+
+  if (!questionsError && questionsData) {
+    // Trier les questions selon l'ordre dans questions_ids
+    const questionMap = new Map(questionsData.map((q: Question) => [q.id, q]));
+    questions = salon.questions_ids
+      .map((id: string) => questionMap.get(id))
+      .filter((q: Question | undefined): q is Question => q !== undefined);
+  }
+}
+
+// Créer un client Supabase côté client pour le Realtime
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+// Récupérer le token d'accès depuis la session serveur
+let accessToken = null;
+if (supabase) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    accessToken = session.access_token;
+  }
+}
+
+// Données à passer au composant React
+const duelData = {
+  salonId: salon.id,
+  salonName: salon.salon_name,
+  questions: questions,
+  currentQuestionIndex: salon.current_question_index || 0,
+  timerSeconds: salon.timer_seconds || 10,
+  isChef,
+  chefId: salon.chef_id,
+  currentUserId: user.id,
+  currentUserPseudo: profile.pseudo,
+};
+---
+
+<BaseLayout title="Duel - Qivana">
+  <div class="duel-play">
+    <div class="duel-play__container">
+      <DuelPlayer
+        client:load
+        supabaseUrl={supabaseUrl}
+        supabaseKey={supabaseAnonKey}
+        duelData={JSON.stringify(duelData)}
+        accessToken={accessToken}
+      />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @import '../../styles/pages/_duel.scss';
+
+  .duel-play {
+    min-height: 100vh;
+    padding: var(--space-6) var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .duel-play__container {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+</style>

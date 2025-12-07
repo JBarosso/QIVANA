@@ -96,12 +96,74 @@ export type Database = {
           },
         ]
       }
+      duel_answers: {
+        Row: {
+          answered_at: string
+          duel_session_id: string
+          id: string
+          is_correct: boolean
+          points_earned: number
+          question_id: string
+          question_index: number
+          selected_index: number
+          time_remaining: number | null
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          duel_session_id: string
+          id?: string
+          is_correct: boolean
+          points_earned?: number
+          question_id: string
+          question_index: number
+          selected_index: number
+          time_remaining?: number | null
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          duel_session_id?: string
+          id?: string
+          is_correct?: boolean
+          points_earned?: number
+          question_id?: string
+          question_index?: number
+          selected_index?: number
+          time_remaining?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duel_answers_duel_session_id_fkey"
+            columns: ["duel_session_id"]
+            isOneToOne: false
+            referencedRelation: "duel_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "duel_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "duel_answers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       duel_sessions: {
         Row: {
           chef_control_enabled: boolean
           chef_id: string
           completed_at: string | null
           created_at: string
+          current_question_index: number | null
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode: Database["public"]["Enums"]["duel_game_mode"]
           id: string
@@ -116,12 +178,14 @@ export type Database = {
           status: Database["public"]["Enums"]["duel_status"]
           timer_seconds: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
+          updated_at: string | null
         }
         Insert: {
           chef_control_enabled?: boolean
           chef_id: string
           completed_at?: string | null
           created_at?: string
+          current_question_index?: number | null
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
@@ -136,12 +200,14 @@ export type Database = {
           status?: Database["public"]["Enums"]["duel_status"]
           timer_seconds?: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
+          updated_at?: string | null
         }
         Update: {
           chef_control_enabled?: boolean
           chef_id?: string
           completed_at?: string | null
           created_at?: string
+          current_question_index?: number | null
           difficulty?: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
@@ -156,6 +222,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["duel_status"]
           timer_seconds?: number | null
           universe?: Database["public"]["Enums"]["quiz_universe"]
+          updated_at?: string | null
         }
         Relationships: [
           {

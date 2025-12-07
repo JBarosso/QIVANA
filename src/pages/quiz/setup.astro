@@ -167,7 +167,10 @@ const difficulties = [
                   const valueDisplay = document.getElementById('timer-value');
                   if (slider && valueDisplay) {
                     slider.addEventListener('input', (e) => {
-                      valueDisplay.textContent = e.target.value;
+                      const target = e.target;
+                      if (target && target instanceof HTMLInputElement) {
+                        valueDisplay.textContent = target.value;
+                      }
                     });
                   }
                 </script>

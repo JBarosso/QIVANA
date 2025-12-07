@@ -129,11 +129,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
       const updatedParticipants = [...participants, newParticipant];
 
-      const { error: updateError } = await supabase
+      // IMPORTANT: Cette mise à jour déclenchera un événement Realtime pour tous les clients
+      // Le trigger Postgres mettra à jour updated_at automatiquement pour forcer Realtime
+      console.log('📡 Updating duel_sessions.participants - this should trigger Realtime event');
+      const { data: updatedSalon, error: updateError } = await supabase
         .from('duel_sessions')
-        .update({ participants: updatedParticipants })
+        .update({ 
+          participants: updatedParticipants,
+          // updated_at sera mis à jour automatiquement par le trigger
+        })
         .eq('id', salonId)
-        .eq('status', 'lobby'); // S'assurer que le salon est toujours en lobby
+        .eq('status', 'lobby') // S'assurer que le salon est toujours en lobby
+        .select('participants, updated_at')
+        .single();
 
       if (updateError) {
         console.error('❌ Error adding participant:', updateError);
@@ -156,19 +164,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         );
       }
       
-      // Vérifier que la mise à jour a bien fonctionné
-      const { data: updatedSalon, error: verifyError } = await supabase
-        .from('duel_sessions')
-        .select('participants')
-        .eq('id', salonId)
-        .single();
-      
-      if (verifyError) {
-        console.error('❌ Error verifying update:', verifyError);
-      } else {
-        console.log('✅ Participant added successfully:', newParticipant);
-        console.log('✅ Updated participants:', updatedSalon?.participants);
-      }
+      console.log('✅ Participant added successfully:', newParticipant);
+      console.log('✅ Updated participants:', updatedSalon?.participants);
+      console.log('📡 Realtime event should be triggered NOW for all connected clients');
     }
 
     // Rediriger vers le lobby

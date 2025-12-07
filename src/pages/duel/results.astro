@@ -1,0 +1,319 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requirePremiumPlus } from '../../lib/auth';
+
+// Protection de la route - Premium+ uniquement
+const authResult = await requirePremiumPlus(Astro);
+
+// Si c'est une redirection, elle a déjà été effectuée
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Récupérer le salon depuis l'URL
+const salonId = Astro.url.searchParams.get('salon');
+let salon = null;
+
+// Récupérer supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+if (salonId && supabase) {
+  // Récupérer le salon par ID
+  const { data, error } = await supabase
+    .from('duel_sessions')
+    .select('*')
+    .eq('id', salonId)
+    .single();
+
+  if (!error && data) {
+    salon = data;
+  }
+}
+
+// Si le salon n'existe pas, rediriger
+if (!salon) {
+  return Astro.redirect('/duel/create?error=salon-not-found');
+}
+
+// Vérifier que le duel est terminé
+if (salon.status !== 'completed') {
+  return Astro.redirect(`/duel/play?salon=${salonId}&error=duel-not-completed`);
+}
+
+// Récupérer toutes les réponses des joueurs
+let playerScores: Array<{
+  userId: string;
+  pseudo: string;
+  totalScore: number;
+  correctAnswers: number;
+  totalQuestions: number;
+}> = [];
+
+if (supabase) {
+  // Récupérer toutes les réponses
+  const { data: answers, error: answersError } = await supabase
+    .from('duel_answers')
+    .select('*')
+    .eq('duel_session_id', salonId);
+
+  if (!answersError && answers) {
+    // Récupérer les pseudos des joueurs
+    const participants = Array.isArray(salon.participants) ? salon.participants : [];
+    const allPlayerIds = [salon.chef_id, ...participants.map((p: any) => p.id)];
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, pseudo')
+      .in('id', allPlayerIds);
+
+    const profileMap = new Map<string, string>((profiles || []).map((p: { id: string; pseudo: string }) => [p.id, p.pseudo]));
+
+    // Calculer les scores par joueur
+    const scoreMap = new Map<string, { score: number; correct: number }>();
+
+    answers.forEach((answer: any) => {
+      const userId = answer.user_id;
+      if (!scoreMap.has(userId)) {
+        scoreMap.set(userId, { score: 0, correct: 0 });
+      }
+      const playerScore = scoreMap.get(userId)!;
+      playerScore.score += answer.points_earned || 0;
+      if (answer.is_correct) {
+        playerScore.correct += 1;
+      }
+    });
+
+    // Construire la liste des scores
+    playerScores = Array.from(scoreMap.entries()).map(([userId, stats]) => ({
+      userId,
+      pseudo: (profileMap.get(userId) as string | undefined) || 'Joueur inconnu',
+      totalScore: stats.score,
+      correctAnswers: stats.correct,
+      totalQuestions: (salon.questions_ids?.length as number | undefined) || 0,
+    }));
+
+    // Trier par score décroissant
+    playerScores.sort((a, b) => b.totalScore - a.totalScore);
+  }
+}
+
+// URL de partage
+const siteUrl = import.meta.env.PUBLIC_SITE_URL || Astro.url.origin;
+const shareUrl = `${siteUrl}/duel/results?salon=${salonId}`;
+---
+
+<BaseLayout title="Résultats du Duel - Qivana">
+  <div class="duel-results">
+    <div class="duel-results__container">
+      <header class="duel-results__header">
+        <h1 class="duel-results__title">{salon.salon_name}</h1>
+        <p class="duel-results__subtitle">Résultats du duel</p>
+      </header>
+
+      <div class="duel-results__content">
+        <!-- Classement -->
+        <section class="duel-results__ranking">
+          <h2 class="duel-results__section-title">Classement</h2>
+          <ol class="duel-results__ranking-list">
+            {playerScores.map((player, index) => {
+              const isCurrentUser = player.userId === user.id;
+              const rank = index + 1;
+              const isFirst = rank === 1;
+              
+              return (
+                <li
+                  class={`duel-results__ranking-item ${isCurrentUser ? 'duel-results__ranking-item--current' : ''} ${isFirst ? 'duel-results__ranking-item--first' : ''}`}
+                >
+                  <div class="duel-results__ranking-rank">
+                    {isFirst ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                  </div>
+                  <div class="duel-results__ranking-info">
+                    <span class="duel-results__ranking-name">
+                      {player.pseudo}
+                      {isCurrentUser && <span class="duel-results__ranking-badge">Vous</span>}
+                    </span>
+                    <span class="duel-results__ranking-stats">
+                      {player.correctAnswers} / {player.totalQuestions} correctes
+                    </span>
+                  </div>
+                  <div class="duel-results__ranking-score">
+                    {player.totalScore} pts
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+
+        <!-- Actions -->
+        <section class="duel-results__actions">
+          <button
+            class="btn btn--primary btn--block"
+            id="shareResultsBtn"
+            data-share-url={shareUrl}
+          >
+            📤 Partager les résultats
+          </button>
+          <a href="/profile" class="btn btn--secondary btn--block">
+            Retour au profil
+          </a>
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @import '../../styles/pages/_duel.scss';
+
+  .duel-results {
+    min-height: 100vh;
+    padding: var(--space-6) var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .duel-results__container {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+
+  .duel-results__header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .duel-results__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .duel-results__subtitle {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+  }
+
+  .duel-results__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .duel-results__ranking {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+
+  .duel-results__section-title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+  }
+
+  .duel-results__ranking-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .duel-results__ranking-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-neutral-800);
+    border-radius: var(--radius-3);
+    transition: all var(--transition-base);
+
+    &--current {
+      background: var(--color-primary);
+      border: 2px solid var(--color-cyan);
+    }
+
+    &--first {
+      background: linear-gradient(135deg, var(--color-warning) 0%, #fbbf24 100%);
+      border: 2px solid var(--color-warning);
+    }
+  }
+
+  .duel-results__ranking-rank {
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .duel-results__ranking-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .duel-results__ranking-name {
+    font-size: var(--fs-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .duel-results__ranking-badge {
+    font-size: var(--fs-2);
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-cyan);
+    color: var(--color-neutral-900);
+    border-radius: var(--radius-1);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .duel-results__ranking-stats {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .duel-results__ranking-score {
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+  }
+
+  .duel-results__actions {
+    text-align: center;
+  }
+</style>
+
+<script is:inline define:vars={{ shareUrl }}>
+  (function() {
+    const shareResultsBtn = document.getElementById('shareResultsBtn');
+    if (shareResultsBtn) {
+      shareResultsBtn.addEventListener('click', function() {
+        navigator.clipboard.writeText(shareUrl).then(function() {
+          shareResultsBtn.textContent = '✅ Lien copié !';
+          setTimeout(function() {
+            shareResultsBtn.textContent = '📤 Partager les résultats';
+          }, 2000);
+        }).catch(function(error) {
+          console.error('Error copying to clipboard:', error);
+          shareResultsBtn.textContent = '❌ Erreur';
+          setTimeout(function() {
+            shareResultsBtn.textContent = '📤 Partager les résultats';
+          }, 2000);
+        });
+      });
+    }
+  })();
+</script>

@@ -25,11 +25,32 @@ if (salonCode) {
     
     if (!salon) {
       error = 'Salon introuvable. Vérifie le code.';
-    } else if (salon.status !== 'lobby') {
-      error = 'Ce salon n\'est plus en attente de joueurs.';
-    } else if (salon.chef_id === user.id) {
-      // Le chef est déjà dans le salon, rediriger vers le lobby
-      return Astro.redirect(`/duel/lobby?salon=${salon.id}`);
+    } else if (salon.status === 'completed') {
+      // Si le duel est terminé, rediriger vers les résultats
+      return Astro.redirect(`/duel/results?salon=${salon.id}`);
+    } else if (salon.status === 'in-progress') {
+      // Si le duel est en cours, vérifier si l'utilisateur fait partie du duel
+      const participants = Array.isArray(salon.participants) ? salon.participants : [];
+      const isChef = salon.chef_id === user.id;
+      const isParticipant = participants.some((p: any) => p.id === user.id);
+      
+      if (isChef || isParticipant) {
+        // L'utilisateur fait partie du duel, rediriger vers la page de jeu
+        return Astro.redirect(`/duel/play?salon=${salon.id}`);
+      } else {
+        // L'utilisateur n'est pas dans le duel, afficher une erreur
+        error = 'Ce duel est déjà en cours. Tu ne peux pas rejoindre un duel déjà commencé.';
+      }
+    } else if (salon.status === 'lobby') {
+      // Le salon est en lobby, vérifier si c'est le chef
+      if (salon.chef_id === user.id) {
+        // Le chef est déjà dans le salon, rediriger vers le lobby
+        return Astro.redirect(`/duel/lobby?salon=${salon.id}`);
+      }
+      // Sinon, permettre de rejoindre (pas d'erreur)
+    } else {
+      // Autre statut (cancelled, etc.)
+      error = 'Ce salon n\'est plus disponible.';
     }
   }
 } else {

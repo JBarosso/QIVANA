@@ -44,6 +44,17 @@ if (!salon) {
   return Astro.redirect('/duel/create?error=salon-not-found');
 }
 
+// Si le duel est en cours, rediriger vers la page de jeu
+if (salon.status === 'in-progress') {
+  return Astro.redirect(`/duel/play?salon=${salonId}`);
+}
+
+// Si le duel est terminé, rediriger vers les résultats
+if (salon.status === 'completed') {
+  return Astro.redirect(`/duel/results?salon=${salonId}`);
+}
+
+// Si le salon n'est plus en lobby (cancelled), rediriger
 if (salon.status !== 'lobby') {
   return Astro.redirect('/duel/join?code=' + salonCode + '&error=salon-not-available');
 }
@@ -154,7 +165,6 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
               isChef={isChef}
               chefId={salon.chef_id}
               chefPseudo={chefPseudo}
-              accessToken={accessToken}
             />
           </section>
 
@@ -164,7 +174,7 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
               <button
                 class="btn btn--primary btn--block"
                 id="startDuelBtn"
-                disabled
+                data-salon-id={salonId}
               >
                 Démarrer le duel (min. 2 joueurs)
               </button>
@@ -398,6 +408,72 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
   })();
 
   // Activer le bouton "Démarrer" quand il y a au moins 2 joueurs
-  // Ce sera géré par le composant Realtime qui mettra à jour le compteur
-  // Pour l'instant, on attend le Milestone 7.3 pour implémenter le démarrage
+  (function() {
+    const startDuelBtn = document.getElementById('startDuelBtn');
+    if (!startDuelBtn) return;
+
+    const salonId = startDuelBtn.getAttribute('data-salon-id');
+    if (!salonId) return;
+
+    // Fonction pour mettre à jour l'état du bouton
+    function updateStartButton(participantsCount) {
+      const totalPlayers = 1 + participantsCount; // Chef + participants
+      if (totalPlayers >= 2) {
+        startDuelBtn.removeAttribute('disabled');
+        startDuelBtn.textContent = `Démarrer le duel (${totalPlayers} joueurs)`;
+      } else {
+        startDuelBtn.setAttribute('disabled', '');
+        startDuelBtn.textContent = 'Démarrer le duel (min. 2 joueurs)';
+      }
+    }
+
+    // Écouter les changements de participants via un événement personnalisé
+    // Le composant LobbyRealtime émettra cet événement
+    window.addEventListener('participants-updated', function(event) {
+      const customEvent = event;
+      const count = (customEvent.detail && customEvent.detail.count) ? customEvent.detail.count : 0;
+      updateStartButton(count);
+    });
+
+    // Initialiser avec 0 (sera mis à jour par le composant)
+    updateStartButton(0);
+
+    // Gérer le clic sur le bouton
+    startDuelBtn.addEventListener('click', async function() {
+      if (startDuelBtn.hasAttribute('disabled')) {
+        return;
+      }
+
+      startDuelBtn.setAttribute('disabled', '');
+      startDuelBtn.textContent = 'Démarrage...';
+
+      try {
+        const formData = new FormData();
+        formData.append('salon_id', salonId);
+
+        const response = await fetch('/api/duel/start', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          alert(`Erreur: ${errorData.error || 'Impossible de démarrer le duel'}`);
+          startDuelBtn.removeAttribute('disabled');
+          updateStartButton(0); // Réinitialiser
+          return;
+        }
+
+        const data = await response.json();
+        if (data.redirectTo) {
+          window.location.href = data.redirectTo;
+        }
+      } catch (error) {
+        console.error('Error starting duel:', error);
+        alert('Erreur lors du démarrage du duel');
+        startDuelBtn.removeAttribute('disabled');
+        updateStartButton(0);
+      }
+    });
+  })();
 </script>

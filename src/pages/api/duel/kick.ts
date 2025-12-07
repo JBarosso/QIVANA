@@ -80,10 +80,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Vérifier que le salon est en lobby
-    if (salon.status !== 'lobby') {
+    // Vérifier que le salon est en lobby ou en cours (on peut expulser pendant le jeu)
+    if (salon.status !== 'lobby' && salon.status !== 'in-progress') {
       return new Response(
-        JSON.stringify({ error: 'Le salon n\'est plus en attente de joueurs' }),
+        JSON.stringify({ error: 'Le salon n\'est plus actif' }),
         {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -118,17 +118,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Mettre à jour le salon
+    // Mettre à jour le salon (peut être en lobby ou in-progress)
+    // IMPORTANT: Cette mise à jour déclenchera un événement Realtime pour tous les clients
+    // Le trigger Postgres mettra à jour updated_at automatiquement pour forcer Realtime
     const { data: updatedSalon, error: updateError } = await supabase
       .from('duel_sessions')
-      .update({ participants: updatedParticipants })
+      .update({ 
+        participants: updatedParticipants,
+        // updated_at sera mis à jour automatiquement par le trigger
+      })
       .eq('id', salonId)
-      .eq('status', 'lobby')
-      .select('participants')
+      .in('status', ['lobby', 'in-progress']) // Permettre l'expulsion en lobby et pendant le jeu
+      .select('participants, updated_at')
       .single();
 
     if (updateError) {
-      console.error('Error expelling participant:', updateError);
+      console.error('❌ Error expelling participant:', updateError);
       return new Response(
         JSON.stringify({ 
           error: 'Erreur lors de l\'expulsion: ' + updateError.message,
@@ -143,6 +148,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     console.log('✅ Participant expelled successfully:', participantId);
     console.log('✅ Updated participants:', updatedSalon?.participants);
+    console.log('📡 Realtime event should be triggered for all connected clients');
 
     return new Response(
       JSON.stringify({ 

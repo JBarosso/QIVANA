@@ -9,6 +9,28 @@ interface Participant {
   joined_at?: string;
 }
 
+// Fonction helper pour valider et parser les participants depuis JSON
+function parseParticipants(data: unknown): Participant[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+  
+  return data.filter((p): p is Participant => {
+    return (
+      typeof p === 'object' &&
+      p !== null &&
+      'id' in p &&
+      'pseudo' in p &&
+      typeof (p as any).id === 'string' &&
+      typeof (p as any).pseudo === 'string'
+    );
+  }).map((p) => ({
+    id: (p as any).id,
+    pseudo: (p as any).pseudo,
+    joined_at: typeof (p as any).joined_at === 'string' ? (p as any).joined_at : undefined,
+  }));
+}
+
 interface LobbyRealtimeProps {
   supabaseUrl: string;
   supabaseKey: string;
@@ -18,7 +40,6 @@ interface LobbyRealtimeProps {
   isChef: boolean;
   chefId: string;
   chefPseudo: string;
-  accessToken?: string | null;
 }
 
 export default function LobbyRealtime({
@@ -30,7 +51,6 @@ export default function LobbyRealtime({
   isChef,
   chefId,
   chefPseudo,
-  accessToken,
 }: LobbyRealtimeProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +66,9 @@ export default function LobbyRealtime({
     salonChefId,
   });
 
-  // Créer le client Supabase avec session persistante
-  // Si un accessToken est fourni depuis le serveur, l'utiliser pour initialiser la session
+  // Créer le client Supabase avec session persistante ET configuration Realtime optimisée
+  // IMPORTANT: Ne pas utiliser setSession avec juste un access_token
+  // À la place, on laisse le client Supabase gérer la session depuis localStorage/cookies
   const [supabase] = useState(() => {
     const client = createClient<Database>(supabaseUrl, supabaseKey, {
       auth: {
@@ -55,19 +76,50 @@ export default function LobbyRealtime({
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        // IMPORTANT: Ne pas utiliser flowType: 'pkce' ici car on veut que le client
+        // récupère automatiquement la session depuis localStorage/cookies
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+        // Configuration Realtime pour meilleure performance et réactivité
+        heartbeatIntervalMs: 30000,
+        reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000),
       },
     });
     
-    // Si un token d'accès est fourni, l'utiliser pour initialiser la session
-    if (accessToken && typeof window !== 'undefined') {
-      // Initialiser la session avec le token
-      client.auth.setSession({
-        access_token: accessToken,
-        refresh_token: '', // Le refresh token sera récupéré automatiquement
-      } as any).catch((error) => {
-        console.warn('Could not set session from token:', error);
-      });
+    // Vérifier la session existante (depuis localStorage ou cookies)
+    // Le client Supabase devrait automatiquement récupérer la session si elle existe
+    if (typeof window !== 'undefined') {
+      // Attendre un peu pour que le client initialise la session depuis le storage
+      setTimeout(() => {
+        client.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
+          if (sessionError) {
+            console.warn('⚠️ Error getting session:', sessionError);
+            console.warn('⚠️ Realtime may not work without a valid session');
+          } else if (sessionData.session) {
+            console.log('✅ Session found for Realtime:', {
+              userId: sessionData.session.user.id,
+              expiresAt: sessionData.session.expires_at 
+                ? new Date(sessionData.session.expires_at * 1000).toISOString() 
+                : 'N/A',
+            });
+          } else {
+            console.warn('⚠️ No session available for Realtime');
+            console.warn('⚠️ Realtime requires authentication to work');
+            console.warn('💡 Make sure user is logged in before accessing the lobby');
+          }
+        });
+      }, 100);
     }
+    
+    console.log('🔧 Supabase client initialized with Realtime support for LobbyRealtime');
+    console.log('📊 Supabase URL:', supabaseUrl);
+    console.log('📊 Realtime config:', {
+      eventsPerSecond: 10,
+      heartbeatIntervalMs: 30000,
+    });
     
     return client;
   });
@@ -96,9 +148,9 @@ export default function LobbyRealtime({
             .maybeSingle();
           
           if (!error && data && mounted) {
-            const parsed = Array.isArray(data.participants) ? data.participants : [];
+            const parsed = parseParticipants(data.participants);
             console.log('✅ Loaded participants (fallback):', parsed);
-            setParticipants(parsed as Participant[]);
+            setParticipants(parsed);
             if (data.chef_id) {
               setSalonChefId(data.chef_id);
             }
@@ -113,9 +165,9 @@ export default function LobbyRealtime({
         const data = await response.json();
         
         if (mounted) {
-          const parsed = Array.isArray(data.participants) ? data.participants : [];
+          const parsed = parseParticipants(data.participants);
           console.log('✅ Loaded participants from API:', parsed);
-          setParticipants(parsed as Participant[]);
+          setParticipants(parsed);
           if (data.chef_id) {
             setSalonChefId(data.chef_id);
           }
@@ -131,6 +183,9 @@ export default function LobbyRealtime({
 
     loadParticipants();
 
+    // Variable pour tracker les mises à jour Realtime (déclarée avant le channel)
+    let lastRealtimeUpdate = Date.now();
+
     // Fonction pour recharger les participants depuis l'API
     const reloadParticipants = async () => {
       try {
@@ -138,11 +193,28 @@ export default function LobbyRealtime({
         if (response.ok) {
           const data = await response.json();
           if (mounted) {
-            const parsed = Array.isArray(data.participants) ? data.participants : [];
+            const parsed = parseParticipants(data.participants);
             console.log('🔄 Reloaded participants:', parsed);
-            setParticipants(parsed as Participant[]);
+            setParticipants(parsed);
             if (data.chef_id) {
               setSalonChefId(data.chef_id);
+            }
+          }
+        } else {
+          // Si erreur 400, le salon n'est peut-être plus en lobby
+          const errorData = await response.json().catch(() => ({}));
+          if (response.status === 400 && errorData.error === 'Salon non disponible') {
+            console.log('⚠️ Salon is no longer in lobby during reload');
+            // Vérifier le statut et rediriger si nécessaire
+            const { data: salonData } = await supabase
+              .from('duel_sessions')
+              .select('status')
+              .eq('id', salonId)
+              .single();
+            
+            if (salonData?.status === 'in-progress') {
+              console.log('🎮 Duel has started, redirecting...');
+              window.location.href = `/duel/play?salon=${salonId}`;
             }
           }
         }
@@ -152,9 +224,67 @@ export default function LobbyRealtime({
     };
 
     // S'abonner aux changements en temps réel
-    const channel = supabase
-      .channel(`duel-session-${salonId}`)
-      .on(
+    // IMPORTANT: Utiliser un nom de channel simple et stable pour éviter les reconnexions
+    const channelName = `duel-session-${salonId}`;
+    console.log('📡 Creating Realtime channel:', channelName);
+    console.log('📡 Supabase URL:', supabaseUrl);
+    console.log('📡 Salon ID:', salonId);
+    
+    // IMPORTANT: Vérifier et attendre que la session soit prête avant de souscrire
+    // Realtime nécessite une session valide pour fonctionner
+    const setupRealtimeChannel = async () => {
+      // Attendre un peu pour que le client Supabase initialise la session depuis localStorage
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Vérifier l'état de la session
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Error getting session for Realtime:', sessionError);
+        console.error('⚠️ Realtime will likely fail without a valid session');
+        console.error('💡 Solution: Make sure user is logged in and session is stored in localStorage');
+      } else if (sessionData.session) {
+        console.log('✅ Session ready for Realtime:', {
+          hasSession: true,
+          userId: sessionData.session.user.id,
+          expiresAt: sessionData.session.expires_at 
+            ? new Date(sessionData.session.expires_at * 1000).toISOString() 
+            : 'N/A',
+        });
+        
+        // Vérifier que l'utilisateur de la session correspond à currentUserId
+        if (sessionData.session.user.id !== currentUserId) {
+          console.warn('⚠️ Session user ID does not match currentUserId:', {
+            sessionUserId: sessionData.session.user.id,
+            currentUserId,
+          });
+        }
+      } else {
+        console.error('❌ No session found for Realtime');
+        console.error('⚠️ Realtime requires authentication - subscription will fail');
+        console.error('💡 Solution: User must be logged in before accessing the lobby');
+        console.error('💡 Check if session is stored in localStorage or cookies');
+        
+        // Essayer de forcer un refresh de la session
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('❌ Could not refresh session:', refreshError);
+        } else if (refreshData.session) {
+          console.log('✅ Session refreshed successfully');
+        }
+      }
+      
+      // Créer et souscrire au channel
+      // IMPORTANT: Ne souscrire QUE si on a une session valide
+      if (!sessionData.session) {
+        console.error('❌ Cannot subscribe to Realtime without a valid session');
+        console.error('💡 User must be logged in before accessing the lobby');
+        return null; // Retourner null si pas de session
+      }
+      
+      const channel = supabase
+        .channel(channelName)
+        .on(
         'postgres_changes',
         {
           event: 'UPDATE',
@@ -163,45 +293,267 @@ export default function LobbyRealtime({
           filter: `id=eq.${salonId}`,
         },
         (payload) => {
-          console.log('🔄 Realtime update received:', payload.new);
+          const timestamp = new Date().toISOString();
+          console.log('🔄 Realtime UPDATE received on duel_sessions:', {
+            new: payload.new,
+            old: payload.old,
+            timestamp,
+            eventType: 'UPDATE',
+            table: 'duel_sessions',
+            salonId,
+          });
+          
+          // Tracker que Realtime fonctionne (pour le polling de secours)
+          lastRealtimeUpdate = Date.now();
+          console.log('✅ Realtime update received - polling not needed');
+          
           if (payload.new) {
-            // Mettre à jour les participants
-            if (payload.new.participants) {
-              const parsed = Array.isArray(payload.new.participants)
-                ? payload.new.participants
-                : [];
-              console.log('👥 Updated participants from Realtime:', parsed);
-              setParticipants(parsed as Participant[]);
+            // ============================================
+            // GESTION DU STATUT DU SALON (via Realtime)
+            // ============================================
+            
+            // Si le duel démarre (status passe à 'in-progress'), rediriger tous les joueurs IMMÉDIATEMENT
+            if (payload.new.status === 'in-progress') {
+              const oldStatus = payload.old?.status;
+              console.log('🎮 Duel status changed to in-progress via Realtime!', {
+                oldStatus,
+                newStatus: payload.new.status,
+                salonId,
+                timestamp: new Date().toISOString(),
+              });
+              
+              // Rediriger immédiatement via Realtime (pas de polling nécessaire)
+              console.log('🎮 Redirecting to play page via Realtime...');
+              window.location.href = `/duel/play?salon=${salonId}`;
+              return;
             }
-            // Mettre à jour le chef_id si changé
-            if (payload.new.chef_id) {
+
+            // Si le salon n'est plus en lobby, arrêter les mises à jour
+            if (payload.new.status !== 'lobby') {
+              console.log('⚠️ Salon is no longer in lobby, status:', payload.new.status);
+              // Ne pas continuer à mettre à jour si le salon n'est plus en lobby
+              return;
+            }
+
+            // ============================================
+            // GESTION DES PARTICIPANTS (via Realtime)
+            // ============================================
+            
+            // Mettre à jour les participants en temps réel (via Realtime, pas de polling)
+            // Vérifier si les participants ont vraiment changé
+            const oldParticipants = parseParticipants(payload.old?.participants);
+            const newParticipants = parseParticipants(payload.new.participants);
+            
+            // Comparer pour éviter les mises à jour inutiles
+            const oldIds = oldParticipants.map((p) => p.id).sort();
+            const newIds = newParticipants.map((p) => p.id).sort();
+            const participantsChanged = JSON.stringify(oldIds) !== JSON.stringify(newIds);
+            
+            if (participantsChanged) {
+              const timestamp = new Date().toISOString();
+              console.log('👥 Participants changed via Realtime:', {
+                old: oldParticipants.map((p) => ({ id: p.id, pseudo: p.pseudo })),
+                new: newParticipants.map((p) => ({ id: p.id, pseudo: p.pseudo })),
+                oldIds,
+                newIds,
+                timestamp,
+              });
+              
+              // Mettre à jour immédiatement (via Realtime, pas de polling)
+              setParticipants(newParticipants);
+              
+              // Tracker que Realtime fonctionne
+              lastRealtimeUpdate = Date.now();
+              console.log('✅ Realtime update received - polling not needed');
+              
+              // Dispatcher l'événement pour mettre à jour le bouton "Démarrer"
+              window.dispatchEvent(
+                new CustomEvent('participants-updated', {
+                  detail: { count: newParticipants.length },
+                })
+              );
+              
+              console.log('✅ Participants state updated via Realtime at', timestamp);
+            } else {
+              console.log('👥 Participants unchanged (same IDs) - skipping update');
+            }
+            
+            // Mettre à jour le chef_id si changé (via Realtime)
+            if (payload.new.chef_id && payload.new.chef_id !== payload.old?.chef_id) {
+              console.log('👑 Chef changed via Realtime:', {
+                old: payload.old?.chef_id,
+                new: payload.new.chef_id,
+              });
               setSalonChefId(payload.new.chef_id);
             }
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
+      .subscribe((status, err) => {
+        const timestamp = new Date().toISOString();
+        console.log('📡 Realtime subscription status:', status, 'at', timestamp);
+        
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to Realtime updates');
+          console.log('✅ Successfully subscribed to Realtime updates for duel_sessions');
+          console.log('📊 Realtime is active - all updates should be instant (< 100ms)');
+          console.log('📊 Channel name:', channelName);
+          console.log('📊 Listening to: UPDATE on duel_sessions WHERE id =', salonId);
+          
+          // Tester immédiatement si Realtime fonctionne en vérifiant la connexion
+          supabase.auth.getSession().then(({ data: sessionData }) => {
+            console.log('📊 Realtime subscription active with session:', {
+              hasSession: !!sessionData.session,
+              userId: sessionData.session?.user?.id,
+            });
+            
+            // Vérifier que le channel est bien connecté
+            const channelState = supabase.getChannels().find((ch) => ch.topic === channelName);
+            if (channelState) {
+              console.log('📊 Channel state:', {
+                topic: channelState.topic,
+                state: channelState.state,
+                joinedOnce: channelState.joinedOnce,
+              });
+            }
+          });
+          
+          // Marquer que Realtime fonctionne
+          lastRealtimeUpdate = Date.now();
+          console.log('✅ Realtime subscription confirmed - polling will be skipped if updates arrive');
         } else if (status === 'CHANNEL_ERROR') {
-          console.warn('⚠️ Realtime subscription error');
+          console.error('❌ Realtime subscription error:', err);
+          console.error('⚠️ Realtime may not be enabled for duel_sessions table');
+          console.error('⚠️ OR: No valid session/authentication');
+          console.error('⚠️ OR: Realtime server connection issue');
+          console.error('⚠️ Falling back to polling (60s interval)');
+          console.error('🔍 Error details:', JSON.stringify(err, null, 2));
+          
+          // Vérifier la session en cas d'erreur
+          supabase.auth.getSession().then(({ data: sessionData, error: sessionError }) => {
+            if (sessionError || !sessionData.session) {
+              console.error('❌ No valid session - this is likely the cause of Realtime failure');
+              console.error('💡 Solution: Ensure user is authenticated before subscribing to Realtime');
+            }
+          });
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Realtime subscription timed out');
+          console.error('⚠️ This usually means Realtime server is unreachable');
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Realtime channel closed');
+          console.warn('⚠️ Channel will attempt to reconnect automatically');
+        } else {
+          console.warn('⚠️ Realtime subscription status:', status);
+          if (err) {
+            console.warn('⚠️ Error object:', err);
+          }
         }
       });
+      
+      return channel;
+    };
+    
+    // Appeler setupRealtimeChannel pour initialiser le channel
+    let channelInstance: ReturnType<typeof supabase.channel> | null = null;
+    setupRealtimeChannel()
+      .then((ch) => {
+        if (ch) {
+          channelInstance = ch;
+          console.log('✅ Realtime channel setup completed');
+        } else {
+          console.warn('⚠️ Realtime channel setup returned null (no session)');
+        }
+      })
+      .catch((error) => {
+        console.error('❌ Error setting up Realtime channel:', error);
+      });
 
-    // Polling de secours : recharger les participants toutes les 3 secondes
-    // Cela garantit que même si Realtime ne fonctionne pas, les mises à jour seront visibles
-    const pollInterval = setInterval(() => {
-      if (mounted) {
-        reloadParticipants();
-      }
-    }, 3000); // Recharger toutes les 3 secondes
+    // Polling de secours TRÈS rare (60 secondes) - uniquement si Realtime échoue complètement
+    // Realtime devrait gérer TOUTES les mises à jour en temps réel :
+    // - Nouveaux participants (via UPDATE sur duel_sessions.participants)
+    // - Changement de statut (via UPDATE sur duel_sessions.status)
+    // - Expulsion de participants (via UPDATE sur duel_sessions.participants)
+    // 
+    // NOTE: Si Realtime fonctionne, ce polling ne devrait JAMAIS se déclencher
+    let pollInterval: NodeJS.Timeout | null = null;
+    // lastRealtimeUpdate est déjà déclaré plus haut, ne pas le redéclarer
+    
+    const startPolling = () => {
+      if (pollInterval) return; // Déjà en cours
+      
+      // Polling de secours très rare (60 secondes) - seulement en cas de problème Realtime
+      pollInterval = setInterval(async () => {
+        if (!mounted) {
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          return;
+        }
+        
+        // Vérifier si Realtime a fonctionné récemment (dans les 5 dernières secondes)
+        const timeSinceLastRealtime = Date.now() - lastRealtimeUpdate;
+        if (timeSinceLastRealtime < 5000) {
+          console.log('✅ Realtime is working (last update', Math.round(timeSinceLastRealtime / 1000), 's ago) - skipping polling');
+          return;
+        }
+        
+        // Si pas de mise à jour Realtime depuis 5 secondes, c'est suspect
+        console.warn('⚠️ No Realtime updates for', Math.round(timeSinceLastRealtime / 1000), 's - polling fallback triggered');
+        
+        // Vérifier d'abord le statut du salon avant de poller
+        try {
+          const statusResponse = await fetch(`/api/duel/participants?salonId=${salonId}`);
+          if (statusResponse.ok) {
+            reloadParticipants();
+          } else {
+            // Si le salon n'est plus en lobby, arrêter le polling
+            const errorData = await statusResponse.json().catch(() => ({}));
+            if (errorData.error === 'Salon non disponible' || statusResponse.status === 400) {
+              console.log('⏹️ Salon is no longer in lobby, stopping polling');
+              if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+              }
+              // Vérifier si le duel a démarré et rediriger
+              const { data: checkData } = await supabase
+                .from('duel_sessions')
+                .select('status')
+                .eq('id', salonId)
+                .single();
+              
+              if (checkData && checkData.status === 'in-progress') {
+                console.log('🎮 Duel has started, redirecting...');
+                window.location.href = `/duel/play?salon=${salonId}`;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error in polling check:', error);
+        }
+      }, 60000); // Polling de secours toutes les 60 secondes seulement (fallback d'urgence)
+    };
+    
+    startPolling();
 
     // Nettoyer l'abonnement au démontage
     return () => {
+      console.log('🧹 Cleaning up Realtime subscription');
       mounted = false;
-      clearInterval(pollInterval);
-      supabase.removeChannel(channel);
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      // Nettoyer le channel
+      if (channelInstance) {
+        supabase.removeChannel(channelInstance);
+      } else {
+        // Si le channel n'a pas été créé, essayer de le trouver par nom
+        const channels = supabase.getChannels();
+        const channelToRemove = channels.find((ch) => ch.topic === channelName);
+        if (channelToRemove) {
+          supabase.removeChannel(channelToRemove);
+        }
+      }
     };
   }, [supabase, salonId]);
 
@@ -276,6 +628,14 @@ export default function LobbyRealtime({
     
     return sorted;
   }, [participants, salonChefId, chefPseudo]);
+
+  // Émettre un événement pour mettre à jour le bouton "Démarrer" dans le lobby
+  useEffect(() => {
+    const event = new CustomEvent('participants-updated', {
+      detail: { count: participants.length },
+    });
+    window.dispatchEvent(event);
+  }, [participants.length]);
 
   // Note: L'ajout des participants est géré par l'API /api/duel/join
   // Le composant se contente d'afficher la liste mise à jour en temps réel
@@ -370,7 +730,7 @@ export default function LobbyRealtime({
                       
                       // Mettre à jour la liste localement (le Realtime devrait aussi le faire)
                       if (data.participants && Array.isArray(data.participants)) {
-                        setParticipants(data.participants as Participant[]);
+                        setParticipants(parseParticipants(data.participants));
                       }
                     } catch (error) {
                       console.error('❌ Error expelling participant:', error);
