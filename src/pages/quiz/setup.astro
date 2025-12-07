@@ -39,15 +39,7 @@ const difficulties = [
       </header>
 
       <!-- Message d'erreur (si stock insuffisant pour Freemium) -->
-      {Astro.url.searchParams.get('error') === 'stock_insufficient' && (
-        <div class="quiz-setup__error">
-          <div class="quiz-setup__error-icon">⚠️</div>
-          <div class="quiz-setup__error-content">
-            <strong>Stock insuffisant</strong>
-            <p>Passe Premium pour débloquer la génération IA automatique</p>
-          </div>
-        </div>
-      )}
+      <!-- Note: L'alerte est maintenant gérée par showAlert() dans le script pour cohérence -->
 
       <form method="POST" action="/api/quiz/start" class="quiz-setup__form" id="quizSetupForm">
         <!-- Sélection Univers -->
@@ -177,62 +169,186 @@ const difficulties = [
 </style>
 
 <script>
-  // Gestion des erreurs depuis l'API (pour les réponses JSON uniquement)
-  // Les redirects Astro fonctionnent automatiquement avec les formulaires POST
+  // Gestion des erreurs depuis l'API
+  // ⚠️ IMPORTANT : Empêcher le comportement par défaut pour gérer toutes les erreurs
   const form = document.getElementById('quizSetupForm') as HTMLFormElement;
   
   if (form) {
     form.addEventListener('submit', async (e) => {
-      // Intercepter seulement pour gérer les erreurs JSON
-      // Les redirects fonctionnent automatiquement
+      // ⚠️ BLOQUER le comportement par défaut pour gérer toutes les réponses
+      e.preventDefault();
+      
       const formData = new FormData(form);
+      const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      // Désactiver le bouton pendant le traitement
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Chargement...';
+      }
       
       try {
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
           body: formData,
-          redirect: 'manual', // Ne pas suivre automatiquement pour pouvoir gérer les erreurs
+          redirect: 'manual', // Ne pas suivre automatiquement
         });
 
-        // Si redirection (status 302/303), suivre manuellement
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response type:', response.type);
+        console.log('📡 Response headers:', [...response.headers.entries()]);
+
+        // Si redirection (status 302/303) → Succès, suivre la redirection
+        // Avec redirect: 'manual', le status peut être 0, 302, ou autre selon le navigateur
         if (response.status >= 300 && response.status < 400) {
           const location = response.headers.get('Location');
+          console.log('📍 Location header:', location);
           if (location) {
+            console.log('✅ Redirection vers:', location);
             window.location.href = location;
             return;
           }
         }
 
-        // Si erreur JSON (status 4xx/5xx), afficher le message
+        // Si status 0 avec redirect: 'manual', c'est souvent une redirection bloquée
+        // On peut essayer de récupérer l'URL depuis response.url
+        if (response.status === 0 || response.type === 'opaqueredirect') {
+          console.log('⚠️ Status 0 ou opaqueredirect détecté');
+          // Essayer de récupérer depuis response.url (peut contenir la redirection)
+          const responseUrl = response.url;
+          if (responseUrl && responseUrl !== window.location.href) {
+            console.log('✅ Redirection depuis response.url:', responseUrl);
+            window.location.href = responseUrl;
+            return;
+          }
+        }
+
+        // Si erreur (status 4xx/5xx) → Afficher l'erreur et NE PAS lancer le quiz
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
+          
+          // Réactiver le bouton
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Lancer le Quiz 🚀';
+          }
+          
+          // Charger showAlert dynamiquement
+          const { showAlert } = await import('@lib/showAlert');
+          
           if (contentType && contentType.includes('application/json')) {
             const data = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
             
             if (data.requiresPremium) {
-              // Rediriger avec paramètre d'erreur pour afficher le message
-              window.location.href = '/quiz/setup?error=stock_insufficient';
-              return;
+              // Afficher l'alerte avec showAlert (cohérent avec le reste de l'app)
+              showAlert({
+                type: 'warning',
+                message: data.message || 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
+                duration: 0, // Pas d'auto-dismiss pour les warnings
+              });
+              
+              // Optionnel : Ajouter le paramètre d'erreur dans l'URL pour persistance
+              const url = new URL(window.location.href);
+              url.searchParams.set('error', 'stock_insufficient');
+              window.history.replaceState({}, '', url.toString());
+              
+              return; // ⚠️ IMPORTANT : Ne pas continuer, le quiz ne doit PAS se lancer
             }
             
-            alert(data.message || data.error || 'Erreur lors du démarrage du quiz');
-            return;
+            // Autre erreur JSON
+            showAlert({
+              type: 'error',
+              message: data.message || data.error || 'Erreur lors du démarrage du quiz',
+              duration: 0,
+            });
+            return; // ⚠️ IMPORTANT : Ne pas continuer
           }
           
           // Erreur non-JSON
           const text = await response.text();
-          alert(text || 'Erreur lors du démarrage du quiz');
-          return;
+          showAlert({
+            type: 'error',
+            message: text || 'Erreur lors du démarrage du quiz',
+            duration: 0,
+          });
+          return; // ⚠️ IMPORTANT : Ne pas continuer
         }
 
-        // Succès : devrait être un redirect normalement
+        // Succès : vérifier si c'est une réponse JSON avec redirectTo
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json().catch(() => null);
+          
+          if (data && data.success && data.redirectTo) {
+            // Réponse JSON avec redirection
+            console.log('✅ Redirection depuis JSON:', data.redirectTo);
+            window.location.href = data.redirectTo;
+            return;
+          }
+        }
+
+        // Fallback : Si redirection HTTP (status 302/303)
         const location = response.headers.get('Location');
+        console.log('📍 Location header (succès):', location);
+        
         if (location) {
+          console.log('✅ Redirection vers:', location);
           window.location.href = location;
+        } else if (response.status === 200 || response.status === 0) {
+          // Si status 200 ou 0, peut-être que la redirection est dans response.url
+          const responseUrl = response.url;
+          console.log('📡 Response URL:', responseUrl);
+          
+          // Si l'URL de réponse est différente de l'URL actuelle, c'est probablement une redirection
+          if (responseUrl && responseUrl !== window.location.href && responseUrl.includes('/quiz/play')) {
+            console.log('✅ Redirection depuis response.url:', responseUrl);
+            window.location.href = responseUrl;
+          } else {
+            // Pas de redirect ? Erreur inattendue
+            console.error('❌ Pas de redirection détectée. Status:', response.status, 'URL:', responseUrl);
+            const { showAlert } = await import('@lib/showAlert');
+            showAlert({
+              type: 'error',
+              message: 'Réponse inattendue du serveur. Veuillez réessayer.',
+              duration: 0,
+            });
+            
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.textContent = 'Lancer le Quiz 🚀';
+            }
+          }
+        } else {
+          // Autre status inattendu
+          console.error('❌ Status inattendu:', response.status);
+          const { showAlert } = await import('@lib/showAlert');
+          showAlert({
+            type: 'error',
+            message: `Réponse inattendue du serveur (status: ${response.status})`,
+            duration: 0,
+          });
+          
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Lancer le Quiz 🚀';
+          }
         }
       } catch (error) {
         console.error('Error submitting form:', error);
-        alert('Erreur lors du démarrage du quiz');
+        
+        // Réactiver le bouton
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Lancer le Quiz 🚀';
+        }
+        
+        // Afficher l'erreur avec showAlert
+        const { showAlert } = await import('@lib/showAlert');
+        showAlert({
+          type: 'error',
+          message: 'Erreur lors du démarrage du quiz. Veuillez réessayer.',
+          duration: 0,
+        });
       }
     });
   }

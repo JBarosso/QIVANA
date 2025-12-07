@@ -13,7 +13,7 @@ import {
   checkQuestionStock,
 } from '../../../lib/quiz';
 import { generateControlledAIQuestions } from '../../../lib/ai-generation';
-import type { Universe, Difficulty } from '../../../lib/quiz';
+import type { Universe, Difficulty, Question } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   // Créer le client Supabase
@@ -81,6 +81,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     );
 
     console.log(`📊 Stock disponible: ${availableStock} questions (demandé: ${questionsRequested})`);
+    console.log(`👁️ Questions déjà vues: ${seenIds.length} questions`);
 
     // ============================================
     // ÉTAPE 2 : Si stock insuffisant
@@ -131,13 +132,101 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     // ============================================
     // ÉTAPE 3 : Recharger depuis la DB (après génération si applicable)
     // ============================================
-    const questions = await fetchRandomQuestions(
-      supabase,
-      universe,
-      difficulty,
-      questionsRequested,
-      seenIds
-    );
+    // ⚠️ IMPORTANT : Recharger les seenIds car de nouvelles questions peuvent avoir été générées
+    // et d'autres sessions peuvent avoir été complétées entre temps
+    const updatedSeenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
+    console.log(`👁️ Questions déjà vues (après génération): ${updatedSeenIds.length} questions`);
+    
+    let questions: Question[];
+    
+    try {
+      questions = await fetchRandomQuestions(
+        supabase,
+        universe,
+        difficulty,
+        questionsRequested,
+        updatedSeenIds // Utiliser les seenIds mis à jour
+      );
+      
+      console.log(`✅ Questions récupérées: ${questions.length} questions`);
+    } catch (fetchError) {
+      // Si fetchRandomQuestions échoue (pas de questions disponibles après exclusion des vues)
+      console.error('❌ Erreur lors de la récupération des questions:', fetchError);
+      console.error(`📊 Détails: Stock disponible=${availableStock}, Questions vues=${updatedSeenIds.length}`);
+      
+      // ⚠️ SÉCURITÉ FREEMIUM : Bloquer si erreur de récupération
+      if (userPlan === 'freemium') {
+        return new Response(
+          JSON.stringify({
+            error: 'Stock insuffisant',
+            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
+            requiresPremium: true,
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      // ⚠️ IMPORTANT : Pour Premium/Premium+, si toutes les questions ont été vues,
+      // on doit générer de nouvelles questions même si le stock initial était suffisant
+      if (fetchError instanceof Error && fetchError.message.includes('déjà été vues')) {
+        console.log(`🤖 Toutes les questions ont été vues. Génération IA pour Premium/Premium+...`);
+        
+        try {
+          // Générer exactement le nombre de questions demandé
+          const generationResult = await generateControlledAIQuestions(
+            supabase,
+            user.id,
+            universe,
+            difficulty,
+            questionsRequested, // Générer exactement le nombre demandé
+            1 // Buffer de 1 question
+          );
+
+          console.log(
+            `✅ Génération IA (toutes vues): ${generationResult.questionIds.length} questions insérées`
+          );
+
+          // Réessayer de récupérer les questions (maintenant avec nouvelles questions générées)
+          const finalSeenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
+          questions = await fetchRandomQuestions(
+            supabase,
+            universe,
+            difficulty,
+            questionsRequested,
+            finalSeenIds
+          );
+          
+          console.log(`✅ Questions récupérées après génération: ${questions.length} questions`);
+        } catch (generationError) {
+          console.error('❌ Erreur lors de la génération IA (fallback):', generationError);
+          return new Response(
+            JSON.stringify({
+              error: 'Impossible de générer les questions',
+              message: 'Erreur lors de la génération IA. Veuillez réessayer.',
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      } else {
+        // Autre erreur
+        return new Response(
+          JSON.stringify({
+            error: 'Impossible de charger les questions',
+            message: fetchError instanceof Error ? fetchError.message : 'Erreur lors de la récupération des questions',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
 
     // Si toujours insuffisant après génération, accepter ce qui est disponible
     if (questions.length < questionsMinimum) {
@@ -159,8 +248,14 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       // Pour Premium/Premium+ : accepter moins de questions si nécessaire
       if (questions.length === 0) {
         return new Response(
-          `Impossible de générer un quiz. Stock insuffisant même après génération IA.`,
-          { status: 400 }
+          JSON.stringify({
+            error: 'Stock insuffisant',
+            message: 'Impossible de générer un quiz. Stock insuffisant même après génération IA.',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
         );
       }
 
@@ -179,8 +274,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       questions.map((q) => q.id)
     );
 
-    // Rediriger vers la page de jeu avec l'ID de session
-    return redirect(`/quiz/play?session=${sessionId}`);
+    // ⚠️ IMPORTANT : Retourner JSON au lieu de redirect pour éviter les problèmes avec redirect: 'manual'
+    // Le client suivra la redirection manuellement
+    return new Response(
+      JSON.stringify({
+        success: true,
+        sessionId,
+        redirectTo: `/quiz/play?session=${sessionId}`,
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error) {
     console.error('Error starting quiz:', error);
     return new Response(

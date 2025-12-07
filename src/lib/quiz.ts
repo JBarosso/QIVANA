@@ -81,7 +81,7 @@ export async function createQuizSession(
 ): Promise<string> {
   // Calculer le score maximum basé sur le nombre de questions
   // Points de base (10) + bonus temps max (10) = 20 points par question
-  const maxScore = questionIds.length * 10;
+  const maxScore = questionIds.length * 20;
 
   const { data, error } = await supabase
     .from('quiz_sessions')
@@ -136,12 +136,32 @@ export async function updateQuizAnswer(
 
   // Arrondir le score pour éviter les erreurs de type integer
   const roundedScore = Math.round(session.score + pointsEarned);
+  
+  // ⚠️ SÉCURITÉ : S'assurer que le score ne dépasse pas max_score
+  // Récupérer max_score pour validation
+  const { data: sessionWithMax, error: maxScoreError } = await supabase
+    .from('quiz_sessions')
+    .select('max_score')
+    .eq('id', sessionId)
+    .single();
+  
+  if (maxScoreError || !sessionWithMax) {
+    console.error('Error fetching max_score:', maxScoreError);
+    throw new Error('Impossible de récupérer les informations de session');
+  }
+  
+  // Clamper le score entre 0 et max_score pour respecter la contrainte
+  const clampedScore = Math.max(0, Math.min(roundedScore, sessionWithMax.max_score || Infinity));
+  
+  if (clampedScore !== roundedScore) {
+    console.warn(`⚠️ Score clampé: ${roundedScore} → ${clampedScore} (max_score: ${sessionWithMax.max_score})`);
+  }
 
   const { error: updateError } = await supabase
     .from('quiz_sessions')
     .update({
       answers: newAnswers,
-      score: roundedScore,
+      score: clampedScore,
     })
     .eq('id', sessionId);
 
