@@ -76,11 +76,30 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
-    const { prompt, difficulty, numberOfQuestions } = await request.json();
+    const { prompt, difficulty, numberOfQuestions, timerSeconds } = await request.json();
 
     // Validation des paramètres
     if (!prompt || !difficulty || !numberOfQuestions) {
       return new Response('Paramètres manquants', { status: 400 });
+    }
+
+    // Récupérer et valider le timer
+    let validatedTimerSeconds = 10; // Par défaut
+    if (timerSeconds) {
+      const parsedTimer = parseInt(timerSeconds.toString(), 10);
+      if (!isNaN(parsedTimer) && parsedTimer > 0) {
+        validatedTimerSeconds = parsedTimer;
+        // Validation selon le plan
+        if (profile.plan === 'premium') {
+          if (![5, 10, 15].includes(validatedTimerSeconds)) {
+            validatedTimerSeconds = 10; // Fallback
+          }
+        } else if (profile.plan === 'premium+') {
+          if (validatedTimerSeconds < 3 || validatedTimerSeconds > 20) {
+            validatedTimerSeconds = 10; // Fallback
+          }
+        }
+      }
     }
 
     // Validation du prompt
@@ -133,7 +152,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         temp_questions: aiResponse.questions, // Questions complètes stockées ici
         answers: [],
         score: 0,
-        max_score: requestedQuestions * 10,
+        max_score: requestedQuestions * 20, // 20 points max par question (10 base + 10 bonus)
+        timer_seconds: validatedTimerSeconds,
         started_at: new Date().toISOString(),
       })
       .select()

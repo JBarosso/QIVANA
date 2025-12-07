@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Question } from '../../lib/quiz';
 import { calculateScore } from '../../lib/quiz';
 import '../../styles/components/QuizPlayer.scss';
@@ -7,20 +7,30 @@ interface QuizPlayerProps {
   sessionId: string;
   questions: Question[];
   currentAnswers: (number | null)[];
+  timerSeconds?: number; // Timer en secondes (défaut: 10)
 }
 
-export default function QuizPlayer({ sessionId, questions, currentAnswers }: QuizPlayerProps) {
+export default function QuizPlayer({ sessionId, questions, currentAnswers, timerSeconds = 10 }: QuizPlayerProps) {
+  // Valider timerSeconds
+  const validatedTimerSeconds = timerSeconds && timerSeconds > 0 ? timerSeconds : 10;
+  console.log('🎮 QuizPlayer monté avec timerSeconds:', validatedTimerSeconds, '(prop:', timerSeconds, ')');
+  
   // Trouver la première question non répondue
   const firstUnansweredIndex = currentAnswers.findIndex((a) => a === null);
   const initialQuestionIndex = firstUnansweredIndex >= 0 ? firstUnansweredIndex : 0;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(initialQuestionIndex);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(10);
+  // Vérifier si la question actuelle est déjà répondue
+  const currentAnswer = currentAnswers[currentQuestionIndex];
+  const [isAnswered, setIsAnswered] = useState(currentAnswer !== null && currentAnswer !== undefined);
+  const [timeRemaining, setTimeRemaining] = useState(validatedTimerSeconds);
   const [isLoading, setIsLoading] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [isSessionCompleted, setIsSessionCompleted] = useState(false);
+  
+  // Ref pour stocker handleAnswer et éviter les problèmes de dépendances dans useEffect
+  const handleAnswerRef = useRef<((answerIndex: number | null, isTimeout: boolean) => Promise<void>) | null>(null);
 
   // ⚠️ PROTECTION : Vérifier si la session est complétée au chargement
   useEffect(() => {
@@ -52,25 +62,7 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
   const totalQuestions = questions.length;
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
-  // Timer logic
-  useEffect(() => {
-    if (isAnswered) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 0) {
-          // Temps écoulé, réponse automatique
-          handleAnswer(null, true);
-          return 0;
-        }
-        return prev - 0.1;
-      });
-    }, 100);
-
-    return () => clearInterval(timer);
-  }, [currentQuestionIndex, isAnswered]);
-
-  const handleAnswer = async (answerIndex: number | null, isTimeout: boolean = false) => {
+  const handleAnswer = useCallback(async (answerIndex: number | null, isTimeout: boolean = false) => {
     if (isAnswered) return;
 
     setIsAnswered(true);
@@ -78,7 +70,7 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
 
     // Calculer le score
     const isCorrect = answerIndex === currentQuestion.correct_index;
-    const points = calculateScore(isCorrect, Math.max(0, timeRemaining), 10);
+    const points = calculateScore(isCorrect, Math.max(0, timeRemaining), validatedTimerSeconds);
     setPointsEarned(points);
 
     // Sauvegarder la réponse
@@ -103,7 +95,61 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sessionId, currentQuestionIndex, timeRemaining, validatedTimerSeconds, isAnswered, currentQuestion]);
+
+  // Mettre à jour la ref à chaque changement de handleAnswer
+  useEffect(() => {
+    handleAnswerRef.current = handleAnswer;
+  }, [handleAnswer]);
+
+  // Timer logic - Démarrer le timer pour chaque question
+  useEffect(() => {
+    // Vérifier si la question actuelle est déjà répondue
+    const currentAnswer = currentAnswers[currentQuestionIndex];
+    const questionIsAnswered = currentAnswer !== null && currentAnswer !== undefined;
+    
+    // Si la question est déjà répondue, ne pas démarrer le timer
+    if (questionIsAnswered) {
+      setIsAnswered(true);
+      setSelectedAnswer(currentAnswer);
+      setTimeRemaining(0); // Timer à 0 pour les questions déjà répondues
+      return;
+    }
+
+    // Réinitialiser l'état pour la nouvelle question
+    setIsAnswered(false);
+    setSelectedAnswer(null);
+    setTimeRemaining(validatedTimerSeconds);
+
+    console.log(`⏱️ Timer démarré pour question ${currentQuestionIndex + 1}: ${validatedTimerSeconds}s`);
+
+    // Démarrer le timer immédiatement
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        // Vérifier si la question a été répondue entre-temps
+        const stillUnanswered = currentAnswers[currentQuestionIndex] === null || currentAnswers[currentQuestionIndex] === undefined;
+        if (!stillUnanswered) {
+          clearInterval(timer);
+          return prev; // Garder la valeur actuelle
+        }
+
+        if (prev <= 0.1) {
+          // Temps écoulé, réponse automatique
+          clearInterval(timer);
+          // Utiliser la ref pour appeler handleAnswer
+          if (handleAnswerRef.current) {
+            handleAnswerRef.current(null, true);
+          }
+          return 0;
+        }
+        return Math.max(0, prev - 0.1);
+      });
+    }, 100);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [currentQuestionIndex, validatedTimerSeconds, currentAnswers]); // Utiliser validatedTimerSeconds
 
   const handleNext = () => {
     if (currentQuestionIndex < totalQuestions - 1) {
@@ -111,7 +157,7 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
       setIsAnswered(false);
-      setTimeRemaining(10);
+      setTimeRemaining(validatedTimerSeconds);
       setPointsEarned(0);
     } else {
       // Quiz terminé, rediriger vers résultats
@@ -237,7 +283,7 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
         <div 
           className="quiz-timer-bar__fill" 
           style={{ 
-            width: `${(timeRemaining / 10) * 100}%`,
+            width: `${(timeRemaining / validatedTimerSeconds) * 100}%`,
             backgroundColor: timeRemaining > 5 ? 'var(--color-accent)' : 
                            timeRemaining > 2 ? 'var(--color-warning)' : 
                            'var(--color-danger)'

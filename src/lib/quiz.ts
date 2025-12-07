@@ -77,7 +77,8 @@ export async function createQuizSession(
   mode: QuizMode,
   universe: Universe,
   difficulty: Difficulty,
-  questionIds: string[]
+  questionIds: string[],
+  timerSeconds: number = 10
 ): Promise<string> {
   // Calculer le score maximum basé sur le nombre de questions
   // Points de base (10) + bonus temps max (10) = 20 points par question
@@ -95,14 +96,25 @@ export async function createQuizSession(
       answers: [],
       score: 0,
       max_score: maxScore,
+      timer_seconds: timerSeconds,
       started_at: new Date().toISOString(),
     })
     .select('id')
     .single();
 
   if (error) {
-    console.error('Error creating quiz session:', error);
-    throw new Error('Impossible de créer la session de quiz');
+    console.error('❌ Error creating quiz session:', error);
+    console.error('❌ Error details:', JSON.stringify(error, null, 2));
+    console.error('❌ Session data attempted:', {
+      user_id: userId,
+      quiz_type: 'db',
+      quiz_mode: mode,
+      universe,
+      difficulty,
+      questions_count: questionIds.length,
+      timer_seconds: timerSeconds,
+    });
+    throw new Error(`Impossible de créer la session de quiz: ${error.message || 'Erreur inconnue'}`);
   }
 
   return data.id;

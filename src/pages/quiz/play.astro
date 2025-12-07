@@ -131,7 +131,8 @@ if (sessionId) {
       questions_ids: ids,
       answers: [],
       score: 0,
-      max_score: ids.length * 10,
+      max_score: ids.length * 20, // 20 points max par question (10 base + 10 bonus)
+      timer_seconds: 10, // Par défaut pour les anciennes sessions
       started_at: new Date().toISOString(),
     })
     .select()
@@ -161,6 +162,7 @@ if (sessionId) {
         sessionId={session.id}
         questions={orderedQuestions}
         currentAnswers={session.answers}
+        timerSeconds={session.timer_seconds ?? 10}
       />
     </div>
   )}

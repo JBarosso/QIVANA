@@ -405,7 +405,9 @@ export type Database = {
           quiz_type: Database["public"]["Enums"]["quiz_type"]
           score: number
           started_at: string
+          temp_questions: Json | null
           time_spent_seconds: number | null
+          timer_seconds: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
           user_id: string
         }
@@ -420,7 +422,9 @@ export type Database = {
           quiz_type: Database["public"]["Enums"]["quiz_type"]
           score?: number
           started_at?: string
+          temp_questions?: Json | null
           time_spent_seconds?: number | null
+          timer_seconds?: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
           user_id: string
         }
@@ -435,7 +439,9 @@ export type Database = {
           quiz_type?: Database["public"]["Enums"]["quiz_type"]
           score?: number
           started_at?: string
+          temp_questions?: Json | null
           time_spent_seconds?: number | null
+          timer_seconds?: number | null
           universe?: Database["public"]["Enums"]["quiz_universe"]
           user_id?: string
         }
@@ -492,14 +498,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_questions: {
+        Args: {
+          match_count: number
+          match_threshold: number
+          query_embedding: string
+        }
+        Returns: {
+          id: string
+          question_id: string
+          similarity: number
+        }[]
+      }
     }
     Enums: {
       duel_status: "lobby" | "in-progress" | "completed" | "cancelled"
       question_source: "ia" | "admin"
       quiz_difficulty: "easy" | "medium" | "hard"
       quiz_mode: "step-by-step" | "all-in-one" | "infinite"
-      quiz_type: "db" | "ai-predefined" | "ai-prompt-free"
+      quiz_type: "db" | "ai-predefined" | "ai-custom-quiz"
       quiz_universe:
         | "anime"
         | "manga"
@@ -640,7 +657,7 @@ export const Constants = {
       question_source: ["ia", "admin"],
       quiz_difficulty: ["easy", "medium", "hard"],
       quiz_mode: ["step-by-step", "all-in-one", "infinite"],
-      quiz_type: ["db", "ai-predefined", "ai-prompt-free"],
+      quiz_type: ["db", "ai-predefined", "ai-custom-quiz"],
       quiz_universe: [
         "anime",
         "manga",

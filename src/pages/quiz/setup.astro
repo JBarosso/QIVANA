@@ -92,6 +92,90 @@ const difficulties = [
           </div>
         </section>
 
+        <!-- Sélection Timer (selon plan) -->
+        {profile.plan !== 'freemium' && (
+          <section class="quiz-setup__section">
+            <h2 class="quiz-setup__section-title">
+              <span class="quiz-setup__section-icon">⏱️</span>
+              Timer
+            </h2>
+            {profile.plan === 'premium' ? (
+              <!-- Premium : Boutons radio 5/10/15s -->
+              <div class="quiz-setup__difficulty-grid">
+                <label class="difficulty-card difficulty-card--primary">
+                  <input
+                    type="radio"
+                    name="timer"
+                    value="5"
+                    required
+                    class="difficulty-card__input"
+                    checked
+                  />
+                  <div class="difficulty-card__content">
+                    <span class="difficulty-card__label">5 secondes</span>
+                    <span class="difficulty-card__description">Rapide ⚡</span>
+                  </div>
+                </label>
+                <label class="difficulty-card difficulty-card--primary">
+                  <input
+                    type="radio"
+                    name="timer"
+                    value="10"
+                    required
+                    class="difficulty-card__input"
+                  />
+                  <div class="difficulty-card__content">
+                    <span class="difficulty-card__label">10 secondes</span>
+                    <span class="difficulty-card__description">Standard 🎯</span>
+                  </div>
+                </label>
+                <label class="difficulty-card difficulty-card--primary">
+                  <input
+                    type="radio"
+                    name="timer"
+                    value="15"
+                    required
+                    class="difficulty-card__input"
+                  />
+                  <div class="difficulty-card__content">
+                    <span class="difficulty-card__label">15 secondes</span>
+                    <span class="difficulty-card__description">Confortable 🧘</span>
+                  </div>
+                </label>
+              </div>
+            ) : (
+              <!-- Premium+ : Slider 3-20s -->
+              <div class="quiz-setup__timer-slider">
+                <input
+                  type="range"
+                  name="timer"
+                  id="timer-slider"
+                  min="3"
+                  max="20"
+                  value="10"
+                  required
+                  class="quiz-setup__timer-input"
+                />
+                <div class="quiz-setup__timer-display">
+                  <label for="timer-slider" class="quiz-setup__timer-label">
+                    <span id="timer-value">10</span> secondes
+                  </label>
+                </div>
+                <script>
+                  // Mettre à jour l'affichage du timer en temps réel
+                  const slider = document.getElementById('timer-slider');
+                  const valueDisplay = document.getElementById('timer-value');
+                  if (slider && valueDisplay) {
+                    slider.addEventListener('input', (e) => {
+                      valueDisplay.textContent = e.target.value;
+                    });
+                  }
+                </script>
+              </div>
+            )}
+          </section>
+        )}
+
         <!-- Info Plan -->
         <div class="quiz-setup__info">
           <div class="quiz-setup__info-icon">ℹ️</div>
@@ -105,7 +189,7 @@ const difficulties = [
             ) : (
               <>
                 <strong>Mode {profile.plan === 'premium' ? 'Premium' : 'Premium+'}</strong>
-                <p>10 questions • Timer {profile.plan === 'premium' ? '5/10/15s' : '3-20s'} • {profile.plan === 'premium+' ? 'All-in-one disponible' : 'Step-by-step'}</p>
+                <p>10 questions • Timer {profile.plan === 'premium' ? '5/10/15s' : profile.plan === 'premium+' ? '3-20s' : '10s'} • Step-by-step</p>
                 <p class="quiz-setup__info-note">✨ Génération IA automatique si stock insuffisant</p>
               </>
             )}
@@ -165,6 +249,70 @@ const difficulties = [
   font-size: var(--fs-1);
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+// Timer slider (Premium+)
+.quiz-setup__timer-slider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-background);
+  border-radius: var(--radius-3);
+}
+
+.quiz-setup__timer-input {
+  width: 100%;
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-neutral-700);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: var(--space-5);
+    height: var(--space-5);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-base);
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: var(--space-5);
+    height: var(--space-5);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-base);
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+  }
+}
+
+.quiz-setup__timer-display {
+  text-align: center;
+}
+
+.quiz-setup__timer-label {
+  font-size: var(--fs-4);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  display: block;
 }
 </style>
 

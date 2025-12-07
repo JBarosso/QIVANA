@@ -154,6 +154,73 @@ const minQuestions = 5;
           )}
         </div>
 
+        <!-- Sélection Timer (selon plan) -->
+        <div class="form-section">
+          <h2 class="form-section__title">4️⃣ Timer</h2>
+          {profile.plan === 'premium' ? (
+            <!-- Premium : Boutons radio 5/10/15s -->
+            <div class="difficulty-grid">
+              <label class="difficulty-card difficulty-card--primary">
+                <input
+                  type="radio"
+                  name="timer"
+                  value="5"
+                  required
+                  class="difficulty-card__input"
+                  checked
+                />
+                <div class="difficulty-card__content">
+                  <div class="difficulty-card__title">5 secondes</div>
+                  <div class="difficulty-card__desc">Rapide ⚡</div>
+                </div>
+              </label>
+              <label class="difficulty-card difficulty-card--primary">
+                <input
+                  type="radio"
+                  name="timer"
+                  value="10"
+                  required
+                  class="difficulty-card__input"
+                />
+                <div class="difficulty-card__content">
+                  <div class="difficulty-card__title">10 secondes</div>
+                  <div class="difficulty-card__desc">Standard 🎯</div>
+                </div>
+              </label>
+              <label class="difficulty-card difficulty-card--primary">
+                <input
+                  type="radio"
+                  name="timer"
+                  value="15"
+                  required
+                  class="difficulty-card__input"
+                />
+                <div class="difficulty-card__content">
+                  <div class="difficulty-card__title">15 secondes</div>
+                  <div class="difficulty-card__desc">Confortable 🧘</div>
+                </div>
+              </label>
+            </div>
+          ) : (
+            <!-- Premium+ : Slider 3-20s -->
+            <div class="slider-container">
+              <input
+                type="range"
+                name="timer"
+                id="timerSlider"
+                min="3"
+                max="20"
+                value="10"
+                required
+                class="slider"
+              />
+              <div class="slider-value">
+                <span id="timerValue">10</span> secondes
+              </div>
+            </div>
+          )}
+        </div>
+
         <!-- Avertissement quiz custom -->
         <div class="info-box info-box--warning">
           <div class="info-box__icon">⚠️</div>
@@ -553,6 +620,16 @@ const minQuestions = 5;
     });
   }
 
+  // Slider de timer (Premium+)
+  const timerSlider = document.getElementById('timerSlider') as HTMLInputElement;
+  const timerValueDisplay = document.getElementById('timerValue');
+
+  if (timerSlider && timerValueDisplay) {
+    timerSlider.addEventListener('input', () => {
+      timerValueDisplay.textContent = timerSlider.value;
+    });
+  }
+
   // Gestion du formulaire
   const form = document.getElementById('customQuizForm') as HTMLFormElement;
   const loadingOverlay = document.getElementById('loadingOverlay');
@@ -565,6 +642,8 @@ const minQuestions = 5;
       const prompt = formData.get('prompt') as string;
       const difficulty = formData.get('difficulty') as string;
       const numberOfQuestions = parseInt(formData.get('numberOfQuestions') as string);
+      const timer = formData.get('timer') as string;
+      const timerSeconds = timer ? parseInt(timer, 10) : 10;
 
       // Validation basique
       if (!prompt || prompt.trim().length < 10) {
@@ -591,6 +670,7 @@ const minQuestions = 5;
             prompt,
             difficulty,
             numberOfQuestions,
+            timerSeconds,
           }),
         });
 

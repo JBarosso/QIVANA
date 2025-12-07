@@ -60,6 +60,29 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const formData = await request.formData();
     const universe = formData.get('universe') as Universe;
     const difficulty = formData.get('difficulty') as Difficulty;
+    
+    // Récupérer le timer (selon plan)
+    let timerSeconds = 10; // Par défaut pour Freemium
+    if (userPlan !== 'freemium') {
+      const timerValue = formData.get('timer');
+      if (timerValue) {
+        const parsedTimer = parseInt(timerValue.toString(), 10);
+        // Vérifier que c'est un nombre valide
+        if (!isNaN(parsedTimer) && parsedTimer > 0) {
+          timerSeconds = parsedTimer;
+          // Validation : Premium (5/10/15) ou Premium+ (3-20)
+          if (userPlan === 'premium') {
+            if (![5, 10, 15].includes(timerSeconds)) {
+              timerSeconds = 10; // Fallback
+            }
+          } else if (userPlan === 'premium+') {
+            if (timerSeconds < 3 || timerSeconds > 20) {
+              timerSeconds = 10; // Fallback
+            }
+          }
+        }
+      }
+    }
 
     if (!universe || !difficulty) {
       return new Response('Univers et difficulté requis', { status: 400 });
@@ -271,7 +294,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       'step-by-step',
       universe,
       difficulty,
-      questions.map((q) => q.id)
+      questions.map((q) => q.id),
+      timerSeconds
     );
 
     // ⚠️ IMPORTANT : Retourner JSON au lieu de redirect pour éviter les problèmes avec redirect: 'manual'
@@ -288,10 +312,18 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       }
     );
   } catch (error) {
-    console.error('Error starting quiz:', error);
+    console.error('❌ Error starting quiz:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erreur interne';
+    console.error('❌ Full error:', JSON.stringify(error, null, 2));
     return new Response(
-      error instanceof Error ? error.message : 'Erreur interne',
-      { status: 500 }
+      JSON.stringify({
+        error: 'Erreur lors du démarrage du quiz',
+        message: errorMessage,
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
     );
   }
 };
