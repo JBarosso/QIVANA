@@ -131,6 +131,26 @@ export default function LobbyRealtime({
 
     loadParticipants();
 
+    // Fonction pour recharger les participants depuis l'API
+    const reloadParticipants = async () => {
+      try {
+        const response = await fetch(`/api/duel/participants?salonId=${salonId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (mounted) {
+            const parsed = Array.isArray(data.participants) ? data.participants : [];
+            console.log('🔄 Reloaded participants:', parsed);
+            setParticipants(parsed as Participant[]);
+            if (data.chef_id) {
+              setSalonChefId(data.chef_id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error reloading participants:', error);
+      }
+    };
+
     // S'abonner aux changements en temps réel
     const channel = supabase
       .channel(`duel-session-${salonId}`)
@@ -150,7 +170,7 @@ export default function LobbyRealtime({
               const parsed = Array.isArray(payload.new.participants)
                 ? payload.new.participants
                 : [];
-              console.log('👥 Updated participants:', parsed);
+              console.log('👥 Updated participants from Realtime:', parsed);
               setParticipants(parsed as Participant[]);
             }
             // Mettre à jour le chef_id si changé
@@ -162,14 +182,59 @@ export default function LobbyRealtime({
       )
       .subscribe((status) => {
         console.log('📡 Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to Realtime updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('⚠️ Realtime subscription error');
+        }
       });
+
+    // Polling de secours : recharger les participants toutes les 3 secondes
+    // Cela garantit que même si Realtime ne fonctionne pas, les mises à jour seront visibles
+    const pollInterval = setInterval(() => {
+      if (mounted) {
+        reloadParticipants();
+      }
+    }, 3000); // Recharger toutes les 3 secondes
 
     // Nettoyer l'abonnement au démontage
     return () => {
       mounted = false;
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [supabase, salonId]);
+
+  // Détecter si l'utilisateur actuel a été expulsé
+  useEffect(() => {
+    // Ne pas vérifier pendant le chargement initial
+    if (isLoading) {
+      return;
+    }
+
+    // Le chef ne peut pas être expulsé
+    if (isChef || currentUserId === salonChefId) {
+      return;
+    }
+
+    // Vérifier si l'utilisateur actuel est toujours dans la liste des participants
+    // On vérifie aussi que la liste a été chargée (au moins le chef devrait être là)
+    const isStillParticipant = participants.some((p) => p.id === currentUserId);
+    const hasParticipants = participants.length > 0 || salonChefId; // Au moins le chef existe
+
+    // Si la liste a été chargée et que l'utilisateur n'est plus dedans, il a été expulsé
+    if (hasParticipants && !isStillParticipant) {
+      // L'utilisateur a été expulsé
+      console.log('🚫 User has been expelled from salon:', {
+        currentUserId,
+        participants: participants.map(p => ({ id: p.id, pseudo: p.pseudo })),
+        salonChefId,
+      });
+      alert('Vous avez été expulsé du salon par le chef.');
+      // Rediriger vers la page d'accueil
+      window.location.href = '/';
+    }
+  }, [participants, currentUserId, isChef, salonChefId, isLoading]);
 
   // S'assurer que le chef est toujours dans la liste des participants affichés
   // Le chef doit toujours être visible, même s'il n'est pas dans le tableau participants
@@ -271,13 +336,48 @@ export default function LobbyRealtime({
                 <button
                   className="lobby-realtime__kick-btn"
                   onClick={async () => {
-                    const updated = participants.filter((p) => p.id !== participant.id);
-                    await supabase
-                      .from('duel_sessions')
-                      .update({ participants: updated })
-                      .eq('id', salonId);
+                    if (!confirm(`Expulser ${participant.pseudo} du salon ?`)) {
+                      return;
+                    }
+                    
+                    try {
+                      console.log('🗑️ Expelling participant:', {
+                        participantId: participant.id,
+                        participantPseudo: participant.pseudo,
+                        salonId,
+                      });
+                      
+                      // Utiliser l'API au lieu du client Supabase directement
+                      const formData = new FormData();
+                      formData.append('salon_id', salonId);
+                      formData.append('participant_id', participant.id);
+                      
+                      const response = await fetch('/api/duel/kick', {
+                        method: 'POST',
+                        body: formData,
+                      });
+                      
+                      if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('❌ Error expelling participant:', response.status, errorData);
+                        alert(`Erreur lors de l'expulsion: ${errorData.error || 'Erreur inconnue'}`);
+                        return;
+                      }
+                      
+                      const data = await response.json();
+                      console.log('✅ Participant expelled successfully:', participant.pseudo);
+                      console.log('✅ Updated participants from API:', data.participants);
+                      
+                      // Mettre à jour la liste localement (le Realtime devrait aussi le faire)
+                      if (data.participants && Array.isArray(data.participants)) {
+                        setParticipants(data.participants as Participant[]);
+                      }
+                    } catch (error) {
+                      console.error('❌ Error expelling participant:', error);
+                      alert('Erreur lors de l\'expulsion: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
+                    }
                   }}
-                  title="Expulser"
+                  title={`Expulser ${participant.pseudo}`}
                 >
                   ✕
                 </button>
