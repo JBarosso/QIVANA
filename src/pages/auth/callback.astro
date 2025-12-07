@@ -13,7 +13,10 @@ const requestUrl = new URL(Astro.request.url);
 const code = requestUrl.searchParams.get('code');
 const error = requestUrl.searchParams.get('error');
 const errorDescription = requestUrl.searchParams.get('error_description');
-const next = requestUrl.searchParams.get('next') || '/';
+const type = requestUrl.searchParams.get('type'); // 'email-confirmation' ou undefined
+// Pour la confirmation d'email, rediriger vers /profile si pas de 'next'
+// Pour OAuth, utiliser 'next' ou rediriger vers /profile
+const next = requestUrl.searchParams.get('next') || (type === 'email-confirmation' ? '/profile' : '/profile');
 
 // Create Supabase client with cookie handling
 const supabase = createServerClient(

@@ -29,10 +29,16 @@ if (Astro.request.method === 'POST') {
   } else if (password !== passwordConfirm) {
     error = 'Les mots de passe ne correspondent pas';
   } else {
+    // ⚠️ IMPORTANT : Utiliser l'URL de production pour la confirmation d'email
+    // Astro.url.origin sera automatiquement l'URL de production en prod (Vercel)
+    const origin = Astro.url.origin;
+    const redirectTo = `${origin}/auth/callback?type=email-confirmation`;
+    
     const { error: signUpError } = await Astro.locals.supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           pseudo,
         },
