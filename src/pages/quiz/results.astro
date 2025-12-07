@@ -81,7 +81,7 @@ if (session.quiz_type === 'ai-custom-quiz') {
   // Pour les quiz normaux, vérifier chaque réponse
   // On s'assure que toutes les questions sont chargées avant de calculer
   if (questions && questions.length === session.questions_ids.length) {
-    correctAnswers = answers.reduce((count, answer, index) => {
+    correctAnswers = answers.reduce((count: number, answer: number | null, index: number) => {
       if (answer === null || answer === undefined) return count;
       const questionId = session.questions_ids[index];
       const question = questions.find((q: Question) => q.id === questionId);
@@ -206,3 +206,20 @@ if (accuracy >= 90) {
 <style lang="scss">
 @use '../../styles/pages/quiz' as *;
 </style>
+
+<script>
+  // ⚠️ PROTECTION : Empêcher de revenir en arrière sur un quiz terminé
+  if (typeof window !== 'undefined') {
+    // Remplacer l'entrée dans l'historique pour que le bouton "retour" ne revienne pas sur le quiz
+    // On ajoute une nouvelle entrée dans l'historique pour la page de résultats
+    // Cela empêche le bouton "retour" de revenir sur la page de quiz
+    window.history.pushState(null, '', window.location.href);
+    
+    // Écouter les événements de navigation (popstate = bouton retour)
+    window.addEventListener('popstate', (event) => {
+      // Si l'utilisateur essaie de revenir en arrière depuis la page de résultats,
+      // rediriger vers la page de setup au lieu de permettre le retour sur le quiz
+      window.location.href = '/quiz/setup';
+    });
+  }
+</script>

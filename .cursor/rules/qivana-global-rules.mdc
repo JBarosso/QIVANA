@@ -31,7 +31,7 @@ You MUST ALWAYS follow these three documents (located in /docs/):
 Additional mandatory rules:
 - When showing file updates, include ONLY the changed parts unless the file is still small.
 - Always ask before creating very large or structural file changes.
-- All code MUST be typed (TypeScript).
+- All code MUST be typed (TypeScript) follow TYPESCRIPT_CHECKLIST.md .
 - All AI prompt templates must be strict JSON.
 - Never import secret keys, always use environment variables.
 

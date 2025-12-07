@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Question } from '../../lib/quiz';
 import { calculateScore } from '../../lib/quiz';
-import './QuizPlayer.scss';
+import '../../styles/components/QuizPlayer.scss';
 
 interface QuizPlayerProps {
   sessionId: string;
@@ -20,6 +20,33 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers }: Qui
   const [timeRemaining, setTimeRemaining] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [isSessionCompleted, setIsSessionCompleted] = useState(false);
+
+  // ⚠️ PROTECTION : Vérifier si la session est complétée au chargement
+  useEffect(() => {
+    const checkSessionStatus = async () => {
+      try {
+        const response = await fetch(`/api/quiz/session-status?session=${sessionId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.completed) {
+            // Session terminée, rediriger vers les résultats
+            setIsSessionCompleted(true);
+            window.location.href = `/quiz/results?session=${sessionId}`;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session status:', error);
+      }
+    };
+
+    checkSessionStatus();
+  }, [sessionId]);
+
+  // Si la session est complétée, ne rien afficher (redirection en cours)
+  if (isSessionCompleted) {
+    return null;
+  }
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;

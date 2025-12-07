@@ -356,7 +356,7 @@
   border-radius: var(--radius-3);
   border: 2px solid var(--color-border);
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-base);
+  transition: all var(--transition-base);
 
   &:hover {
     transform: translateY(-4px);
