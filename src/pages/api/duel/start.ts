@@ -214,11 +214,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       totalPlayers,
     });
 
+    // Retourner les questions complètes pour Socket.IO
     return new Response(
       JSON.stringify({ 
         success: true,
-        redirectTo: `/duel/play?salon=${salonId}`,
+        redirectTo: `/duel/play?room=${salon.salon_code}&salon=${salonId}`,
         questionsCount: questionIds.length,
+        questions: questions, // Questions complètes pour Socket.IO
       }),
       {
         status: 200,
