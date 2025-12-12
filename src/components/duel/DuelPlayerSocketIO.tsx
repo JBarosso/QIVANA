@@ -10,6 +10,7 @@ import '../../styles/components/DuelPlayer.scss';
 
 interface DuelPlayerSocketIOProps {
   roomId: string;
+  salonId?: string; // ID du salon Supabase pour la redirection vers results
   salonName: string;
   currentUserId: string;
   currentUserPseudo: string;
@@ -18,6 +19,7 @@ interface DuelPlayerSocketIOProps {
 
 export default function DuelPlayerSocketIO({
   roomId,
+  salonId,
   salonName,
   currentUserId,
   currentUserPseudo,
@@ -36,6 +38,7 @@ export default function DuelPlayerSocketIO({
   const [showPlayersPanel, setShowPlayersPanel] = useState(false);
   const [isWaitingForQuestion, setIsWaitingForQuestion] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isAnsweredRef = useRef(false); // Ref pour suivre si on a répondu (pour le timer)
 
   // Rejoindre la room au montage
   useEffect(() => {
@@ -78,18 +81,40 @@ export default function DuelPlayerSocketIO({
       setTimeRemaining(data.timerDuration);
       setPointsEarned(0);
       setIsWaitingForQuestion(false);
+      isAnsweredRef.current = false; // Reset la ref
       
       // Démarrer le timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
       
+      // Stocker la questionIndex dans une variable locale pour le timer
+      const currentQuestionIndex = data.questionIndex;
+      
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
             if (timerRef.current) {
               clearInterval(timerRef.current);
+              timerRef.current = null;
             }
+            
+            // ⚠️ IMPORTANT : Si le timer expire et que le joueur n'a pas répondu, envoyer automatiquement 0 point
+            if (!isAnsweredRef.current && socket) {
+              console.log('⏱️ Timer expired, sending automatic answer with 0 points');
+              isAnsweredRef.current = true;
+              setIsAnswered(true);
+              setIsCorrect(false);
+              setPointsEarned(0);
+              
+              // Envoyer une réponse automatique avec l'index -1 (pas de réponse)
+              socket.emit('game:answer', {
+                questionIndex: currentQuestionIndex,
+                selectedIndex: -1, // -1 = pas de réponse
+                timeRemaining: 0,
+              });
+            }
+            
             return 0;
           }
           return prev - 1;
@@ -115,8 +140,11 @@ export default function DuelPlayerSocketIO({
 
     const onGameEnd = (data: GameEnd) => {
       console.log('🎉 Game ended:', data);
-      // Rediriger vers les résultats
-      window.location.href = `/duel/results?room=${roomId}`;
+      // Rediriger vers les résultats avec salonId si disponible, sinon roomId
+      const resultsUrl = salonId 
+        ? `/duel/results?salon=${salonId}`
+        : `/duel/results?room=${roomId}`;
+      window.location.href = resultsUrl;
     };
 
     const onGameError = (data: { message: string }) => {
@@ -150,7 +178,11 @@ export default function DuelPlayerSocketIO({
   // Gérer la réponse
   const handleAnswer = useCallback(
     (answerIndex: number) => {
-      if (isAnswered || !currentQuestion || !socket) return;
+      if (isAnswered || isAnsweredRef.current || !currentQuestion || !socket) return;
+      
+      // Désactiver immédiatement pour éviter les double-clics
+      isAnsweredRef.current = true;
+      setIsAnswered(true);
 
       console.log('📤 Sending answer:', answerIndex);
 
@@ -161,6 +193,12 @@ export default function DuelPlayerSocketIO({
       });
 
       setSelectedAnswer(answerIndex);
+      
+      // Arrêter le timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     },
     [isAnswered, currentQuestion, timeRemaining, socket]
   );

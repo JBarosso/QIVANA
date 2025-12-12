@@ -65,6 +65,7 @@ if (!isChef && !isParticipant) {
         <DuelPlayerSocketIO
           client:load
           roomId={finalRoomId}
+          salonId={salonId || undefined}
           salonName={salon.salon_name}
           currentUserId={user.id}
           currentUserPseudo={profile.pseudo}
