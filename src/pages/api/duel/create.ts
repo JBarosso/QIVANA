@@ -2,10 +2,13 @@
 // API ROUTE - CREATE DUEL SALON
 // ============================================
 // Crée un nouveau salon de duel (Premium+ uniquement)
+// Supporte les modes: db, ai-predefined, ai-custom-quiz
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import { createSalon } from '../../../lib/duel';
+import { generateQuiz } from '../../../lib/ai';
+import { getRecentUserQuestions } from '../../../lib/quiz';
 import type { Universe, Difficulty, QuizType } from '../../../types';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -108,7 +111,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       );
     }
 
-    if (!mode || !['db', 'ai-predefined'].includes(mode)) {
+    if (!mode || !['db', 'ai-custom-quiz'].includes(mode)) {
       return new Response(
         JSON.stringify({ error: 'Source de questions invalide' }),
         {
@@ -116,6 +119,100 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
           headers: { 'Content-Type': 'application/json' },
         }
       );
+    }
+
+    // Pour le custom quiz, vérifier le prompt
+    let customPrompt: string | null = null;
+    let tempQuestions: any[] | null = null;
+    
+    if (mode === 'ai-custom-quiz') {
+      customPrompt = formData.get('custom_prompt')?.toString().trim() || null;
+      
+      if (!customPrompt || customPrompt.length < 10) {
+        return new Response(
+          JSON.stringify({ error: 'Le prompt custom doit contenir au moins 10 caractères' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // Vérifier le quota IA
+      const { data: quotaProfile } = await supabase
+        .from('profiles')
+        .select('ai_quizzes_used_this_month, ai_quota_reset_date')
+        .eq('id', user.id)
+        .single();
+
+      if (quotaProfile) {
+        const now = new Date();
+        const resetDate = new Date(quotaProfile.ai_quota_reset_date);
+        
+        // Si la date de reset est passée, réinitialiser le quota
+        if (now > resetDate) {
+          await supabase
+            .from('profiles')
+            .update({
+              ai_quizzes_used_this_month: 0,
+              ai_quota_reset_date: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+            })
+            .eq('id', user.id);
+        }
+      }
+
+      const currentQuota = quotaProfile?.ai_quizzes_used_this_month || 0;
+      const maxQuota = 200; // Premium+ a 200 quiz IA par mois
+      
+      if (currentQuota >= maxQuota) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Quota mensuel de quiz IA épuisé',
+            message: `Vous avez utilisé ${currentQuota}/${maxQuota} quiz IA ce mois. Le quota sera réinitialisé le mois prochain.`
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      // Générer le custom quiz
+      try {
+        const contextQuestions = await getRecentUserQuestions(supabase, user.id, 'other', 20);
+        
+        const aiResponse = await generateQuiz({
+          universe: 'other',
+          difficulty: difficulty as Difficulty,
+          numberOfQuestions: questions_count,
+          customPrompt: customPrompt,
+          contextQuestions: contextQuestions.length > 0 ? contextQuestions : undefined,
+        });
+
+        tempQuestions = aiResponse.questions;
+        
+        // Incrémenter le quota
+        await supabase
+          .from('profiles')
+          .update({
+            ai_quizzes_used_this_month: currentQuota + 1,
+          })
+          .eq('id', user.id);
+
+        console.log(`✅ Custom quiz generated: ${tempQuestions.length} questions`);
+      } catch (error) {
+        console.error('Error generating custom quiz:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Erreur lors de la génération du quiz custom',
+            details: error instanceof Error ? error.message : 'Erreur inconnue'
+          }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
 
     if (!universe || !['anime', 'manga', 'comics', 'games', 'movies', 'series', 'other'].includes(universe)) {
@@ -168,6 +265,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       timer_seconds: parsedTimerSeconds,
       is_public,
       chef_id: user.id,
+      temp_questions: tempQuestions, // Questions temporaires si custom quiz
     });
 
     // Retourner le succès avec redirection vers le lobby

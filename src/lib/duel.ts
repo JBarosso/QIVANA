@@ -75,6 +75,7 @@ export interface CreateSalonData {
   timer_seconds: number | null;
   is_public: boolean;
   chef_id: string;
+  temp_questions?: any[] | null; // Questions temporaires pour custom quiz
 }
 
 /**
@@ -88,22 +89,29 @@ export async function createSalon(
   const salon_code = await generateUniqueSalonCode(supabase);
 
   // Insérer le salon
+  const insertData: any = {
+    salon_code,
+    salon_name: data.salon_name,
+    game_mode: data.game_mode,
+    mode: data.mode,
+    universe: data.universe,
+    difficulty: data.difficulty,
+    questions_count: data.questions_count,
+    timer_seconds: data.timer_seconds,
+    is_public: data.is_public,
+    chef_id: data.chef_id,
+    status: 'lobby',
+    participants: [],
+  };
+
+  // Ajouter temp_questions si fourni (pour custom quiz)
+  if (data.temp_questions) {
+    insertData.temp_questions = data.temp_questions;
+  }
+
   const { data: salon, error } = await supabase
     .from('duel_sessions')
-    .insert({
-      salon_code,
-      salon_name: data.salon_name,
-      game_mode: data.game_mode,
-      mode: data.mode,
-      universe: data.universe,
-      difficulty: data.difficulty,
-      questions_count: data.questions_count,
-      timer_seconds: data.timer_seconds,
-      is_public: data.is_public,
-      chef_id: data.chef_id,
-      status: 'lobby',
-      participants: [],
-    })
+    .insert(insertData)
     .select('id')
     .single();
 

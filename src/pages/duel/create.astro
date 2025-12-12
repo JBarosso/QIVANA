@@ -96,7 +96,7 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
           </div>
         </section>
 
-        <!-- Source des questions (DB ou IA) -->
+        <!-- Source des questions (DB avec génération IA automatique, ou Custom Quiz) -->
         <section class="duel-create__section">
           <h2 class="duel-create__section-title">
             <span class="duel-create__section-icon">📚</span>
@@ -111,20 +111,41 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
                 required
                 checked
                 class="duel-create__radio__input"
+                id="mode-db"
               />
               <span class="duel-create__radio__label">Base de données</span>
-              <span class="duel-create__radio__hint">Questions validées et approuvées</span>
+              <span class="duel-create__radio__hint">Questions validées. Génération IA automatique si stock insuffisant</span>
             </label>
             <label class="duel-create__radio">
               <input
                 type="radio"
                 name="mode"
-                value="ai-predefined"
+                value="ai-custom-quiz"
                 class="duel-create__radio__input"
+                id="mode-custom-quiz"
               />
-              <span class="duel-create__radio__label">IA (prédéfini)</span>
-              <span class="duel-create__radio__hint">Génération IA si stock insuffisant</span>
+              <span class="duel-create__radio__label">✨ Quiz Custom</span>
+              <span class="duel-create__radio__hint">Crée un quiz personnalisé avec ton propre prompt</span>
             </label>
+          </div>
+          
+          <!-- Section Custom Quiz (affichée uniquement si mode custom sélectionné) -->
+          <div id="custom-quiz-section" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: var(--color-bg-secondary, #f5f5f5); border-radius: 8px;">
+            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">📝 Ton prompt créatif</h3>
+            <p style="margin-bottom: 1rem; color: var(--color-text-secondary, #666); font-size: 0.9rem;">
+              Décris le quiz que tu veux. Sois précis et créatif !
+            </p>
+            <textarea
+              name="custom_prompt"
+              id="customPromptInput"
+              placeholder="Ex: Crée un quiz sur les répliques cultes de Breaking Bad"
+              rows="4"
+              maxlength="500"
+              style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border, #ddd); border-radius: 4px; font-family: inherit; resize: vertical;"
+            ></textarea>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-secondary, #666);">
+              <span id="customCharCount">0</span> / 500 caractères
+            </div>
           </div>
         </section>
 
@@ -233,6 +254,36 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
   import { showAlert } from '../../lib/showAlert';
 
   const form = document.getElementById('duelCreateForm') as HTMLFormElement;
+  const customQuizSection = document.getElementById('custom-quiz-section');
+  const customPromptInput = document.getElementById('customPromptInput') as HTMLTextAreaElement;
+  const customCharCount = document.getElementById('customCharCount');
+  const modeInputs = document.querySelectorAll('input[name="mode"]') as NodeListOf<HTMLInputElement>;
+  
+  // Afficher/masquer la section custom quiz selon le mode sélectionné
+  if (modeInputs && customQuizSection) {
+    modeInputs.forEach((input) => {
+      input.addEventListener('change', () => {
+        if (input.value === 'ai-custom-quiz') {
+          customQuizSection.style.display = 'block';
+          if (customPromptInput) {
+            customPromptInput.required = true;
+          }
+        } else {
+          customQuizSection.style.display = 'none';
+          if (customPromptInput) {
+            customPromptInput.required = false;
+          }
+        }
+      });
+    });
+  }
+
+  // Compteur de caractères pour le prompt custom
+  if (customPromptInput && customCharCount) {
+    customPromptInput.addEventListener('input', () => {
+      customCharCount.textContent = customPromptInput.value.length.toString();
+    });
+  }
   
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -240,6 +291,19 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
       
       const formData = new FormData(form);
       const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
+      // Vérifier si mode custom quiz et prompt requis
+      const selectedMode = formData.get('mode');
+      if (selectedMode === 'ai-custom-quiz') {
+        const customPrompt = formData.get('custom_prompt')?.toString().trim();
+        if (!customPrompt || customPrompt.length < 10) {
+          showAlert({ 
+            message: 'Le prompt custom doit contenir au moins 10 caractères', 
+            type: 'error' 
+          });
+          return;
+        }
+      }
       
       if (submitButton) {
         submitButton.disabled = true;

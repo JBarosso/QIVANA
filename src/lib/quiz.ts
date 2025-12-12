@@ -434,3 +434,180 @@ export async function checkQuestionStock(
 
   return availableQuestions.length;
 }
+
+/**
+ * Fonction unifiée pour récupérer des questions avec génération IA automatique si nécessaire
+ * Utilisée à la fois pour le mode solo et multijoueur
+ * 
+ * @param supabase - Client Supabase
+ * @param userId - ID de l'utilisateur (pour vérifier le plan et les questions vues)
+ * @param universe - Univers sélectionné
+ * @param difficulty - Difficulté sélectionnée
+ * @param questionsRequested - Nombre de questions demandées
+ * @param questionsMinimum - Nombre minimum de questions acceptables (défaut: 3)
+ * @param excludeSeenQuestions - Si true, exclut les questions déjà vues par l'utilisateur (défaut: true pour solo, false pour multijoueur)
+ * @returns Tableau de questions
+ */
+export async function fetchQuestionsWithAutoGeneration(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  universe: Universe,
+  difficulty: Difficulty,
+  questionsRequested: number,
+  questionsMinimum: number = 3,
+  excludeSeenQuestions: boolean = true
+): Promise<Question[]> {
+  // Récupérer le plan de l'utilisateur
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', userId)
+    .single();
+
+  const userPlan = profile?.plan || 'freemium';
+
+  // ============================================
+  // ÉTAPE 1 : Vérifier le stock DB disponible
+  // ============================================
+  const seenIds = excludeSeenQuestions 
+    ? await getSeenQuestionIds(supabase, userId, universe, difficulty)
+    : [];
+  const availableStock = await checkQuestionStock(
+    supabase,
+    userId,
+    universe,
+    difficulty,
+    questionsRequested
+  );
+
+  console.log(`📊 Stock disponible: ${availableStock} questions (demandé: ${questionsRequested})`);
+  if (excludeSeenQuestions) {
+    console.log(`👁️ Questions déjà vues: ${seenIds.length} questions`);
+  }
+
+  // ============================================
+  // ÉTAPE 2 : Si stock insuffisant ET Premium/Premium+
+  // ============================================
+  if (availableStock < questionsRequested) {
+    // ⚠️ SÉCURITÉ FREEMIUM : Bloquer la génération IA
+    if (userPlan === 'freemium') {
+      throw new Error('Stock insuffisant. Passe Premium pour débloquer la génération IA.');
+    }
+
+    // Pour Premium/Premium+ : génération IA contrôlée
+    const missingCount = questionsRequested - availableStock;
+    console.log(`🤖 Stock insuffisant. Génération IA contrôlée: ${missingCount} questions manquantes`);
+
+    try {
+      const { generateControlledAIQuestions } = await import('./ai-generation');
+      // Génération contrôlée (1 batch, pas de boucle)
+      const generationResult = await generateControlledAIQuestions(
+        supabase,
+        userId,
+        universe,
+        difficulty,
+        missingCount,
+        1 // Buffer de 1 question
+      );
+
+      console.log(
+        `✅ Génération IA: ${generationResult.questionIds.length} questions insérées, ${generationResult.duplicatesSkipped} duplicates`
+      );
+    } catch (generationError) {
+      console.error('❌ Erreur lors de la génération IA:', generationError);
+      // Continuer même si génération échoue (on utilisera ce qui est disponible en DB)
+    }
+  }
+
+  // ============================================
+  // ÉTAPE 3 : Récupérer les questions depuis la DB
+  // ============================================
+  // ⚠️ IMPORTANT : Recharger les seenIds car de nouvelles questions peuvent avoir été générées
+  const updatedSeenIds = excludeSeenQuestions
+    ? await getSeenQuestionIds(supabase, userId, universe, difficulty)
+    : [];
+  
+  if (excludeSeenQuestions) {
+    console.log(`👁️ Questions déjà vues (après génération): ${updatedSeenIds.length} questions`);
+  }
+  
+  let questions: Question[];
+  
+  try {
+    questions = await fetchRandomQuestions(
+      supabase,
+      universe,
+      difficulty,
+      questionsRequested,
+      updatedSeenIds
+    );
+    
+    console.log(`✅ Questions récupérées: ${questions.length} questions`);
+  } catch (fetchError) {
+    // Si fetchRandomQuestions échoue (pas de questions disponibles après exclusion des vues)
+    console.error('❌ Erreur lors de la récupération des questions:', fetchError);
+    
+    // ⚠️ SÉCURITÉ FREEMIUM : Bloquer si erreur de récupération
+    if (userPlan === 'freemium') {
+      throw new Error('Stock insuffisant. Passe Premium pour débloquer la génération IA.');
+    }
+    
+    // ⚠️ IMPORTANT : Pour Premium/Premium+, si toutes les questions ont été vues,
+    // on doit générer de nouvelles questions même si le stock initial était suffisant
+    if (fetchError instanceof Error && fetchError.message.includes('déjà été vues')) {
+      console.log(`🤖 Toutes les questions ont été vues. Génération IA pour Premium/Premium+...`);
+      
+      try {
+        const { generateControlledAIQuestions } = await import('./ai-generation');
+        // Générer exactement le nombre de questions demandé
+        const generationResult = await generateControlledAIQuestions(
+          supabase,
+          userId,
+          universe,
+          difficulty,
+          questionsRequested, // Générer exactement le nombre demandé
+          1 // Buffer de 1 question
+        );
+
+        console.log(
+          `✅ Génération IA (toutes vues): ${generationResult.questionIds.length} questions insérées`
+        );
+
+        // Réessayer de récupérer les questions (maintenant avec nouvelles questions générées)
+        const finalSeenIds = excludeSeenQuestions
+          ? await getSeenQuestionIds(supabase, userId, universe, difficulty)
+          : [];
+        questions = await fetchRandomQuestions(
+          supabase,
+          universe,
+          difficulty,
+          questionsRequested,
+          finalSeenIds
+        );
+        
+        console.log(`✅ Questions récupérées après génération: ${questions.length} questions`);
+      } catch (generationError) {
+        console.error('❌ Erreur lors de la génération IA (fallback):', generationError);
+        throw new Error('Erreur lors de la génération IA. Veuillez réessayer.');
+      }
+    } else {
+      // Autre erreur
+      throw new Error(
+        fetchError instanceof Error 
+          ? fetchError.message 
+          : 'Erreur lors de la récupération des questions'
+      );
+    }
+  }
+
+  // Si toujours insuffisant après génération, accepter ce qui est disponible (sauf si 0)
+  if (questions.length < questionsMinimum) {
+    if (questions.length === 0) {
+      throw new Error('Impossible de générer un quiz. Stock insuffisant même après génération IA.');
+    }
+
+    console.log(`⚠️ Moins de questions que demandé: ${questions.length}/${questionsRequested}`);
+  }
+
+  return questions;
+}
