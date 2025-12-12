@@ -57,6 +57,7 @@ export interface RoomSettings {
   stepByStepMode: boolean;
   leaderId: string;
   players: Player[];
+  bannedPlayers?: string[]; // Liste des IDs de joueurs bannis
 }
 
 export interface Player {

@@ -29,6 +29,7 @@ export default function DuelPlayerSocketIO({
   const [currentQuestion, setCurrentQuestion] = useState<GameQuestionEvent | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(10);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [scores, setScores] = useState<GameScoresUpdate['scores']>([]);
@@ -57,6 +58,7 @@ export default function DuelPlayerSocketIO({
       setCurrentQuestion(data);
       setSelectedAnswer(null);
       setIsAnswered(false);
+      setIsCorrect(false);
       setTimeRemaining(data.timerDuration);
       setPointsEarned(0);
       
@@ -80,6 +82,7 @@ export default function DuelPlayerSocketIO({
 
     const onAnswerResult = (data: GameAnswerResult) => {
       console.log('📊 Answer result:', data);
+      setIsCorrect(data.isCorrect);
       setPointsEarned(data.pointsEarned);
       setIsAnswered(true);
     };
@@ -170,8 +173,6 @@ export default function DuelPlayerSocketIO({
   }
 
   const showResult = isAnswered;
-  const isCorrect = showResult && selectedAnswer !== null && 
-    currentQuestion.question.choices[selectedAnswer] === currentQuestion.question.choices[0]; // TODO: utiliser correctIndex
 
   return (
     <div className="duel-player">

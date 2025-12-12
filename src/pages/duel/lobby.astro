@@ -4,6 +4,7 @@ import { requirePremiumPlus } from '../../lib/auth';
 import { getSalonByCode } from '../../lib/duel';
 import LobbyRealtime from '../../components/duel/LobbyRealtime';
 import StartGameButton from '../../components/duel/StartGameButton';
+import CreateRoomButton from '../../components/duel/CreateRoomButton';
 
 // Protection de la route - Premium+ uniquement
 const authResult = await requirePremiumPlus(Astro);
@@ -152,6 +153,25 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
               </div>
             </div>
           </section>
+
+          <!-- Créer la room Socket.IO automatiquement (si chef) -->
+          {isChef && salonCode && (
+            <CreateRoomButton
+              client:load
+              roomId={salonCode}
+              salonName={salon.salon_name}
+              mode={salon.mode}
+              universe={salon.universe}
+              difficulty={salon.difficulty}
+              questionCount={salon.questions_count}
+              timerSeconds={salon.timer_seconds || 10}
+              timerEnabled={!!salon.timer_seconds}
+              stepByStepMode={false}
+              isPrivate={!salon.is_public}
+              leaderId={salon.chef_id}
+              leaderPseudo={chefPseudo}
+            />
+          )}
 
           <!-- Liste des joueurs (Socket.IO) -->
           <section class="duel-lobby__section">

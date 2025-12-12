@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { createSocketConnection } from './socket';
 
 /**
@@ -11,35 +11,35 @@ export function useSocketIO() {
   const [socketId, setSocketId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Créer la connexion
-    const socket = createSocketConnection();
-    socketRef.current = socket;
+    // Créer la connexion une seule fois
+    if (!socketRef.current) {
+      const socket = createSocketConnection();
+      socketRef.current = socket;
 
-    // Gérer les événements de connexion
-    const onConnect = () => {
-      setIsConnected(true);
-      setSocketId(socket.id || null);
-    };
+      // Gérer les événements de connexion
+      const onConnect = () => {
+        setIsConnected(true);
+        setSocketId(socket.id || null);
+      };
 
-    const onDisconnect = () => {
-      setIsConnected(false);
-      setSocketId(null);
-    };
+      const onDisconnect = () => {
+        setIsConnected(false);
+        setSocketId(null);
+      };
 
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
 
-    // Si déjà connecté
-    if (socket.connected) {
-      onConnect();
+      // Si déjà connecté
+      if (socket.connected) {
+        onConnect();
+      }
     }
 
     // Cleanup
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.disconnect();
-      socketRef.current = null;
+      // Ne pas déconnecter ici car on veut garder la connexion
+      // La connexion sera réutilisée par d'autres composants
     };
   }, []);
 

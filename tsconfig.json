@@ -16,6 +16,6 @@
     },
     "types": ["node"]
   },
-  "include": ["src/**/*", "src/env.d.ts"],
+  "include": ["src/**/*", "src/env.d.ts", "src/types/**/*"],
   "exclude": ["node_modules", "dist"]
 }
