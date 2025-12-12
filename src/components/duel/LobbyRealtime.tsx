@@ -129,6 +129,18 @@ export default function LobbyRealtime({
     };
 
     // Écouter room:created pour le chef
+    // Écouter le démarrage du jeu pour rediriger tous les joueurs (pas seulement le leader)
+    const onGameQuestion = (data: any) => {
+      console.log('🎮 Game started, redirecting to play page...');
+      // Rediriger vers la page de jeu
+      const salonId = new URLSearchParams(window.location.search).get('salon');
+      if (salonId) {
+        window.location.href = `/duel/play?room=${roomId}&salon=${salonId}`;
+      } else {
+        window.location.href = `/duel/play?room=${roomId}`;
+      }
+    };
+
     socket.on('room:created', onRoomCreated);
     socket.on('room:joined', onRoomJoined);
     socket.on('room:player-joined', onPlayerJoined);
@@ -136,6 +148,7 @@ export default function LobbyRealtime({
     socket.on('room:error', onRoomError);
     socket.on('room:kicked', onKicked);
     socket.on('room:banned', onBanned);
+    socket.on('game:question', onGameQuestion); // Écouter le démarrage du jeu
 
     // Écouter l'événement personnalisé de création de room
     const onRoomCreatedEvent = (event: Event) => {
@@ -181,6 +194,7 @@ export default function LobbyRealtime({
         socket.off('room:error', onRoomError);
         socket.off('room:kicked', onKicked);
         socket.off('room:banned', onBanned);
+        socket.off('game:question', onGameQuestion);
 
         // Quitter la room au démontage
         socket.emit('room:leave');

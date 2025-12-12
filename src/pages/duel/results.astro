@@ -42,60 +42,95 @@ if (salon.status !== 'completed') {
   return Astro.redirect(`/duel/play?salon=${salonId}&error=duel-not-completed`);
 }
 
-// Récupérer toutes les réponses des joueurs
+// Récupérer les résultats du duel depuis duel_results (Socket.IO sauvegarde ici)
 let playerScores: Array<{
   userId: string;
   pseudo: string;
   totalScore: number;
   correctAnswers: number;
   totalQuestions: number;
+  rank: number;
 }> = [];
 
 if (supabase) {
-  // Récupérer toutes les réponses
-  const { data: answers, error: answersError } = await supabase
-    .from('duel_answers')
+  // Récupérer les résultats depuis duel_results en utilisant le salon_code
+  const { data: duelResult, error: resultError } = await supabase
+    .from('duel_results')
     .select('*')
-    .eq('duel_session_id', salonId);
+    .eq('room_id', salon.salon_code)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .single();
 
-  if (!answersError && answers) {
-    // Récupérer les pseudos des joueurs
-    const participants = Array.isArray(salon.participants) ? salon.participants : [];
-    const allPlayerIds = [salon.chef_id, ...participants.map((p: any) => p.id)];
+  if (!resultError && duelResult && duelResult.players) {
+    // Les résultats sont déjà dans le bon format depuis Socket.IO
+    const players = duelResult.players as Array<{
+      playerId: string;
+      pseudo: string;
+      score: number;
+      rank: number;
+    }>;
 
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, pseudo')
-      .in('id', allPlayerIds);
-
-    const profileMap = new Map<string, string>((profiles || []).map((p: { id: string; pseudo: string }) => [p.id, p.pseudo]));
-
-    // Calculer les scores par joueur
-    const scoreMap = new Map<string, { score: number; correct: number }>();
-
-    answers.forEach((answer: any) => {
-      const userId = answer.user_id;
-      if (!scoreMap.has(userId)) {
-        scoreMap.set(userId, { score: 0, correct: 0 });
-      }
-      const playerScore = scoreMap.get(userId)!;
-      playerScore.score += answer.points_earned || 0;
-      if (answer.is_correct) {
-        playerScore.correct += 1;
-      }
-    });
-
-    // Construire la liste des scores
-    playerScores = Array.from(scoreMap.entries()).map(([userId, stats]) => ({
-      userId,
-      pseudo: (profileMap.get(userId) as string | undefined) || 'Joueur inconnu',
-      totalScore: stats.score,
-      correctAnswers: stats.correct,
-      totalQuestions: (salon.questions_ids?.length as number | undefined) || 0,
+    // Les résultats incluent maintenant correctAnswers et totalQuestions
+    playerScores = players.map((player) => ({
+      userId: player.playerId,
+      pseudo: player.pseudo,
+      totalScore: player.score,
+      correctAnswers: (player as any).correctAnswers || 0,
+      totalQuestions: (player as any).totalQuestions || (salon.questions_ids?.length as number | undefined) || 0,
+      rank: player.rank,
     }));
 
-    // Trier par score décroissant
+    // Trier par score décroissant (déjà fait côté serveur, mais on s'assure)
     playerScores.sort((a, b) => b.totalScore - a.totalScore);
+  } else {
+    // Fallback : essayer de récupérer depuis duel_answers (ancien système)
+    console.warn('No duel_results found, trying duel_answers fallback');
+    const { data: answers, error: answersError } = await supabase
+      .from('duel_answers')
+      .select('*')
+      .eq('duel_session_id', salonId);
+
+    if (!answersError && answers && answers.length > 0) {
+      // Récupérer les pseudos des joueurs
+      const participants = Array.isArray(salon.participants) ? salon.participants : [];
+      const allPlayerIds = [salon.chef_id, ...participants.map((p: any) => p.id)];
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, pseudo')
+        .in('id', allPlayerIds);
+
+      const profileMap = new Map<string, string>((profiles || []).map((p: { id: string; pseudo: string }) => [p.id, p.pseudo]));
+
+      // Calculer les scores par joueur
+      const scoreMap = new Map<string, { score: number; correct: number }>();
+
+      answers.forEach((answer: any) => {
+        const userId = answer.user_id;
+        if (!scoreMap.has(userId)) {
+          scoreMap.set(userId, { score: 0, correct: 0 });
+        }
+        const playerScore = scoreMap.get(userId)!;
+        playerScore.score += answer.points_earned || 0;
+        if (answer.is_correct) {
+          playerScore.correct += 1;
+        }
+      });
+
+      // Construire la liste des scores
+      playerScores = Array.from(scoreMap.entries()).map(([userId, stats], index) => ({
+        userId,
+        pseudo: (profileMap.get(userId) as string | undefined) || 'Joueur inconnu',
+        totalScore: stats.score,
+        correctAnswers: stats.correct,
+        totalQuestions: (salon.questions_ids?.length as number | undefined) || 0,
+        rank: index + 1,
+      }));
+
+      // Trier par score décroissant
+      playerScores.sort((a, b) => b.totalScore - a.totalScore);
+    }
   }
 }
 
@@ -117,10 +152,17 @@ const shareUrl = `${siteUrl}/duel/results?salon=${salonId}`;
         <section class="duel-results__ranking">
           <h2 class="duel-results__section-title">Classement</h2>
           <ol class="duel-results__ranking-list">
-            {playerScores.map((player, index) => {
-              const isCurrentUser = player.userId === user.id;
-              const rank = index + 1;
-              const isFirst = rank === 1;
+            {playerScores.length === 0 ? (
+              <li class="duel-results__ranking-item">
+                <p style="color: var(--color-text-muted); text-align: center; width: 100%;">
+                  Aucun résultat disponible pour ce duel.
+                </p>
+              </li>
+            ) : (
+              playerScores.map((player, index) => {
+                const isCurrentUser = player.userId === user.id;
+                const rank = player.rank || index + 1;
+                const isFirst = rank === 1;
               
               return (
                 <li
@@ -143,7 +185,8 @@ const shareUrl = `${siteUrl}/duel/results?salon=${salonId}`;
                   </div>
                 </li>
               );
-            })}
+            })
+            )}
           </ol>
         </section>
 

@@ -37,6 +37,7 @@ export default function DuelPlayerSocketIO({
   const [scores, setScores] = useState<GameScoresUpdate['scores']>([]);
   const [showPlayersPanel, setShowPlayersPanel] = useState(false);
   const [isWaitingForQuestion, setIsWaitingForQuestion] = useState(true);
+  const [canAdvance, setCanAdvance] = useState(false); // Peut-on passer à la question suivante ?
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isAnsweredRef = useRef(false); // Ref pour suivre si on a répondu (pour le timer)
 
@@ -49,21 +50,9 @@ export default function DuelPlayerSocketIO({
 
     console.log('🎮 Joining room for game:', roomId);
 
-    // Écouter room:joined pour savoir quand on a rejoint
-    const onRoomJoined = (data: { room: any }) => {
-      console.log('✅ Room joined for game:', data.room);
-      // Si un jeu est en cours, le serveur devrait envoyer game:question automatiquement
-    };
-
-    socket.once('room:joined', onRoomJoined);
-
-    // Rejoindre la room
-    socket.emit('room:join', {
-      roomId: roomId,
-      playerId: currentUserId,
-      pseudo: currentUserPseudo,
-    });
-
+    // ⚠️ IMPORTANT : Configurer TOUS les listeners AVANT de rejoindre la room
+    // pour ne pas manquer les événements qui arrivent immédiatement
+    
     // Écouter les événements de jeu
     const onQuestion = (data: GameQuestionEvent) => {
       console.log('❓ New question received:', data);
@@ -81,7 +70,10 @@ export default function DuelPlayerSocketIO({
       setTimeRemaining(data.timerDuration);
       setPointsEarned(0);
       setIsWaitingForQuestion(false);
+      setCanAdvance(false); // Reset : on ne peut pas avancer tant que tous n'ont pas répondu ou que le timer n'est pas terminé
       isAnsweredRef.current = false; // Reset la ref
+      
+      console.log('📋 New question received, canAdvance reset to false');
       
       // Démarrer le timer
       if (timerRef.current) {
@@ -113,6 +105,15 @@ export default function DuelPlayerSocketIO({
                 selectedIndex: -1, // -1 = pas de réponse
                 timeRemaining: 0,
               });
+              
+              // ⚠️ IMPORTANT : Si on est le chef, vérifier si on peut avancer (timer terminé pour tous)
+              // Le serveur vérifiera aussi, mais on peut activer le bouton côté client
+              if (isChef) {
+                // Attendre un peu pour que tous les joueurs aient envoyé leur réponse (timer expiré)
+                setTimeout(() => {
+                  setCanAdvance(true);
+                }, 1000);
+              }
             }
             
             return 0;
@@ -127,6 +128,12 @@ export default function DuelPlayerSocketIO({
       setIsCorrect(data.isCorrect);
       setPointsEarned(data.pointsEarned);
       setIsAnswered(true);
+      
+      // Si on est le chef et qu'on a répondu, on peut potentiellement avancer
+      // (mais on attend que tous les autres aient répondu ou que le timer soit terminé)
+      if (isChef) {
+        console.log('👑 Chef answered, waiting for all players or timer expiration');
+      }
     };
 
     const onScoresUpdate = (data: GameScoresUpdate) => {
@@ -134,8 +141,11 @@ export default function DuelPlayerSocketIO({
       setScores(data.scores);
     };
 
-    const onAllAnswered = () => {
-      console.log('✅ All players answered');
+    const onAllAnswered = (data?: { message?: string }) => {
+      console.log('✅ All players answered or timer expired:', data?.message || '');
+      // Tous les joueurs ont répondu OU le timer est terminé, on peut avancer
+      setCanAdvance(true);
+      console.log('✅ canAdvance set to true');
     };
 
     const onGameEnd = (data: GameEnd) => {
@@ -152,12 +162,27 @@ export default function DuelPlayerSocketIO({
       alert(`Erreur: ${data.message}`);
     };
 
+    // Écouter room:joined pour savoir quand on a rejoint
+    const onRoomJoined = (data: { room: any }) => {
+      console.log('✅ Room joined for game:', data.room);
+      // Si un jeu est en cours, le serveur devrait envoyer game:question automatiquement
+    };
+
+    // ⚠️ CRITIQUE : Configurer TOUS les listeners AVANT de rejoindre la room
     socket.on('game:question', onQuestion);
     socket.on('game:answer-result', onAnswerResult);
     socket.on('game:scores-update', onScoresUpdate);
     socket.on('game:all-answered', onAllAnswered);
     socket.on('game:end', onGameEnd);
     socket.on('game:error', onGameError);
+    socket.once('room:joined', onRoomJoined);
+
+    // Maintenant qu'on a configuré TOUS les listeners, rejoindre la room
+    socket.emit('room:join', {
+      roomId: roomId,
+      playerId: currentUserId,
+      pseudo: currentUserPseudo,
+    });
 
     // Cleanup
     return () => {
@@ -205,11 +230,21 @@ export default function DuelPlayerSocketIO({
 
   // Passer à la question suivante (chef only)
   const handleNextQuestion = useCallback(() => {
-    if (!isChef || !socket) return;
+    if (!isChef || !socket) {
+      console.log('❌ Cannot advance: isChef=', isChef, 'socket=', !!socket);
+      return;
+    }
 
-    console.log('➡️ Next question');
+    // ⚠️ IMPORTANT : Si canAdvance est false, on essaie quand même d'envoyer l'événement
+    // Le serveur vérifiera de toute façon si on peut avancer
+    // Cela permet de gérer le cas où l'événement game:all-answered n'a pas été reçu
+    if (!canAdvance) {
+      console.log('⚠️ canAdvance is false, but trying anyway (server will validate)');
+    }
+
+    console.log('➡️ Next question requested');
     socket.emit('game:next-question');
-  }, [isChef, socket]);
+  }, [isChef, socket, canAdvance]);
 
   if (!isConnected) {
     return (
@@ -336,8 +371,14 @@ export default function DuelPlayerSocketIO({
           <button
             className="duel-player__next-btn"
             onClick={handleNextQuestion}
+            // Ne pas désactiver le bouton : le serveur validera de toute façon
+            // disabled={!canAdvance}
+            title={!canAdvance ? 'En attente : tous les joueurs doivent répondre ou le timer doit être terminé (le serveur validera)' : ''}
+            style={!canAdvance ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
           >
-            Question Suivante ➡️
+            {currentQuestion && currentQuestion.questionIndex < currentQuestion.totalQuestions - 1
+              ? 'Question Suivante ➡️'
+              : 'Voir les résultats 🎯'}
           </button>
         </div>
       )}
