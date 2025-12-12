@@ -177,40 +177,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Si on a moins de questions que demandé, on continue avec ce qu'on a
-    const questionIds = questions.map((q) => q.id);
-
-    // Mettre à jour le salon : questions_ids, status='in-progress', started_at
-    // IMPORTANT: Cette mise à jour déclenchera un événement Realtime pour tous les clients
-    // Le trigger Postgres mettra à jour updated_at automatiquement
-    const { error: updateError } = await supabase
-      .from('duel_sessions')
-      .update({
-        questions_ids: questionIds,
-        status: 'in-progress',
-        started_at: new Date().toISOString(),
-        // updated_at sera mis à jour automatiquement par le trigger
-      })
-      .eq('id', salonId)
-      .eq('status', 'lobby'); // S'assurer que le salon est toujours en lobby
-
-    if (updateError) {
-      console.error('Error starting duel:', updateError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Erreur lors du démarrage du duel: ' + updateError.message,
-          details: updateError.details,
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    console.log('✅ Duel started successfully:', {
+    // ⚠️ IMPORTANT : Ne PAS mettre à jour le statut ici
+    // Socket.IO mettra à jour Supabase après le démarrage réussi du jeu
+    // On retourne juste les questions pour Socket.IO
+    
+    console.log('✅ Questions retrieved successfully:', {
       salonId,
-      questionsCount: questionIds.length,
+      questionsCount: questions.length,
       totalPlayers,
     });
 
@@ -219,7 +192,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       JSON.stringify({ 
         success: true,
         redirectTo: `/duel/play?room=${salon.salon_code}&salon=${salonId}`,
-        questionsCount: questionIds.length,
+        questionsCount: questions.length,
         questions: questions, // Questions complètes pour Socket.IO
       }),
       {

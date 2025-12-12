@@ -34,6 +34,7 @@ export default function DuelPlayerSocketIO({
   const [pointsEarned, setPointsEarned] = useState(0);
   const [scores, setScores] = useState<GameScoresUpdate['scores']>([]);
   const [showPlayersPanel, setShowPlayersPanel] = useState(false);
+  const [isWaitingForQuestion, setIsWaitingForQuestion] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rejoindre la room au montage
@@ -45,6 +46,14 @@ export default function DuelPlayerSocketIO({
 
     console.log('🎮 Joining room for game:', roomId);
 
+    // Écouter room:joined pour savoir quand on a rejoint
+    const onRoomJoined = (data: { room: any }) => {
+      console.log('✅ Room joined for game:', data.room);
+      // Si un jeu est en cours, le serveur devrait envoyer game:question automatiquement
+    };
+
+    socket.once('room:joined', onRoomJoined);
+
     // Rejoindre la room
     socket.emit('room:join', {
       roomId: roomId,
@@ -55,12 +64,20 @@ export default function DuelPlayerSocketIO({
     // Écouter les événements de jeu
     const onQuestion = (data: GameQuestionEvent) => {
       console.log('❓ New question received:', data);
+      console.log('📋 Question details:', {
+        id: data.question.id,
+        question: data.question.question.substring(0, 50) + '...',
+        choicesCount: data.question.choices.length,
+        questionIndex: data.questionIndex,
+        totalQuestions: data.totalQuestions,
+      });
       setCurrentQuestion(data);
       setSelectedAnswer(null);
       setIsAnswered(false);
       setIsCorrect(false);
       setTimeRemaining(data.timerDuration);
       setPointsEarned(0);
+      setIsWaitingForQuestion(false);
       
       // Démarrer le timer
       if (timerRef.current) {
@@ -164,10 +181,16 @@ export default function DuelPlayerSocketIO({
     );
   }
 
-  if (!currentQuestion) {
+  // État de chargement : attendre la première question
+  if (isWaitingForQuestion || !currentQuestion) {
     return (
       <div className="duel-player">
-        <p className="duel-player__error">En attente de la première question...</p>
+        <div className="duel-player__loading">
+          <p>⏳ En attente de la première question...</p>
+          <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.5rem' }}>
+            Le jeu va démarrer dans quelques instants.
+          </p>
+        </div>
       </div>
     );
   }

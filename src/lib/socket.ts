@@ -14,9 +14,28 @@ const getSocketUrl = (): string => {
 };
 
 /**
- * Crée une connexion Socket.IO
+ * Instance unique de socket partagée entre tous les composants
+ */
+let sharedSocketInstance: Socket | null = null;
+
+/**
+ * Crée ou récupère la connexion Socket.IO partagée
+ * ⚠️ IMPORTANT : Une seule instance de socket pour toute l'application
  */
 export function createSocketConnection(): Socket {
+  // Si une instance existe déjà, la réutiliser
+  if (sharedSocketInstance && sharedSocketInstance.connected) {
+    return sharedSocketInstance;
+  }
+
+  // Si une instance existe mais n'est pas connectée, la nettoyer
+  if (sharedSocketInstance && !sharedSocketInstance.connected) {
+    sharedSocketInstance.removeAllListeners();
+    sharedSocketInstance.disconnect();
+    sharedSocketInstance = null;
+  }
+
+  // Créer une nouvelle instance
   const url = getSocketUrl();
   
   const socket = io(url, {
@@ -38,6 +57,9 @@ export function createSocketConnection(): Socket {
   socket.on('connect_error', (error) => {
     console.error('❌ Socket.IO connection error:', error);
   });
+
+  // Stocker l'instance partagée
+  sharedSocketInstance = socket;
 
   return socket;
 }
@@ -70,6 +92,8 @@ export interface Question {
   id: string;
   question: string;
   choices: string[];
+  correctIndex: number;
+  explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
   universe: string;
 }

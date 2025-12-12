@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocketIO } from '../../lib/useSocketIO';
 import type { Question as SocketQuestion } from '../../lib/socket';
 import type { Question as AstroQuestion } from '../../types';
@@ -26,6 +26,7 @@ export default function StartGameButton({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPlayersCount, setCurrentPlayersCount] = useState(initialCount);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Écouter les mises à jour de participants
   useEffect(() => {
@@ -45,9 +46,17 @@ export default function StartGameButton({
   useEffect(() => {
     if (!socket) return;
 
-    const onGameQuestion = () => {
+    const onGameQuestion = (data: any) => {
       // Le jeu a démarré, rediriger vers la page de jeu
-      console.log('🎮 Game started, redirecting to play page');
+      console.log('🎮 Game started, received question:', data);
+      
+      // Nettoyer le timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      
+      setIsLoading(false);
       window.location.href = `/duel/play?room=${roomId}&salon=${salonId}`;
     };
 
@@ -55,6 +64,10 @@ export default function StartGameButton({
 
     return () => {
       socket.off('game:question', onGameQuestion);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, [socket, roomId, salonId]);
 
@@ -73,6 +86,12 @@ export default function StartGameButton({
     setError(null);
 
     try {
+      // Vérifier que le socket est dans la room avant de continuer
+      console.log('🔍 Verifying socket is in room before starting game...');
+      
+      // Attendre un peu pour s'assurer que la room est bien créée et que le socket est dedans
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Récupérer les questions depuis Supabase
       const formData = new FormData();
       formData.append('salon_id', salonId);
@@ -108,11 +127,50 @@ export default function StartGameButton({
       }));
 
       console.log('📤 Starting game with', socketQuestions.length, 'questions');
+      console.log('📋 First question sample:', {
+        id: socketQuestions[0]?.id,
+        question: socketQuestions[0]?.question.substring(0, 50) + '...',
+        choicesCount: socketQuestions[0]?.choices.length,
+      });
+
+      // Écouter les erreurs de jeu
+      const onGameError = (data: { message: string }) => {
+        console.error('❌ Game error:', data.message);
+        setError(data.message);
+        setIsLoading(false);
+        socket.off('game:error', onGameError);
+      };
+
+      socket.once('game:error', onGameError);
 
       // Démarrer le jeu via Socket.IO
+      // Note: isLoading restera true jusqu'à ce que game:question soit reçu (redirection)
+      console.log('📤 Emitting game:start to server...');
+      console.log('🔍 Socket ID:', socket.id, 'Room ID:', roomId);
+      
       socket.emit('game:start', {
         questions: socketQuestions,
+        salonId: salonId, // Passer aussi le salonId pour que le serveur puisse mettre à jour Supabase
       });
+      
+      console.log('✅ game:start emitted, waiting for game:question...');
+      
+      // Nettoyer le timeout précédent s'il existe
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      // Timeout de sécurité : si aucune question n'arrive dans les 5 secondes, afficher une erreur
+      timeoutRef.current = setTimeout(() => {
+        setIsLoading((prevLoading) => {
+          if (prevLoading) {
+            console.error('⏱️ Timeout: No game:question received after 5 seconds');
+            setError('Le serveur ne répond pas. Vérifiez votre connexion.');
+            return false;
+          }
+          return prevLoading;
+        });
+      }, 5000);
     } catch (error) {
       console.error('❌ Error starting game:', error);
       setError(error instanceof Error ? error.message : 'Erreur inconnue');

@@ -3,48 +3,54 @@ import type { Socket } from 'socket.io-client';
 import { createSocketConnection } from './socket';
 
 /**
+ * Instance partagée du socket (réutilisée par tous les composants)
+ */
+let globalSocketInstance: Socket | null = null;
+
+/**
  * Hook React pour gérer la connexion Socket.IO
+ * ⚠️ IMPORTANT : Utilise une instance partagée pour tous les composants
  */
 export function useSocketIO() {
-  const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Créer la connexion une seule fois
-    if (!socketRef.current) {
-      const socket = createSocketConnection();
-      socketRef.current = socket;
-
-      // Gérer les événements de connexion
-      const onConnect = () => {
-        setIsConnected(true);
-        setSocketId(socket.id || null);
-      };
-
-      const onDisconnect = () => {
-        setIsConnected(false);
-        setSocketId(null);
-      };
-
-      socket.on('connect', onConnect);
-      socket.on('disconnect', onDisconnect);
-
-      // Si déjà connecté
-      if (socket.connected) {
-        onConnect();
-      }
+    // Utiliser l'instance partagée ou en créer une nouvelle
+    if (!globalSocketInstance) {
+      globalSocketInstance = createSocketConnection();
     }
 
-    // Cleanup
+    const socket = globalSocketInstance;
+
+    // Gérer les événements de connexion
+    const onConnect = () => {
+      setIsConnected(true);
+      setSocketId(socket.id || null);
+    };
+
+    const onDisconnect = () => {
+      setIsConnected(false);
+      setSocketId(null);
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    // Si déjà connecté, mettre à jour l'état immédiatement
+    if (socket.connected) {
+      onConnect();
+    }
+
+    // Cleanup : ne pas déconnecter, juste retirer les listeners de ce composant
     return () => {
-      // Ne pas déconnecter ici car on veut garder la connexion
-      // La connexion sera réutilisée par d'autres composants
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
     };
   }, []);
 
   return {
-    socket: socketRef.current,
+    socket: globalSocketInstance,
     isConnected,
     socketId,
   };
