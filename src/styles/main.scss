@@ -25,6 +25,10 @@
 @use 'components/AdminLayout';
 @use 'components/UpgradeModal';
 
+// 4. Import des pages
+@use 'pages/pricing';
+@use 'pages/payment';
+
 // ============================================
 // GLOBAL OVERRIDES QIVANA
 // ============================================
