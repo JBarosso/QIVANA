@@ -1,0 +1,413 @@
+---
+// ============================================
+// ADMIN - GESTION DES SIGNALEMENTS
+// ============================================
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+// Paramètres de filtrage
+const url = Astro.url;
+const filterStatus = url.searchParams.get('status') || 'pending';
+const page = parseInt(url.searchParams.get('page') || '1');
+const limit = 20;
+const offset = (page - 1) * limit;
+
+let flags: any[] = [];
+let totalCount = 0;
+
+if (supabase) {
+  let query = supabase
+    .from('flags')
+    .select(`
+      *,
+      question:question_id (id, question, universe, difficulty, choices, correct_index, explanation),
+      reporter:reported_by (pseudo),
+      resolver:resolved_by (pseudo)
+    `, { count: 'exact' });
+
+  if (filterStatus && filterStatus !== 'all') {
+    query = query.eq('status', filterStatus);
+  }
+
+  query = query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const { data, count, error } = await query;
+
+  if (!error) {
+    flags = data || [];
+    totalCount = count || 0;
+  }
+}
+
+const totalPages = Math.ceil(totalCount / limit);
+
+const universeLabels: Record<string, string> = {
+  anime: 'Anime',
+  manga: 'Manga',
+  comics: 'Comics',
+  games: 'Jeux',
+  movies: 'Films',
+  series: 'Séries',
+  other: 'Autre',
+};
+
+const successMessage = url.searchParams.get('success');
+const errorMessage = url.searchParams.get('error');
+---
+
+<AdminLayout title="Signalements" currentPage="flags">
+  {successMessage && (
+    <div class="admin-alert admin-alert--success">
+      ✅ {decodeURIComponent(successMessage)}
+    </div>
+  )}
+
+  {errorMessage && (
+    <div class="admin-alert admin-alert--error">
+      ❌ {decodeURIComponent(errorMessage)}
+    </div>
+  )}
+
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">
+        🚩 Signalements ({totalCount})
+      </h2>
+    </div>
+
+    <!-- Filtres -->
+    <div class="admin-filters">
+      <a 
+        href="?status=pending" 
+        class={`admin-filter ${filterStatus === 'pending' ? 'admin-filter--active' : ''}`}
+      >
+        ⏳ En attente
+      </a>
+      <a 
+        href="?status=resolved" 
+        class={`admin-filter ${filterStatus === 'resolved' ? 'admin-filter--active' : ''}`}
+      >
+        ✅ Résolus
+      </a>
+      <a 
+        href="?status=rejected" 
+        class={`admin-filter ${filterStatus === 'rejected' ? 'admin-filter--active' : ''}`}
+      >
+        ❌ Rejetés
+      </a>
+      <a 
+        href="?status=all" 
+        class={`admin-filter ${filterStatus === 'all' ? 'admin-filter--active' : ''}`}
+      >
+        Tous
+      </a>
+    </div>
+
+    <!-- Liste des signalements -->
+    {flags.length > 0 ? (
+      <div class="flags-list">
+        {flags.map((flag) => (
+          <div class="flag-card">
+            <div class="flag-card__header">
+              <div class="flag-card__meta">
+                <span class={`admin-badge admin-badge--${flag.status === 'pending' ? 'warning' : flag.status === 'resolved' ? 'success' : 'error'}`}>
+                  {flag.status === 'pending' ? '⏳ En attente' : flag.status === 'resolved' ? '✅ Résolu' : '❌ Rejeté'}
+                </span>
+                <span class="flag-card__date">
+                  {new Date(flag.created_at).toLocaleString('fr-FR')}
+                </span>
+              </div>
+              <span class="flag-card__reporter">
+                Par: {(flag.reporter as any)?.pseudo || 'Anonyme'}
+              </span>
+            </div>
+
+            <div class="flag-card__content">
+              <div class="flag-card__reason">
+                <strong>Raison:</strong> {flag.reason}
+              </div>
+              {flag.additional_info && (
+                <div class="flag-card__info">
+                  <strong>Détails:</strong> {flag.additional_info}
+                </div>
+              )}
+            </div>
+
+            {(flag.question as any) && (
+              <div class="flag-card__question">
+                <div class="flag-card__question-header">
+                  <span class="admin-badge admin-badge--primary">
+                    {universeLabels[(flag.question as any).universe] || (flag.question as any).universe}
+                  </span>
+                  <span class={`admin-badge admin-badge--${(flag.question as any).difficulty === 'easy' ? 'success' : (flag.question as any).difficulty === 'medium' ? 'warning' : 'error'}`}>
+                    {(flag.question as any).difficulty}
+                  </span>
+                </div>
+                <p class="flag-card__question-text">{(flag.question as any).question}</p>
+                <div class="flag-card__choices">
+                  {((flag.question as any).choices as string[]).map((choice: string, i: number) => (
+                    <div class={`flag-card__choice ${i === (flag.question as any).correct_index ? 'flag-card__choice--correct' : ''}`}>
+                      {i === (flag.question as any).correct_index ? '✅' : '○'} {choice}
+                    </div>
+                  ))}
+                </div>
+                <div class="flag-card__explanation">
+                  <strong>Explication:</strong> {(flag.question as any).explanation}
+                </div>
+              </div>
+            )}
+
+            {flag.status === 'pending' && (
+              <div class="flag-card__actions">
+                <form method="post" action="/api/admin/flags/resolve" class="flag-form">
+                  <input type="hidden" name="id" value={flag.id} />
+                  <input type="hidden" name="action" value="resolve" />
+                  <textarea 
+                    name="resolution_note" 
+                    placeholder="Note de résolution (optionnel)..."
+                    class="admin-textarea admin-textarea--small"
+                  ></textarea>
+                  <div class="flag-form__buttons">
+                    <button type="submit" name="action" value="resolve" class="btn btn--success btn--sm">
+                      ✅ Marquer résolu
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn--outline btn--sm">
+                      ❌ Rejeter
+                    </button>
+                    {(flag.question as any) && (
+                      <a href={`/admin/questions/${(flag.question as any).id}`} class="btn btn--primary btn--sm">
+                        ✏️ Éditer la question
+                      </a>
+                    )}
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {flag.status !== 'pending' && flag.resolution_note && (
+              <div class="flag-card__resolution">
+                <strong>Résolution:</strong> {flag.resolution_note}
+                {(flag.resolver as any)?.pseudo && (
+                  <span class="flag-card__resolver">
+                    — par {(flag.resolver as any).pseudo}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="admin-empty">
+        <div class="admin-empty__icon">✨</div>
+        <p class="admin-empty__text">Aucun signalement {filterStatus === 'pending' ? 'en attente' : ''}</p>
+      </div>
+    )}
+
+    <!-- Pagination -->
+    {totalPages > 1 && (
+      <div class="admin-pagination">
+        {page > 1 && (
+          <a href={`?status=${filterStatus}&page=${page - 1}`} class="admin-pagination__btn">
+            ← Précédent
+          </a>
+        )}
+        
+        <span class="admin-pagination__info">
+          Page {page} / {totalPages}
+        </span>
+
+        {page < totalPages && (
+          <a href={`?status=${filterStatus}&page=${page + 1}`} class="admin-pagination__btn">
+            Suivant →
+          </a>
+        )}
+      </div>
+    )}
+  </section>
+</AdminLayout>
+
+<style lang="scss">
+  .admin-alert {
+    padding: var(--space-4);
+    border-radius: var(--radius-2);
+    margin-bottom: var(--space-4);
+    font-weight: var(--font-weight-medium);
+
+    &--success {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--color-success);
+      border: 1px solid var(--color-success);
+    }
+
+    &--error {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-error);
+      border: 1px solid var(--color-error);
+    }
+  }
+
+  .flags-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .flag-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+  }
+
+  .flag-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .flag-card__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .flag-card__date {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .flag-card__reporter {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .flag-card__content {
+    margin-bottom: var(--space-4);
+  }
+
+  .flag-card__reason,
+  .flag-card__info {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .flag-card__question {
+    background: var(--color-surface);
+    border-radius: var(--radius-2);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-left: 3px solid var(--color-primary);
+  }
+
+  .flag-card__question-header {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .flag-card__question-text {
+    font-size: var(--fs-3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-3);
+  }
+
+  .flag-card__choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .flag-card__choice {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    padding: var(--space-2);
+    border-radius: var(--radius-1);
+
+    &--correct {
+      color: var(--color-success);
+      background: rgba(34, 197, 94, 0.1);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+
+  .flag-card__explanation {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .flag-card__actions {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .flag-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .flag-form__buttons {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .admin-textarea--small {
+    min-height: 60px;
+    font-size: var(--fs-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-2);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+  }
+
+  .btn--success {
+    background: var(--color-success);
+    color: white;
+    border-color: var(--color-success);
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-success) 80%, black);
+    }
+  }
+
+  .btn--sm {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-2);
+  }
+
+  .flag-card__resolution {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .flag-card__resolver {
+    font-style: italic;
+  }
+
+  .admin-pagination__info {
+    color: var(--color-text-muted);
+    font-size: var(--fs-2);
+  }
+</style>

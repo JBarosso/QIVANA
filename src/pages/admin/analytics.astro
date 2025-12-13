@@ -1,0 +1,439 @@
+---
+// ============================================
+// ADMIN - ANALYTICS & ROI
+// ============================================
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+// Données pour les graphiques
+let aiUsageData: any[] = [];
+let monthlyStats: any[] = [];
+let userGrowthData: any[] = [];
+let quizStats = {
+  total: 0,
+  thisMonth: 0,
+  thisWeek: 0,
+};
+
+if (supabase) {
+  // AI Usage par jour (30 derniers jours)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const { data: aiUsage } = await supabase
+    .from('ai_usage')
+    .select('created_at, questions_count, estimated_cost_cents, quiz_type')
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .order('created_at', { ascending: true });
+
+  aiUsageData = aiUsage || [];
+
+  // Stats mensuelles (6 derniers mois)
+  for (let i = 5; i >= 0; i--) {
+    const monthStart = new Date();
+    monthStart.setMonth(monthStart.getMonth() - i);
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const monthEnd = new Date(monthStart);
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+    const { count: aiCount } = await supabase
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', monthStart.toISOString())
+      .lt('created_at', monthEnd.toISOString());
+
+    const { data: aiCostData } = await supabase
+      .from('ai_usage')
+      .select('estimated_cost_cents')
+      .gte('created_at', monthStart.toISOString())
+      .lt('created_at', monthEnd.toISOString());
+
+    const totalCost = aiCostData?.reduce((acc: number, u: any) => acc + (u.estimated_cost_cents || 0), 0) || 0;
+
+    const { count: newUsers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', monthStart.toISOString())
+      .lt('created_at', monthEnd.toISOString());
+
+    const { count: quizCount } = await supabase
+      .from('quiz_sessions')
+      .select('*', { count: 'exact', head: true })
+      .gte('started_at', monthStart.toISOString())
+      .lt('started_at', monthEnd.toISOString());
+
+    monthlyStats.push({
+      month: monthStart.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+      aiUsage: aiCount || 0,
+      aiCost: totalCost / 100, // Convert to euros
+      newUsers: newUsers || 0,
+      quizzes: quizCount || 0,
+    });
+  }
+
+  // Quiz stats
+  const { count: totalQuizzes } = await supabase
+    .from('quiz_sessions')
+    .select('*', { count: 'exact', head: true });
+  quizStats.total = totalQuizzes || 0;
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const { count: monthQuizzes } = await supabase
+    .from('quiz_sessions')
+    .select('*', { count: 'exact', head: true })
+    .gte('started_at', startOfMonth.toISOString());
+  quizStats.thisMonth = monthQuizzes || 0;
+
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+  const { count: weekQuizzes } = await supabase
+    .from('quiz_sessions')
+    .select('*', { count: 'exact', head: true })
+    .gte('started_at', startOfWeek.toISOString());
+  quizStats.thisWeek = weekQuizzes || 0;
+}
+
+// Préparer les données pour les graphiques
+const chartLabels = monthlyStats.map(s => s.month);
+const aiUsageValues = monthlyStats.map(s => s.aiUsage);
+const aiCostValues = monthlyStats.map(s => s.aiCost);
+const newUsersValues = monthlyStats.map(s => s.newUsers);
+const quizzesValues = monthlyStats.map(s => s.quizzes);
+
+// Total AI cost
+const totalAiCost = aiCostValues.reduce((a, b) => a + b, 0);
+const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
+---
+
+<AdminLayout title="Analytics" currentPage="analytics">
+  <!-- Chart.js via CDN -->
+  <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  
+  <!-- Hidden div pour passer les données au script -->
+  <div 
+    id="chartData" 
+    style="display: none;"
+    data-labels={JSON.stringify(chartLabels)}
+    data-aiusage={JSON.stringify(aiUsageValues)}
+    data-aicost={JSON.stringify(aiCostValues)}
+    data-newusers={JSON.stringify(newUsersValues)}
+    data-quizzes={JSON.stringify(quizzesValues)}
+  ></div>
+
+  <!-- Summary Stats -->
+  <div class="admin-stats">
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">🎮</div>
+      <div class="admin-stat-card__value">{quizStats.total}</div>
+      <div class="admin-stat-card__label">Quiz joués (total)</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">📅</div>
+      <div class="admin-stat-card__value">{quizStats.thisMonth}</div>
+      <div class="admin-stat-card__label">Quiz ce mois</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">📆</div>
+      <div class="admin-stat-card__value">{quizStats.thisWeek}</div>
+      <div class="admin-stat-card__label">Quiz cette semaine</div>
+    </div>
+
+    <div class="admin-stat-card admin-stat-card--highlight">
+      <div class="admin-stat-card__icon">💰</div>
+      <div class="admin-stat-card__value">{totalAiCost.toFixed(2)}€</div>
+      <div class="admin-stat-card__label">Coût AI total (6 mois)</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">📊</div>
+      <div class="admin-stat-card__value">{avgMonthlyCost.toFixed(2)}€</div>
+      <div class="admin-stat-card__label">Coût AI mensuel moyen</div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-grid">
+    <!-- AI Usage Chart -->
+    <section class="admin-section chart-section">
+      <div class="admin-section__header">
+        <h2 class="admin-section__title">🤖 Utilisation IA (6 mois)</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="aiUsageChart"></canvas>
+      </div>
+    </section>
+
+    <!-- AI Cost Chart -->
+    <section class="admin-section chart-section">
+      <div class="admin-section__header">
+        <h2 class="admin-section__title">💰 Coût IA (€)</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="aiCostChart"></canvas>
+      </div>
+    </section>
+
+    <!-- User Growth Chart -->
+    <section class="admin-section chart-section">
+      <div class="admin-section__header">
+        <h2 class="admin-section__title">👥 Nouveaux utilisateurs</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="userGrowthChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Quiz Activity Chart -->
+    <section class="admin-section chart-section">
+      <div class="admin-section__header">
+        <h2 class="admin-section__title">🎮 Activité Quiz</h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="quizActivityChart"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <!-- ROI Section -->
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">📈 ROI Analysis</h2>
+    </div>
+    <div class="roi-grid">
+      <div class="roi-card">
+        <div class="roi-card__title">Coût par Quiz AI</div>
+        <div class="roi-card__value">
+          {aiUsageValues.reduce((a, b) => a + b, 0) > 0 
+            ? (totalAiCost / aiUsageValues.reduce((a, b) => a + b, 0)).toFixed(3) 
+            : '0.00'}€
+        </div>
+        <div class="roi-card__description">
+          Coût moyen par génération de quiz AI
+        </div>
+      </div>
+
+      <div class="roi-card">
+        <div class="roi-card__title">Coût par Utilisateur</div>
+        <div class="roi-card__value">
+          {newUsersValues.reduce((a, b) => a + b, 0) > 0 
+            ? (totalAiCost / newUsersValues.reduce((a, b) => a + b, 0)).toFixed(2) 
+            : '0.00'}€
+        </div>
+        <div class="roi-card__description">
+          Coût AI moyen par nouvel utilisateur
+        </div>
+      </div>
+
+      <div class="roi-card roi-card--highlight">
+        <div class="roi-card__title">Break-even Premium</div>
+        <div class="roi-card__value">
+          {avgMonthlyCost > 0 ? Math.ceil(avgMonthlyCost / 4.99) : 0}
+        </div>
+        <div class="roi-card__description">
+          Abonnements Premium nécessaires pour couvrir les coûts AI
+          <br/><small>(à 4.99€/mois)</small>
+        </div>
+      </div>
+    </div>
+  </section>
+</AdminLayout>
+
+<script is:inline>
+  // Attendre que Chart.js soit chargé
+  window.addEventListener('load', function() {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js not loaded');
+      return;
+    }
+
+    // Récupérer les données depuis les attributs data
+    const chartData = document.getElementById('chartData');
+    if (!chartData) return;
+
+    const chartLabels = JSON.parse(chartData.dataset.labels || '[]');
+    const aiUsageValues = JSON.parse(chartData.dataset.aiusage || '[]');
+    const aiCostValues = JSON.parse(chartData.dataset.aicost || '[]');
+    const newUsersValues = JSON.parse(chartData.dataset.newusers || '[]');
+    const quizzesValues = JSON.parse(chartData.dataset.quizzes || '[]');
+
+  // Configuration commune
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: 'rgba(255, 255, 255, 0.7)',
+        },
+      },
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          color: 'rgba(255, 255, 255, 0.7)',
+        },
+      },
+    },
+  };
+
+  // AI Usage Chart
+  new Chart(document.getElementById('aiUsageChart'), {
+    type: 'bar',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        data: aiUsageValues,
+        backgroundColor: 'rgba(14, 165, 233, 0.8)',
+        borderColor: 'rgb(14, 165, 233)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+    },
+    options: commonOptions,
+  });
+
+  // AI Cost Chart
+  new Chart(document.getElementById('aiCostChart'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        data: aiCostValues,
+        borderColor: 'rgb(236, 72, 153)',
+        backgroundColor: 'rgba(236, 72, 153, 0.1)',
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: commonOptions,
+  });
+
+  // User Growth Chart
+  new Chart(document.getElementById('userGrowthChart'), {
+    type: 'bar',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        data: newUsersValues,
+        backgroundColor: 'rgba(124, 58, 237, 0.8)',
+        borderColor: 'rgb(124, 58, 237)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }],
+    },
+    options: commonOptions,
+  });
+
+  // Quiz Activity Chart
+  new Chart(document.getElementById('quizActivityChart'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        data: quizzesValues,
+        borderColor: 'rgb(250, 204, 21)',
+        backgroundColor: 'rgba(250, 204, 21, 0.1)',
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: commonOptions,
+  });
+  });
+</script>
+
+<style lang="scss">
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-section {
+    min-height: 350px;
+  }
+
+  .chart-container {
+    height: 250px;
+    position: relative;
+  }
+
+  .roi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .roi-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    text-align: center;
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-base);
+
+    &:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+
+    &--highlight {
+      border-color: var(--color-warning);
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.05), rgba(250, 204, 21, 0.02));
+    }
+  }
+
+  .roi-card__title {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-3);
+  }
+
+  .roi-card__value {
+    font-size: var(--fs-9);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .roi-card__description {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    line-height: 1.5;
+
+    small {
+      opacity: 0.7;
+    }
+  }
+</style>

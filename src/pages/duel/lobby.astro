@@ -3,6 +3,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { requirePremiumPlus } from '../../lib/auth';
 import { getSalonByCode } from '../../lib/duel';
 import LobbyRealtime from '../../components/duel/LobbyRealtime';
+import StartGameButton from '../../components/duel/StartGameButton';
+import CreateRoomButton from '../../components/duel/CreateRoomButton';
 
 // Protection de la route - Premium+ uniquement
 const authResult = await requirePremiumPlus(Astro);
@@ -152,32 +154,54 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
             </div>
           </section>
 
-          <!-- Liste des joueurs (Realtime) -->
+          <!-- Créer la room Socket.IO automatiquement (si chef) -->
+          {isChef && salonCode && (
+            <CreateRoomButton
+              client:load
+              roomId={salonCode}
+              salonName={salon.salon_name}
+              mode={salon.mode}
+              universe={salon.universe}
+              difficulty={salon.difficulty}
+              questionCount={salon.questions_count}
+              timerSeconds={salon.timer_seconds || 10}
+              timerEnabled={!!salon.timer_seconds}
+              stepByStepMode={false}
+              isPrivate={!salon.is_public}
+              leaderId={salon.chef_id}
+              leaderPseudo={chefPseudo}
+            />
+          )}
+
+          <!-- Liste des joueurs (Socket.IO) -->
           <section class="duel-lobby__section">
             <h2 class="duel-lobby__section-title">Joueurs</h2>
-            <LobbyRealtime
-              client:load
-              supabaseUrl={supabaseUrl}
-              supabaseKey={supabaseAnonKey}
-              salonId={salonId || ''}
-              currentUserId={user.id}
-              currentUserPseudo={profile.pseudo}
-              isChef={isChef}
-              chefId={salon.chef_id}
-              chefPseudo={chefPseudo}
-            />
+            {salonCode && (
+              <LobbyRealtime
+                client:load
+                roomId={salonCode}
+                currentUserId={user.id}
+                currentUserPseudo={profile.pseudo}
+                isChef={isChef}
+                chefId={salon.chef_id}
+                chefPseudo={chefPseudo}
+              />
+            )}
           </section>
 
           <!-- Actions -->
           <section class="duel-lobby__actions">
-            {isChef && (
-              <button
-                class="btn btn--primary btn--block"
-                id="startDuelBtn"
-                data-salon-id={salonId}
-              >
-                Démarrer le duel (min. 2 joueurs)
-              </button>
+            {isChef && salonCode && (
+              <StartGameButton
+                client:load
+                roomId={salonCode}
+                salonId={salonId || ''}
+                questionsCount={salon.questions_count}
+                universe={salon.universe}
+                difficulty={salon.difficulty}
+                minPlayers={2}
+                currentPlayersCount={1}
+              />
             )}
             <a href="/profile" class="btn btn--secondary btn--block">
               Retour au profil

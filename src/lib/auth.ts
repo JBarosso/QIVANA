@@ -209,3 +209,51 @@ export async function requirePremiumPlus(Astro: AstroContext): Promise<AuthResul
     profile,
   };
 }
+
+/**
+ * Check if user is authenticated AND is an admin (server-side)
+ * Redirects to /auth/login if not authenticated
+ * Redirects to / with 403 if not admin
+ * To be used in Astro pages: const { user, profile } = await requireAdmin(Astro);
+ */
+export async function requireAdmin(Astro: AstroContext): Promise<AuthResult | Response> {
+  const authResult = await requireAuth(Astro);
+  
+  // Si c'est une redirection (non authentifié), la retourner
+  if (authResult instanceof Response) {
+    return authResult;
+  }
+  
+  const { user, profile } = authResult;
+  
+  // Vérifier que l'utilisateur est admin
+  if (!(profile as any).is_admin) {
+    // Rediriger vers l'accueil (les non-admins ne doivent pas savoir que la route existe)
+    return Astro.redirect('/');
+  }
+  
+  return {
+    user,
+    profile,
+  };
+}
+
+/**
+ * Check if user is admin (helper pour middleware)
+ */
+export async function isAdmin(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) {
+    return false;
+  }
+
+  return (data as any).is_admin === true;
+}

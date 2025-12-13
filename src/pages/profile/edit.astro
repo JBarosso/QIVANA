@@ -1,0 +1,302 @@
+---
+// ============================================
+// EDIT PROFILE PAGE (Protected)
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getUser, getProfile } from '@/lib/auth';
+
+// Type assertion pour supabase
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+// Require authentication
+const user = await getUser(supabase);
+if (!user) {
+  return Astro.redirect('/auth/login');
+}
+
+// Fetch user profile
+const profile = await getProfile(supabase, user.id);
+if (!profile) {
+  return Astro.redirect('/auth/login?error=Profil+introuvable');
+}
+
+// Gérer les messages d'erreur et de succès
+const error = Astro.url.searchParams.get('error');
+const success = Astro.url.searchParams.get('success');
+---
+
+<BaseLayout
+  title="Modifier mon profil - Qivana"
+  description="Modifiez vos informations de profil"
+>
+  <main class="edit-profile-page">
+    <div class="container">
+      <div class="edit-card">
+        <h1 class="edit-card__title">✏️ Modifier mon profil</h1>
+
+        {error && (
+          <div class="alert alert--error">
+            {error === 'pseudo-taken' && 'Ce pseudo est déjà utilisé par un autre joueur.'}
+            {error === 'pseudo-invalid' && 'Le pseudo doit contenir entre 3 et 20 caractères.'}
+            {error === 'password-mismatch' && 'Les mots de passe ne correspondent pas.'}
+            {error === 'password-short' && 'Le mot de passe doit contenir au moins 6 caractères.'}
+            {error === 'update-failed' && 'Erreur lors de la mise à jour. Veuillez réessayer.'}
+          </div>
+        )}
+
+        {success && (
+          <div class="alert alert--success">
+            {success === 'profile-updated' && 'Profil mis à jour avec succès !'}
+            {success === 'password-updated' && 'Mot de passe modifié avec succès !'}
+          </div>
+        )}
+
+        <form method="POST" action="/api/profile/update" class="edit-form">
+          <div class="form-group">
+            <label for="pseudo" class="form-label">Pseudo</label>
+            <input
+              type="text"
+              id="pseudo"
+              name="pseudo"
+              class="form-input"
+              value={profile.pseudo}
+              minlength="3"
+              maxlength="20"
+              required
+            />
+            <span class="form-hint">Entre 3 et 20 caractères</span>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--full">
+            <span class="btn__text">Mettre à jour le pseudo</span>
+          </button>
+        </form>
+
+        <div class="divider">
+          <span>Changer le mot de passe</span>
+        </div>
+
+        <form method="POST" action="/api/profile/change-password" class="edit-form">
+          <div class="form-group">
+            <label for="new_password" class="form-label">Nouveau mot de passe</label>
+            <div class="password-input-wrapper">
+              <input
+                type="password"
+                id="new_password"
+                name="new_password"
+                class="form-input password-input"
+                minlength="6"
+                required
+              />
+              <button type="button" class="password-toggle" data-target="new_password">
+                <span class="password-toggle__icon">👁️</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
+            <div class="password-input-wrapper">
+              <input
+                type="password"
+                id="confirm_password"
+                name="confirm_password"
+                class="form-input password-input"
+                minlength="6"
+                required
+              />
+              <button type="button" class="password-toggle" data-target="confirm_password">
+                <span class="password-toggle__icon">👁️</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn--secondary btn--full">
+            <span class="btn__text">Changer le mot de passe</span>
+          </button>
+        </form>
+
+        <div class="edit-card__actions">
+          <a href="/profile" class="btn btn--outline">
+            <span class="btn__text">← Retour au profil</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  // Toggle password visibility
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleButtons = document.querySelectorAll('.password-toggle');
+    
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const targetId = button.getAttribute('data-target');
+        const input = document.getElementById(targetId as string) as HTMLInputElement;
+        const icon = button.querySelector('.password-toggle__icon');
+        
+        if (input && icon) {
+          if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '🙈';
+          } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+          }
+        }
+      });
+    });
+  });
+</script>
+
+<style lang="scss">
+  .edit-profile-page {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+    background: linear-gradient(135deg, var(--color-neutral-900) 0%, var(--color-neutral-800) 100%);
+  }
+
+  .edit-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .edit-card__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-6);
+    text-align: center;
+  }
+
+  .alert {
+    padding: var(--space-4);
+    border-radius: var(--radius-2);
+    margin-bottom: var(--space-6);
+    text-align: center;
+
+    &--error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+    }
+
+    &--success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--color-success);
+      color: var(--color-success);
+    }
+  }
+
+  .edit-form {
+    margin-bottom: var(--space-6);
+  }
+
+  .form-group {
+    margin-bottom: var(--space-4);
+  }
+
+  .form-label {
+    display: block;
+    font-size: var(--fs-3);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--space-2);
+    color: var(--color-text);
+  }
+
+  .password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--fs-3);
+    background: var(--color-background);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-2);
+    color: var(--color-text);
+    transition: border-color var(--transition-fast);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    &.password-input {
+      padding-right: var(--space-10); // Espace pour le bouton
+    }
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: var(--space-3);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition-fast);
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .password-toggle__icon {
+    font-size: var(--fs-4);
+    user-select: none;
+  }
+
+  .form-hint {
+    display: block;
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    margin: var(--space-6) 0;
+    
+    span {
+      padding: 0 var(--space-4);
+      font-size: var(--fs-3);
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+  }
+
+  .btn--full {
+    width: 100%;
+  }
+
+  .edit-card__actions {
+    margin-top: var(--space-6);
+    text-align: center;
+  }
+</style>

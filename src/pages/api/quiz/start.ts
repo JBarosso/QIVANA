@@ -7,12 +7,9 @@
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import {
-  fetchRandomQuestions,
   createQuizSession,
-  getSeenQuestionIds,
-  checkQuestionStock,
+  fetchQuestionsWithAutoGeneration,
 } from '../../../lib/quiz';
-import { generateControlledAIQuestions } from '../../../lib/ai-generation';
 import type { Universe, Difficulty, Question } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -91,94 +88,25 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const questionsRequested = 10;
     const questionsMinimum = 3;
 
-    // ============================================
-    // ÉTAPE 1 : Vérifier le stock DB disponible
-    // ============================================
-    const seenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
-    const availableStock = await checkQuestionStock(
-      supabase,
-      user.id,
-      universe,
-      difficulty,
-      questionsRequested
-    );
-
-    console.log(`📊 Stock disponible: ${availableStock} questions (demandé: ${questionsRequested})`);
-    console.log(`👁️ Questions déjà vues: ${seenIds.length} questions`);
-
-    // ============================================
-    // ÉTAPE 2 : Si stock insuffisant
-    // ============================================
-    if (availableStock < questionsRequested) {
-      // ⚠️ SÉCURITÉ FREEMIUM : Double vérification avant génération IA
-      if (userPlan === 'freemium') {
-        return new Response(
-          JSON.stringify({
-            error: 'Stock insuffisant',
-            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
-            requiresPremium: true,
-          }),
-          {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      // Pour Premium/Premium+ : génération IA contrôlée
-      const missingCount = questionsRequested - availableStock;
-      console.log(`🤖 Stock insuffisant. Génération IA contrôlée: ${missingCount} questions manquantes`);
-
-      try {
-        // Génération contrôlée (1 batch, pas de boucle)
-        const generationResult = await generateControlledAIQuestions(
-          supabase,
-          user.id,
-          universe,
-          difficulty,
-          missingCount,
-          1 // Buffer de 1 question
-        );
-
-        console.log(
-          `✅ Génération IA: ${generationResult.questionIds.length} questions insérées, ${generationResult.duplicatesSkipped} duplicates`
-        );
-
-        // Logging pour analytics (à implémenter dans une table dédiée si nécessaire)
-        console.log(`📊 AI Generation logged: user=${user.id}, universe=${universe}, count=${generationResult.questionIds.length}`);
-      } catch (generationError) {
-        console.error('❌ Erreur lors de la génération IA:', generationError);
-        // Continuer même si génération échoue (on utilisera ce qui est disponible en DB)
-      }
-    }
-
-    // ============================================
-    // ÉTAPE 3 : Recharger depuis la DB (après génération si applicable)
-    // ============================================
-    // ⚠️ IMPORTANT : Recharger les seenIds car de nouvelles questions peuvent avoir été générées
-    // et d'autres sessions peuvent avoir été complétées entre temps
-    const updatedSeenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
-    console.log(`👁️ Questions déjà vues (après génération): ${updatedSeenIds.length} questions`);
+    // Utiliser la fonction unifiée pour récupérer les questions avec génération IA automatique
+    const { fetchQuestionsWithAutoGeneration } = await import('../../../lib/quiz');
     
     let questions: Question[];
-    
     try {
-      questions = await fetchRandomQuestions(
+      questions = await fetchQuestionsWithAutoGeneration(
         supabase,
+        user.id,
         universe,
         difficulty,
         questionsRequested,
-        updatedSeenIds // Utiliser les seenIds mis à jour
+        questionsMinimum,
+        true // Exclure les questions déjà vues (mode solo)
       );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       
-      console.log(`✅ Questions récupérées: ${questions.length} questions`);
-    } catch (fetchError) {
-      // Si fetchRandomQuestions échoue (pas de questions disponibles après exclusion des vues)
-      console.error('❌ Erreur lors de la récupération des questions:', fetchError);
-      console.error(`📊 Détails: Stock disponible=${availableStock}, Questions vues=${updatedSeenIds.length}`);
-      
-      // ⚠️ SÉCURITÉ FREEMIUM : Bloquer si erreur de récupération
-      if (userPlan === 'freemium') {
+      // Gérer les erreurs spécifiques selon le plan
+      if (errorMessage.includes('Stock insuffisant') && userPlan === 'freemium') {
         return new Response(
           JSON.stringify({
             error: 'Stock insuffisant',
@@ -192,97 +120,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         );
       }
       
-      // ⚠️ IMPORTANT : Pour Premium/Premium+, si toutes les questions ont été vues,
-      // on doit générer de nouvelles questions même si le stock initial était suffisant
-      if (fetchError instanceof Error && fetchError.message.includes('déjà été vues')) {
-        console.log(`🤖 Toutes les questions ont été vues. Génération IA pour Premium/Premium+...`);
-        
-        try {
-          // Générer exactement le nombre de questions demandé
-          const generationResult = await generateControlledAIQuestions(
-            supabase,
-            user.id,
-            universe,
-            difficulty,
-            questionsRequested, // Générer exactement le nombre demandé
-            1 // Buffer de 1 question
-          );
-
-          console.log(
-            `✅ Génération IA (toutes vues): ${generationResult.questionIds.length} questions insérées`
-          );
-
-          // Réessayer de récupérer les questions (maintenant avec nouvelles questions générées)
-          const finalSeenIds = await getSeenQuestionIds(supabase, user.id, universe, difficulty);
-          questions = await fetchRandomQuestions(
-            supabase,
-            universe,
-            difficulty,
-            questionsRequested,
-            finalSeenIds
-          );
-          
-          console.log(`✅ Questions récupérées après génération: ${questions.length} questions`);
-        } catch (generationError) {
-          console.error('❌ Erreur lors de la génération IA (fallback):', generationError);
-          return new Response(
-            JSON.stringify({
-              error: 'Impossible de générer les questions',
-              message: 'Erreur lors de la génération IA. Veuillez réessayer.',
-            }),
-            {
-              status: 500,
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
+      return new Response(
+        JSON.stringify({
+          error: 'Impossible de charger les questions',
+          message: errorMessage,
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
         }
-      } else {
-        // Autre erreur
-        return new Response(
-          JSON.stringify({
-            error: 'Impossible de charger les questions',
-            message: fetchError instanceof Error ? fetchError.message : 'Erreur lors de la récupération des questions',
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-    }
-
-    // Si toujours insuffisant après génération, accepter ce qui est disponible
-    if (questions.length < questionsMinimum) {
-      // ⚠️ SÉCURITÉ FREEMIUM : Message différent selon le plan
-      if (userPlan === 'freemium') {
-        return new Response(
-          JSON.stringify({
-            error: 'Stock insuffisant',
-            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
-            requiresPremium: true,
-          }),
-          {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      // Pour Premium/Premium+ : accepter moins de questions si nécessaire
-      if (questions.length === 0) {
-        return new Response(
-          JSON.stringify({
-            error: 'Stock insuffisant',
-            message: 'Impossible de générer un quiz. Stock insuffisant même après génération IA.',
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      console.log(`⚠️ Moins de questions que demandé: ${questions.length}/${questionsRequested}`);
+      );
     }
 
     // ============================================

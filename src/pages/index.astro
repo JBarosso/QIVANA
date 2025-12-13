@@ -31,6 +31,9 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
             <a href="/auth/login" class="btn btn--secondary">
               <span class="btn__text">Se connecter</span>
             </a>
+            <a href="/leaderboard" class="btn btn--outline">
+              <span class="btn__text">🏆 Classement</span>
+            </a>
           </div>
         ) : (
           <div class="hero__cta">
@@ -47,6 +50,9 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
                 <span class="btn__text">⚔️ Créer un Salon</span>
               </a>
             )}
+            <a href="/leaderboard" class="btn btn--secondary">
+              <span class="btn__text">🏆 Classement</span>
+            </a>
             <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
             </a>

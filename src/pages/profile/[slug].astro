@@ -1,0 +1,357 @@
+---
+// ============================================
+// PUBLIC PROFILE PAGE
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { createServerClient } from '@supabase/ssr';
+import BadgeGrid from '@/components/badges/BadgeGrid';
+import type { BadgeData } from '@/components/badges/types';
+
+const { slug } = Astro.params;
+
+const supabase = createServerClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  {
+    cookies: {
+      get(key) {
+        return Astro.cookies.get(key)?.value;
+      },
+      set(key, value, options) {
+        Astro.cookies.set(key, value, options);
+      },
+      remove(key, options) {
+        Astro.cookies.delete(key, options);
+      },
+    },
+  }
+);
+
+// Récupérer le profil par slug
+const { data: profile, error } = await supabase
+  .from('profiles')
+  .select('id, pseudo, plan, slug, selected_avatar_id')
+  .eq('slug', slug)
+  .single();
+
+if (error || !profile) {
+  return Astro.redirect('/leaderboard?error=profil-introuvable');
+}
+
+// Récupérer l'avatar sélectionné
+let selectedAvatar: any = null;
+if (profile.selected_avatar_id) {
+  const { data: avatarData } = await supabase
+    .from('avatars')
+    .select('*')
+    .eq('id', profile.selected_avatar_id)
+    .single();
+  
+  if (avatarData) {
+    selectedAvatar = avatarData;
+  }
+}
+
+// Vérifier si l'utilisateur actuel est le propriétaire du profil
+const { data: { user } } = await supabase.auth.getUser();
+const isOwnProfile = user && user.id === profile.id;
+
+// Calculer le score solo depuis quiz_sessions
+const { data: quizData } = await supabase
+  .from('quiz_sessions')
+  .select('score')
+  .eq('user_id', profile.id)
+  .not('completed_at', 'is', null);
+
+let soloQuizScore = 0;
+let quizCount = 0;
+if (quizData) {
+  quizCount = quizData.length;
+  soloQuizScore = quizData.reduce((acc: number, q: any) => acc + (q.score || 0), 0);
+}
+
+// Récupérer les badges débloqués
+let allBadges: BadgeData[] = [];
+let unlockedBadgeIds = new Set<string>();
+
+const { data: badgesData } = await supabase
+  .from('badges')
+  .select('*')
+  .order('rarity', { ascending: false });
+
+if (badgesData) {
+  allBadges = badgesData.map((b: any) => ({
+    id: b.id,
+    code: b.code,
+    name: b.name,
+    description: b.description,
+    icon_url: b.icon_url,
+    rarity: b.rarity as BadgeData['rarity'],
+    category: b.category as BadgeData['category'],
+  }));
+}
+
+const { data: userBadgesData } = await supabase
+  .from('user_badges')
+  .select('badge_id, unlocked_at')
+  .eq('user_id', profile.id);
+
+if (userBadgesData) {
+  unlockedBadgeIds = new Set(userBadgesData.map((ub: any) => ub.badge_id));
+  allBadges = allBadges.map(badge => {
+    const userBadge = userBadgesData.find((ub: any) => ub.badge_id === badge.id);
+    return {
+      ...badge,
+      unlocked_at: userBadge?.unlocked_at || null,
+    };
+  });
+}
+
+// Filtrer pour n'afficher que les badges débloqués sur le profil public
+const unlockedBadges = allBadges.filter(b => unlockedBadgeIds.has(b.id));
+
+// URL de partage
+const shareUrl = `${Astro.url.origin}/profile/${slug}`;
+---
+
+<BaseLayout
+  title={`${profile.pseudo} - Profil Qivana`}
+  description={`Profil de ${profile.pseudo} sur Qivana`}
+>
+  <main class="profile-page profile-page--public">
+    <div class="container">
+      <div class="profile-card">
+        <div class="profile-card__header">
+          <div class="profile-avatar">
+            {selectedAvatar ? (
+              <img
+                src={selectedAvatar.image_url}
+                alt={selectedAvatar.name}
+                class="profile-avatar__img"
+              />
+            ) : (
+              <div class="profile-avatar__placeholder">
+                {profile.pseudo.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div class="profile-info">
+            <h1 class="profile-info__name">{profile.pseudo}</h1>
+            <div class="profile-badge">
+              <span class="profile-badge__label">
+                {profile.plan === 'freemium' && '🆓 Freemium'}
+                {profile.plan === 'premium' && '⭐ Premium'}
+                {profile.plan === 'premium+' && '💎 Premium+'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-card__stats">
+          <div class="stat-card">
+            <div class="stat-card__icon">📊</div>
+            <div class="stat-card__value">{Math.round(soloQuizScore)}</div>
+            <div class="stat-card__label">Points</div>
+          </div>
+
+          {quizCount > 0 && (
+            <div class="stat-card">
+              <div class="stat-card__icon">🎯</div>
+              <div class="stat-card__value">{quizCount}</div>
+              <div class="stat-card__label">Quiz</div>
+            </div>
+          )}
+
+          <div class="stat-card">
+            <div class="stat-card__icon">🏅</div>
+            <div class="stat-card__value">{unlockedBadges.length}</div>
+            <div class="stat-card__label">Badges</div>
+          </div>
+        </div>
+
+        <div class="profile-card__actions">
+          <a href="/leaderboard" class="btn btn--secondary">
+            <span class="btn__text">← Classement</span>
+          </a>
+          {isOwnProfile && (
+            <a href="/profile" class="btn btn--primary">
+              <span class="btn__text">Mon profil complet</span>
+            </a>
+          )}
+          <button 
+            class="btn btn--outline" 
+            id="share-btn"
+            data-url={shareUrl}
+          >
+            <span class="btn__text">📤 Partager</span>
+          </button>
+        </div>
+      </div>
+
+      {unlockedBadges.length > 0 && (
+        <div class="profile-section">
+          <h2 class="profile-section__title">Badges débloqués</h2>
+          <BadgeGrid 
+            client:load
+            badges={JSON.stringify(unlockedBadges)}
+            unlockedBadgeIds={JSON.stringify(Array.from(unlockedBadgeIds))}
+          />
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  const shareBtn = document.getElementById('share-btn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      const url = shareBtn.getAttribute('data-url');
+      
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Profil Qivana',
+            url: url || window.location.href,
+          });
+        } catch (err) {
+          // User cancelled
+        }
+      } else {
+        // Fallback: copier dans le presse-papier
+        try {
+          await navigator.clipboard.writeText(url || window.location.href);
+          alert('Lien copié dans le presse-papier !');
+        } catch (err) {
+          alert('Impossible de copier le lien');
+        }
+      }
+    });
+  }
+</script>
+
+<style lang="scss">
+  @use '@/styles/pages/_quiz.scss';
+
+  .profile-page--public {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .profile-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    margin: 0 auto var(--space-8);
+  }
+
+  .profile-card__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+
+  .profile-avatar {
+    flex-shrink: 0;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-neutral-800);
+  }
+
+  .profile-avatar__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-avatar__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: var(--color-text-on-primary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .profile-info {
+    flex: 1;
+  }
+
+  .profile-info__name {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-7);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-2);
+  }
+
+  .profile-badge__label {
+    font-size: var(--fs-3);
+    color: var(--color-text-muted);
+  }
+
+  .profile-card__stats {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-4);
+    text-align: center;
+    min-width: 100px;
+  }
+
+  .stat-card__icon {
+    font-size: var(--fs-6);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat-card__value {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+  }
+
+  .stat-card__label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .profile-card__actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .profile-section {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .profile-section__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-4);
+    text-align: center;
+  }
+</style>

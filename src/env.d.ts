@@ -8,3 +8,11 @@ declare namespace App {
     supabase: SupabaseClient<Database>;
   }
 }
+
+interface ImportMetaEnv {
+  readonly VITE_SOCKET_IO_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

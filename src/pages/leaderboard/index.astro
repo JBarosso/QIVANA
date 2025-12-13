@@ -1,0 +1,424 @@
+---
+// ============================================
+// LEADERBOARD PAGE (Global)
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '../../types/supabase';
+
+const supabase = createServerClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  {
+    cookies: {
+      get(key) {
+        return Astro.cookies.get(key)?.value;
+      },
+      set(key, value, options) {
+        Astro.cookies.set(key, value, options);
+      },
+      remove(key, options) {
+        Astro.cookies.delete(key, options);
+      },
+    },
+  }
+);
+
+// Récupérer le classement global basé uniquement sur les quiz solo
+// Calculer le score des quiz solo depuis quiz_sessions
+const limit = 50; // Afficher 50 par page
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const offset = (page - 1) * limit;
+
+// Calculer les scores des quiz solo pour chaque utilisateur
+const { data: quizScores, error: quizScoresError } = await supabase
+  .from('quiz_sessions')
+  .select('user_id, score')
+  .not('completed_at', 'is', null);
+
+// Agréger les scores par utilisateur
+const userScores = new Map<string, number>();
+if (quizScores) {
+  for (const session of quizScores) {
+    const currentScore = userScores.get(session.user_id) || 0;
+    userScores.set(session.user_id, currentScore + (session.score || 0));
+  }
+}
+
+// Récupérer les profils et ajouter leur score de quiz solo
+const { data: allProfiles, error } = await supabase
+  .from('profiles')
+  .select('id, pseudo, plan, slug, selected_avatar_id');
+
+// Récupérer tous les avatars pour pouvoir les afficher
+const { data: allAvatars } = await supabase
+  .from('avatars')
+  .select('id, image_url');
+
+const avatarsMap = new Map(allAvatars?.map(a => [a.id, a.image_url]) || []);
+
+if (error) {
+  console.error('Error fetching profiles:', error);
+}
+
+// Mapper les profils avec leur score de quiz solo et trier
+const leaderboardWithScores = (allProfiles || [])
+  .map(profile => ({
+    ...profile,
+    solo_quiz_score: userScores.get(profile.id) || 0
+  }))
+  .filter(profile => profile.solo_quiz_score > 0) // Afficher uniquement ceux qui ont des points
+  .sort((a, b) => b.solo_quiz_score - a.solo_quiz_score)
+  .slice(offset, offset + limit);
+
+const totalCount = Array.from(userScores.values()).filter(score => score > 0).length;
+const hasMore = offset + limit < totalCount;
+
+const leaderboardData = leaderboardWithScores || [];
+
+// Récupérer l'utilisateur actuel pour afficher son rang
+let currentUserRank = null;
+let currentUserId = null;
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+  currentUserId = user.id;
+  // Trouver le rang de l'utilisateur
+  const userIndex = leaderboardData.findIndex(p => p.id === user.id);
+  if (userIndex !== -1) {
+    currentUserRank = offset + userIndex + 1; // Rang global avec offset
+  } else {
+    // Si l'utilisateur n'est pas dans la page actuelle, calculer son rang exact
+    const userSoloScore = userScores.get(user.id) || 0;
+    
+    if (userSoloScore > 0) {
+      // Compter combien d'utilisateurs ont un score supérieur
+      const usersWithHigherScore = Array.from(userScores.values())
+        .filter(score => score > userSoloScore).length;
+      
+      currentUserRank = usersWithHigherScore + 1;
+    }
+  }
+}
+---
+
+<BaseLayout title="Classement Global - Qivana" description="Classement des meilleurs joueurs Qivana">
+  <main class="leaderboard-page">
+    <div class="container">
+      <header class="leaderboard-header">
+        <h1 class="leaderboard-header__title">🏆 Classement Global</h1>
+        <p class="leaderboard-header__subtitle">Les meilleurs joueurs de Qivana</p>
+      </header>
+
+      {currentUserRank && (
+        <div class="leaderboard-user-rank">
+          <div class="leaderboard-user-rank__badge">
+            <span class="leaderboard-user-rank__label">Ton rang</span>
+            <span class="leaderboard-user-rank__value">#{currentUserRank}</span>
+          </div>
+        </div>
+      )}
+
+      <div class="leaderboard-list">
+        {leaderboardData.length === 0 ? (
+          <div class="leaderboard-empty">
+            <p>Aucun joueur dans le classement pour le moment.</p>
+          </div>
+        ) : (
+          <ol class="leaderboard-list__items">
+            {leaderboardData.map((player, index) => {
+              const rank = offset + index + 1; // Rang global (avec offset)
+              const isCurrentUser = currentUserId === player.id;
+              // Calculer isTopThree de manière explicite pour éviter les erreurs Astro
+              const isTopThree = rank === 1 || rank === 2 || rank === 3;
+              let itemClasses = 'leaderboard-item';
+              if (isCurrentUser) itemClasses += ' leaderboard-item--current';
+              if (rank === 1) itemClasses += ' leaderboard-item--rank-1';
+              if (rank === 2) itemClasses += ' leaderboard-item--rank-2';
+              if (rank === 3) itemClasses += ' leaderboard-item--rank-3';
+              
+              return (
+                <li class={itemClasses}>
+                  <a href={`/profile/${player.slug}`} class="leaderboard-item__link">
+                    <div class="leaderboard-item__rank">
+                      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                    </div>
+                    
+                    <div class="leaderboard-item__avatar">
+                      {player.selected_avatar_id && avatarsMap.get(player.selected_avatar_id) ? (
+                        <img src={avatarsMap.get(player.selected_avatar_id)} alt={player.pseudo} />
+                      ) : (
+                        <div class="leaderboard-item__avatar-placeholder">
+                          {player.pseudo.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div class="leaderboard-item__info">
+                      <div class="leaderboard-item__name">
+                        {player.pseudo}
+                        {isCurrentUser ? <span class="leaderboard-item__you">(Vous)</span> : ''}
+                      </div>
+                      <div class="leaderboard-item__stats">
+                        <span class="leaderboard-item__stat">
+                          {Math.round(Number(player.solo_quiz_score) || 0)} pts
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="leaderboard-item__plan">
+                      {player.plan === 'premium+' ? '💎' : player.plan === 'premium' ? '⭐' : '🆓'}
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+
+      {hasMore && (
+        <div class="leaderboard-pagination">
+          <a href={`/leaderboard?page=${page + 1}`} class="btn btn--primary">
+            Voir plus ({Math.min(limit, (totalCount || 0) - offset - limit)} suivants)
+          </a>
+        </div>
+      )}
+
+      {page > 1 && (
+        <div class="leaderboard-pagination">
+          <a href={`/leaderboard?page=${page - 1}`} class="btn btn--outline">
+            ← Précédent
+          </a>
+        </div>
+      )}
+
+      <div class="leaderboard-actions">
+        <a href="/leaderboard/universe" class="btn btn--secondary">
+          Classement par univers
+        </a>
+        <a href="/profile" class="btn btn--outline">
+          Mon profil
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @use '../../styles/pages/_quiz.scss';
+
+  .leaderboard-page {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+  }
+
+  .leaderboard-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+    color: var(--color-text);
+  }
+
+  .leaderboard-header__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-2);
+  }
+
+  .leaderboard-header__subtitle {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+    opacity: 0.9;
+  }
+
+  .leaderboard-user-rank {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-6);
+  }
+
+  .leaderboard-user-rank__badge {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-4) var(--space-6);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    border: 2px solid var(--color-warning);
+  }
+
+  .leaderboard-user-rank__label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .leaderboard-user-rank__value {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-7);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-warning);
+  }
+
+  .leaderboard-list {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: var(--space-6);
+  }
+
+  .leaderboard-empty {
+    text-align: center;
+    padding: var(--space-8);
+    color: var(--color-text-muted);
+  }
+
+  .leaderboard-list__items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .leaderboard-item {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    border: 2px solid transparent;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--color-neutral-800);
+      transform: translateX(4px);
+    }
+  }
+
+  .leaderboard-item__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+
+    &--current {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(236, 72, 153, 0.1));
+      border-color: var(--color-warning);
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.3);
+    }
+
+    &--rank-1 {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(250, 204, 21, 0.05));
+      border-color: var(--color-warning);
+      box-shadow: 0 0 16px rgba(250, 204, 21, 0.4);
+    }
+
+    &--rank-2 {
+      background: linear-gradient(135deg, rgba(156, 163, 175, 0.15), rgba(156, 163, 175, 0.05));
+      border-color: #9CA3AF;
+      box-shadow: 0 0 12px rgba(156, 163, 175, 0.3);
+    }
+
+    &--rank-3 {
+      background: linear-gradient(135deg, rgba(180, 83, 9, 0.15), rgba(180, 83, 9, 0.05));
+      border-color: #B45309;
+      box-shadow: 0 0 12px rgba(180, 83, 9, 0.3);
+    }
+  }
+
+  .leaderboard-item__rank {
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    min-width: 60px;
+    text-align: center;
+    color: var(--color-primary);
+  }
+
+  .leaderboard-item__avatar {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-neutral-800);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .leaderboard-item__avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: var(--color-text-on-primary);
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .leaderboard-item__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .leaderboard-item__name {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .leaderboard-item__you {
+    font-size: var(--fs-2);
+    color: var(--color-warning);
+    font-weight: var(--font-weight-normal);
+  }
+
+  .leaderboard-item__stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .leaderboard-item__stat-separator {
+    color: var(--color-neutral-600);
+  }
+
+  .leaderboard-item__plan {
+    font-size: var(--fs-5);
+    flex-shrink: 0;
+  }
+
+  .leaderboard-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .leaderboard-pagination {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-6);
+  }
+</style>
