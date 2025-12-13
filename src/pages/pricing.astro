@@ -1,0 +1,548 @@
+---
+// ============================================
+// PAGE PRICING - Tarifs publics
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { PLANS } from '@/lib/stripe';
+
+// Récupérer l'utilisateur s'il est connecté
+const supabase = (Astro.locals as any).supabase;
+let user = null;
+let currentPlan = 'freemium';
+
+if (supabase) {
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  user = authUser;
+  
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+    
+    if (profile) {
+      currentPlan = profile.plan;
+    }
+  }
+}
+
+const plans = Object.values(PLANS);
+---
+
+<BaseLayout title="Tarifs" description="Découvrez les offres Qivana : Freemium, Premium et Premium+">
+  <main class="pricing-page">
+    <section class="pricing-hero">
+      <h1 class="pricing-hero__title">
+        Choisissez votre <span class="gradient-text">aventure</span>
+      </h1>
+      <p class="pricing-hero__subtitle">
+        Des quiz illimités aux duels épiques, trouvez le plan qui vous correspond
+      </p>
+    </section>
+
+    <!-- Toggle mensuel/annuel -->
+    <div class="pricing-toggle">
+      <button class="pricing-toggle__btn pricing-toggle__btn--active" data-billing="monthly">
+        Mensuel
+      </button>
+      <button class="pricing-toggle__btn" data-billing="yearly">
+        Annuel
+        <span class="pricing-toggle__badge">-17%</span>
+      </button>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="pricing-grid">
+      {plans.map((plan) => (
+        <div class={`pricing-card ${plan.popular ? 'pricing-card--popular' : ''} ${currentPlan === plan.name ? 'pricing-card--current' : ''}`}>
+          {plan.popular && (
+            <div class="pricing-card__badge">🔥 Populaire</div>
+          )}
+          
+          {currentPlan === plan.name && (
+            <div class="pricing-card__current-badge">✓ Votre plan actuel</div>
+          )}
+
+          <div class="pricing-card__header">
+            <h2 class="pricing-card__name">{plan.displayName}</h2>
+            <p class="pricing-card__description">{plan.description}</p>
+          </div>
+
+          <div class="pricing-card__pricing">
+            <div class="pricing-card__price" data-monthly={plan.monthlyPrice} data-yearly={plan.yearlyPrice}>
+              <span class="pricing-card__currency">€</span>
+              <span class="pricing-card__amount">{plan.monthlyPrice}</span>
+              <span class="pricing-card__period">/mois</span>
+            </div>
+            {plan.yearlyDiscount && (
+              <div class="pricing-card__discount" data-discount={plan.yearlyDiscount}>
+                {plan.yearlyDiscount}
+              </div>
+            )}
+          </div>
+
+          <ul class="pricing-card__features">
+            {plan.features.map((feature) => (
+              <li class="pricing-card__feature">
+                <span class="pricing-card__feature-icon">✓</span>
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          <div class="pricing-card__cta">
+            {plan.name === 'freemium' ? (
+              user ? (
+                <a href="/quiz" class="btn btn--outline btn--full">
+                  Jouer gratuitement
+                </a>
+              ) : (
+                <a href="/auth/signup" class="btn btn--outline btn--full">
+                  Commencer gratuitement
+                </a>
+              )
+            ) : currentPlan === plan.name ? (
+              <button class="btn btn--secondary btn--full" disabled>
+                Plan actuel
+              </button>
+            ) : (
+              <button 
+                class="btn btn--primary btn--full btn--subscribe"
+                data-plan={plan.name}
+                data-billing="monthly"
+              >
+                {currentPlan === 'freemium' ? 'Passer à ' + plan.displayName : 'Changer pour ' + plan.displayName}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- FAQ Section -->
+    <section class="pricing-faq">
+      <h2 class="pricing-faq__title">Questions fréquentes</h2>
+      
+      <div class="pricing-faq__grid">
+        <div class="pricing-faq__item">
+          <h3 class="pricing-faq__question">Puis-je changer de plan à tout moment ?</h3>
+          <p class="pricing-faq__answer">
+            Oui ! Vous pouvez upgrader ou downgrader votre abonnement à tout moment. 
+            Les changements prennent effet immédiatement.
+          </p>
+        </div>
+
+        <div class="pricing-faq__item">
+          <h3 class="pricing-faq__question">Comment fonctionne le paiement ?</h3>
+          <p class="pricing-faq__answer">
+            Nous utilisons Stripe pour les paiements sécurisés. Vous pouvez payer par carte 
+            bancaire et gérer votre abonnement à tout moment.
+          </p>
+        </div>
+
+        <div class="pricing-faq__item">
+          <h3 class="pricing-faq__question">Puis-je annuler mon abonnement ?</h3>
+          <p class="pricing-faq__answer">
+            Oui, vous pouvez annuler à tout moment depuis votre profil. Vous conserverez 
+            les avantages jusqu'à la fin de la période payée.
+          </p>
+        </div>
+
+        <div class="pricing-faq__item">
+          <h3 class="pricing-faq__question">Que signifie "~200 quiz IA/mois" ?</h3>
+          <p class="pricing-faq__answer">
+            C'est une limite Fair Use pour éviter les abus. En utilisation normale, 
+            vous ne l'atteindrez jamais !
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  // Toggle mensuel/annuel
+  const toggleBtns = document.querySelectorAll('.pricing-toggle__btn');
+  const priceElements = document.querySelectorAll('.pricing-card__price');
+  const discountElements = document.querySelectorAll('.pricing-card__discount');
+  const subscribeBtns = document.querySelectorAll('.btn--subscribe');
+
+  toggleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const billing = btn.getAttribute('data-billing');
+      
+      // Update toggle state
+      toggleBtns.forEach(b => b.classList.remove('pricing-toggle__btn--active'));
+      btn.classList.add('pricing-toggle__btn--active');
+
+      // Update prices
+      priceElements.forEach(el => {
+        const monthly = parseFloat(el.getAttribute('data-monthly') || '0');
+        const yearly = parseFloat(el.getAttribute('data-yearly') || '0');
+        
+        const amountEl = el.querySelector('.pricing-card__amount');
+        const periodEl = el.querySelector('.pricing-card__period');
+        
+        if (amountEl && periodEl) {
+          if (billing === 'yearly' && yearly > 0) {
+            amountEl.textContent = (yearly / 12).toFixed(2);
+            periodEl.textContent = '/mois (facturé annuellement)';
+          } else {
+            amountEl.textContent = monthly.toString();
+            periodEl.textContent = '/mois';
+          }
+        }
+      });
+
+      // Show/hide discount badges
+      discountElements.forEach(el => {
+        if (billing === 'yearly') {
+          el.classList.add('pricing-card__discount--visible');
+        } else {
+          el.classList.remove('pricing-card__discount--visible');
+        }
+      });
+
+      // Update subscribe buttons
+      subscribeBtns.forEach(btn => {
+        btn.setAttribute('data-billing', billing || 'monthly');
+      });
+    });
+  });
+
+  // Subscribe button click
+  subscribeBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const plan = btn.getAttribute('data-plan');
+      const billing = btn.getAttribute('data-billing');
+
+      // Disable button
+      btn.setAttribute('disabled', 'true');
+      btn.textContent = 'Chargement...';
+
+      try {
+        const response = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, billing }),
+        });
+
+        const data = await response.json();
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.redirect) {
+          window.location.href = data.redirect;
+        } else {
+          throw new Error(data.error || 'Erreur inconnue');
+        }
+      } catch (error) {
+        console.error('Checkout error:', error);
+        alert('Une erreur est survenue. Veuillez réessayer.');
+        btn.removeAttribute('disabled');
+        btn.textContent = 'Réessayer';
+      }
+    });
+  });
+</script>
+
+<style lang="scss">
+  .pricing-page {
+    padding: var(--space-8) var(--space-4);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  // Hero
+  .pricing-hero {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .pricing-hero__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-10);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-4);
+
+    @media (max-width: 768px) {
+      font-size: var(--fs-8);
+    }
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .pricing-hero__subtitle {
+    font-size: var(--fs-5);
+    color: var(--color-text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  // Toggle
+  .pricing-toggle {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-8);
+    background: var(--color-surface);
+    padding: var(--space-2);
+    border-radius: var(--radius-3);
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .pricing-toggle__btn {
+    padding: var(--space-3) var(--space-6);
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--fs-3);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-2);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    &:hover {
+      color: var(--color-text);
+    }
+
+    &--active {
+      background: var(--color-primary);
+      color: white;
+    }
+  }
+
+  .pricing-toggle__badge {
+    font-size: var(--fs-1);
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-success);
+    color: white;
+    border-radius: var(--radius-2);
+    font-weight: var(--font-weight-bold);
+  }
+
+  // Grid
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-12);
+
+    @media (max-width: 1024px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  // Card
+  .pricing-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-6);
+    border: 2px solid var(--color-border);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: all var(--transition-base);
+
+    &:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-4px);
+    }
+
+    &--popular {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 40px rgba(124, 58, 237, 0.2);
+    }
+
+    &--current {
+      border-color: var(--color-success);
+    }
+  }
+
+  .pricing-card__badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--space-1) var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: white;
+    font-size: var(--fs-2);
+    font-weight: var(--font-weight-bold);
+    border-radius: var(--radius-3);
+    white-space: nowrap;
+  }
+
+  .pricing-card__current-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--space-1) var(--space-4);
+    background: var(--color-success);
+    color: white;
+    font-size: var(--fs-2);
+    font-weight: var(--font-weight-bold);
+    border-radius: var(--radius-3);
+    white-space: nowrap;
+  }
+
+  .pricing-card__header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+  }
+
+  .pricing-card__name {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-6);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-2);
+  }
+
+  .pricing-card__description {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .pricing-card__pricing {
+    text-align: center;
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pricing-card__price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+
+  .pricing-card__currency {
+    font-size: var(--fs-5);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+  }
+
+  .pricing-card__amount {
+    font-size: var(--fs-10);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    line-height: 1;
+  }
+
+  .pricing-card__period {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-left: var(--space-1);
+  }
+
+  .pricing-card__discount {
+    margin-top: var(--space-2);
+    font-size: var(--fs-2);
+    color: var(--color-success);
+    font-weight: var(--font-weight-medium);
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all var(--transition-fast);
+
+    &--visible {
+      opacity: 1;
+      height: auto;
+    }
+  }
+
+  .pricing-card__features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-6) 0;
+    flex: 1;
+  }
+
+  .pricing-card__feature {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    font-size: var(--fs-2);
+    color: var(--color-text);
+    margin-bottom: var(--space-3);
+  }
+
+  .pricing-card__feature-icon {
+    color: var(--color-success);
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .pricing-card__cta {
+    margin-top: auto;
+  }
+
+  .btn--full {
+    width: 100%;
+  }
+
+  // FAQ
+  .pricing-faq {
+    margin-top: var(--space-12);
+    padding-top: var(--space-12);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pricing-faq__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-7);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .pricing-faq__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .pricing-faq__item {
+    background: var(--color-surface);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+  }
+
+  .pricing-faq__question {
+    font-size: var(--fs-4);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-3);
+    color: var(--color-text);
+  }
+
+  .pricing-faq__answer {
+    font-size: var(--fs-3);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+</style>

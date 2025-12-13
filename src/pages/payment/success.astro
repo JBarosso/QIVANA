@@ -1,0 +1,218 @@
+---
+// ============================================
+// PAYMENT SUCCESS PAGE
+// ============================================
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+// Récupérer les informations de la session si disponibles
+const sessionId = Astro.url.searchParams.get('session_id');
+
+// On pourrait vérifier la session ici si nécessaire
+// Pour l'instant on affiche juste un message de succès
+---
+
+<BaseLayout title="Paiement réussi" description="Votre paiement a été accepté">
+  <main class="payment-page">
+    <div class="payment-card payment-card--success">
+      <div class="payment-card__icon">🎉</div>
+      
+      <h1 class="payment-card__title">Paiement réussi !</h1>
+      
+      <p class="payment-card__message">
+        Merci pour votre confiance ! Votre abonnement est maintenant actif.
+      </p>
+
+      <div class="payment-card__details">
+        <div class="payment-card__feature">
+          <span class="payment-card__feature-icon">✓</span>
+          Accès immédiat à toutes les fonctionnalités
+        </div>
+        <div class="payment-card__feature">
+          <span class="payment-card__feature-icon">✓</span>
+          Quiz IA débloqués
+        </div>
+        <div class="payment-card__feature">
+          <span class="payment-card__feature-icon">✓</span>
+          Accès aux duels multijoueur
+        </div>
+      </div>
+
+      <div class="payment-card__actions">
+        <a href="/quiz" class="btn btn--primary btn--lg">
+          🎮 Jouer maintenant
+        </a>
+        <a href="/profile" class="btn btn--outline">
+          👤 Voir mon profil
+        </a>
+      </div>
+
+      <p class="payment-card__note">
+        Un email de confirmation vous a été envoyé.
+        <br/>
+        Vous pouvez gérer votre abonnement depuis votre profil.
+      </p>
+    </div>
+
+    <!-- Confetti Animation -->
+    <div class="confetti" id="confetti"></div>
+  </main>
+</BaseLayout>
+
+<script>
+  // Simple confetti effect
+  function createConfetti() {
+    const confettiContainer = document.getElementById('confetti');
+    if (!confettiContainer) return;
+
+    const colors = ['#7c3aed', '#4f46e5', '#0ea5e9', '#ec4899', '#facc15', '#22c55e'];
+    
+    for (let i = 0; i < 50; i++) {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti-piece';
+      confetti.style.left = Math.random() * 100 + '%';
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+      confetti.style.animationDelay = Math.random() * 2 + 's';
+      confettiContainer.appendChild(confetti);
+    }
+
+    // Clean up after animation
+    setTimeout(() => {
+      confettiContainer.innerHTML = '';
+    }, 6000);
+  }
+
+  createConfetti();
+</script>
+
+<style lang="scss">
+  .payment-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .payment-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    padding: var(--space-10);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    border: 2px solid var(--color-border);
+    position: relative;
+    z-index: 10;
+
+    &--success {
+      border-color: var(--color-success);
+      box-shadow: 0 0 60px rgba(34, 197, 94, 0.2);
+    }
+  }
+
+  .payment-card__icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-4);
+    animation: bounce 1s ease-in-out;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+
+  .payment-card__title {
+    font-family: var(--font-secondary);
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-4);
+    background: linear-gradient(135deg, var(--color-success), #4ade80);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .payment-card__message {
+    font-size: var(--fs-4);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-6);
+  }
+
+  .payment-card__details {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+  }
+
+  .payment-card__feature {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    padding: var(--space-2) 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--color-border);
+    }
+  }
+
+  .payment-card__feature-icon {
+    color: var(--color-success);
+    font-weight: bold;
+  }
+
+  .payment-card__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .btn--lg {
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--fs-4);
+  }
+
+  .payment-card__note {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  // Confetti
+  .confetti {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  :global(.confetti-piece) {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    border-radius: 2px;
+    animation: fall linear forwards;
+  }
+
+  @keyframes fall {
+    0% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg);
+      opacity: 0;
+    }
+  }
+</style>

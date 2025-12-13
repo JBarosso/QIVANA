@@ -220,6 +220,19 @@ if (supabase) {
                 {profile.plan === 'premium+' && '💎 Premium+'}
               </span>
             </div>
+            
+            <!-- Bouton abonnement -->
+            <div class="profile-subscription">
+              {profile.plan === 'freemium' ? (
+                <a href="/pricing" class="btn btn--primary btn--sm">
+                  💎 Passer Premium
+                </a>
+              ) : (
+                <button id="manageSubscription" class="btn btn--outline btn--sm">
+                  ⚙️ Gérer mon abonnement
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -382,6 +395,35 @@ if (supabase) {
         } catch (err) {
           alert('Impossible de copier le lien');
         }
+      }
+    });
+  }
+
+  // Manage subscription (Stripe Customer Portal)
+  const manageSubscriptionBtn = document.getElementById('manageSubscription');
+  if (manageSubscriptionBtn) {
+    manageSubscriptionBtn.addEventListener('click', async () => {
+      manageSubscriptionBtn.setAttribute('disabled', 'true');
+      manageSubscriptionBtn.textContent = 'Chargement...';
+
+      try {
+        const response = await fetch('/api/stripe/portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const data = await response.json();
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error(data.error || 'Erreur inconnue');
+        }
+      } catch (error) {
+        console.error('Portal error:', error);
+        alert('Erreur: ' + (error instanceof Error ? error.message : 'Impossible d\'ouvrir le portail'));
+        manageSubscriptionBtn.removeAttribute('disabled');
+        manageSubscriptionBtn.textContent = '⚙️ Gérer mon abonnement';
       }
     });
   }
@@ -639,6 +681,15 @@ if (supabase) {
   .info-item__label {
     font-size: var(--fs-2);
     color: var(--color-text-muted);
+  }
+
+  .profile-subscription {
+    margin-top: var(--space-4);
+  }
+
+  .btn--sm {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--fs-2);
   }
 
   .info-item__value {

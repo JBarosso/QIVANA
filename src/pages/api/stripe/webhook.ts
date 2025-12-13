@@ -1,0 +1,251 @@
+// ============================================
+// API: Stripe Webhook Handler
+// ============================================
+
+import type { APIRoute } from 'astro';
+import { stripe, getPlanFromPriceId } from '@/lib/stripe';
+import { createClient } from '@supabase/supabase-js';
+
+// Client Supabase avec service role pour bypasser RLS
+const supabaseAdmin = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export const POST: APIRoute = async ({ request }) => {
+  const body = await request.text();
+  const signature = request.headers.get('stripe-signature');
+
+  if (!signature) {
+    return new Response('Missing signature', { status: 400 });
+  }
+
+  const webhookSecret = import.meta.env.STRIPE_WEBHOOK_SECRET;
+  
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET not configured');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return new Response(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`, { 
+      status: 400 
+    });
+  }
+
+  console.log(`📩 Stripe webhook received: ${event.type}`);
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        await handleCheckoutCompleted(session);
+        break;
+      }
+
+      case 'invoice.paid': {
+        const invoice = event.data.object;
+        await handleInvoicePaid(invoice);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        await handlePaymentFailed(invoice);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        await handleSubscriptionDeleted(subscription);
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        await handleSubscriptionUpdated(subscription);
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Webhook handler error:', error);
+    return new Response(`Webhook handler error: ${error instanceof Error ? error.message : 'Unknown'}`, {
+      status: 500,
+    });
+  }
+};
+
+// ============================================
+// HANDLERS
+// ============================================
+
+async function handleCheckoutCompleted(session: any) {
+  const userId = session.metadata?.supabase_user_id;
+  const plan = session.metadata?.plan;
+  const subscriptionId = session.subscription;
+
+  if (!userId || !plan) {
+    console.error('Missing metadata in checkout session');
+    return;
+  }
+
+  console.log(`✅ Checkout completed for user ${userId}, plan: ${plan}`);
+
+  // Mettre à jour le plan de l'utilisateur
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({ plan: plan })
+    .eq('id', userId);
+
+  if (profileError) {
+    console.error('Error updating profile:', profileError);
+  }
+
+  // Enregistrer le paiement
+  const { error: paymentError } = await supabaseAdmin
+    .from('payments')
+    .insert({
+      user_id: userId,
+      stripe_payment_intent_id: session.payment_intent,
+      stripe_subscription_id: subscriptionId,
+      amount_cents: session.amount_total,
+      currency: session.currency,
+      plan: plan,
+      status: 'completed',
+      paid_at: new Date().toISOString(),
+    });
+
+  if (paymentError) {
+    console.error('Error recording payment:', paymentError);
+  }
+
+  console.log(`🎉 User ${userId} upgraded to ${plan}`);
+}
+
+async function handleInvoicePaid(invoice: any) {
+  const subscriptionId = invoice.subscription;
+  
+  if (!subscriptionId) return;
+
+  // Récupérer la subscription pour avoir le user ID
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const userId = subscription.metadata?.supabase_user_id;
+  
+  if (!userId) {
+    console.error('No user ID in subscription metadata');
+    return;
+  }
+
+  // Récupérer le plan depuis le price ID
+  const priceId = subscription.items.data[0]?.price.id;
+  const plan = getPlanFromPriceId(priceId);
+
+  if (plan) {
+    // S'assurer que le plan est à jour
+    await supabaseAdmin
+      .from('profiles')
+      .update({ plan: plan })
+      .eq('id', userId);
+
+    // Enregistrer le paiement récurrent
+    await supabaseAdmin
+      .from('payments')
+      .insert({
+        user_id: userId,
+        stripe_payment_intent_id: invoice.payment_intent,
+        stripe_subscription_id: subscriptionId,
+        amount_cents: invoice.amount_paid,
+        currency: invoice.currency,
+        plan: plan,
+        status: 'completed',
+        paid_at: new Date().toISOString(),
+      });
+
+    console.log(`💳 Invoice paid for user ${userId}, plan: ${plan}`);
+  }
+}
+
+async function handlePaymentFailed(invoice: any) {
+  const subscriptionId = invoice.subscription;
+  
+  if (!subscriptionId) return;
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const userId = subscription.metadata?.supabase_user_id;
+  
+  if (!userId) return;
+
+  console.log(`⚠️ Payment failed for user ${userId}`);
+
+  // On pourrait envoyer un email ici
+  // Pour l'instant, on log juste l'événement
+  
+  // Enregistrer le paiement échoué
+  await supabaseAdmin
+    .from('payments')
+    .insert({
+      user_id: userId,
+      stripe_payment_intent_id: invoice.payment_intent,
+      stripe_subscription_id: subscriptionId,
+      amount_cents: invoice.amount_due,
+      currency: invoice.currency,
+      plan: subscription.metadata?.plan || 'unknown',
+      status: 'failed',
+    });
+}
+
+async function handleSubscriptionDeleted(subscription: any) {
+  const userId = subscription.metadata?.supabase_user_id;
+  
+  if (!userId) {
+    console.error('No user ID in subscription metadata');
+    return;
+  }
+
+  console.log(`🔴 Subscription deleted for user ${userId}`);
+
+  // Downgrade vers Freemium
+  const { error } = await supabaseAdmin
+    .from('profiles')
+    .update({ plan: 'freemium' })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error downgrading user:', error);
+  } else {
+    console.log(`📉 User ${userId} downgraded to freemium`);
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: any) {
+  const userId = subscription.metadata?.supabase_user_id;
+  
+  if (!userId) return;
+
+  // Récupérer le nouveau plan
+  const priceId = subscription.items.data[0]?.price.id;
+  const plan = getPlanFromPriceId(priceId);
+
+  if (plan && subscription.status === 'active') {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ plan: plan })
+      .eq('id', userId);
+
+    console.log(`🔄 Subscription updated for user ${userId}, new plan: ${plan}`);
+  }
+}

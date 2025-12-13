@@ -31,6 +31,9 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
             <a href="/auth/login" class="btn btn--secondary">
               <span class="btn__text">Se connecter</span>
             </a>
+            <a href="/pricing" class="btn btn--secondary btn--pricing">
+              <span class="btn__text">💎 Voir les offres</span>
+            </a>
             <a href="/leaderboard" class="btn btn--outline">
               <span class="btn__text">🏆 Classement</span>
             </a>
@@ -56,6 +59,11 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
             <a href="/profile" class="btn btn--secondary">
               <span class="btn__text">Mon profil</span>
             </a>
+            {profile && profile.plan === 'freemium' && (
+              <a href="/pricing" class="btn btn--secondary btn--upgrade">
+                <span class="btn__text">💎 Passer Premium</span>
+              </a>
+            )}
             <a href="/auth/logout" class="btn btn--outline">
               <span class="btn__text">Se déconnecter</span>
             </a>

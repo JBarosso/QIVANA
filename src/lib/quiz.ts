@@ -216,7 +216,7 @@ export async function completeQuizSession(
   // Récupérer les points actuels du profil
   const { data: profile, error: profileFetchError } = await supabase
     .from('profiles')
-    .select('total_score')
+    .select('total_score, points')
     .eq('id', session.user_id)
     .single();
 
@@ -225,18 +225,19 @@ export async function completeQuizSession(
     return; // Ne pas bloquer si le profil n'existe pas
   }
 
-  // Ajouter les points du quiz au profil
-  const newTotalScore = (Number(profile.total_score) || 0) + session.score;
+  // Ajouter les points du quiz au profil (points pour solo, total_score pour duels)
+  const profileAny = profile as any;
+  const newPoints = (Number(profileAny.points) || 0) + session.score;
 
   const { error: profileUpdateError } = await supabase
     .from('profiles')
     .update({
-      total_score: newTotalScore,
-    })
+      points: newPoints,
+    } as any)
     .eq('id', session.user_id);
 
   if (profileUpdateError) {
-    console.error('Error updating profile total_score:', profileUpdateError);
+    console.error('Error updating profile points:', profileUpdateError);
     // Ne pas bloquer si l'ajout de points échoue
   }
 }
@@ -259,7 +260,7 @@ export async function getQuizSession(
     return null;
   }
 
-  return data as QuizSession;
+  return data as unknown as QuizSession;
 }
 
 /**

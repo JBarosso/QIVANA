@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
@@ -96,6 +94,78 @@ export type Database = {
           },
         ]
       }
+      avatars: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          name: string
+          rarity: string
+          unlock_criteria: Json
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          image_url: string
+          name: string
+          rarity: string
+          unlock_criteria?: Json
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          name?: string
+          rarity?: string
+          unlock_criteria?: Json
+        }
+        Relationships: []
+      }
+      badges: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          criteria: Json
+          description: string
+          icon_url: string | null
+          id: string
+          name: string
+          rarity: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          criteria?: Json
+          description: string
+          icon_url?: string | null
+          id?: string
+          name: string
+          rarity?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          criteria?: Json
+          description?: string
+          icon_url?: string | null
+          id?: string
+          name?: string
+          rarity?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       duel_answers: {
         Row: {
           answered_at: string
@@ -157,6 +227,44 @@ export type Database = {
           },
         ]
       }
+      duel_results: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          players: Json
+          room_id: string
+          settings: Json
+          winner_id: string | null
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          players: Json
+          room_id: string
+          settings: Json
+          winner_id?: string | null
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          players?: Json
+          room_id?: string
+          settings?: Json
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duel_results_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       duel_sessions: {
         Row: {
           chef_control_enabled: boolean
@@ -164,6 +272,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           current_question_index: number | null
+          custom_prompt: string | null
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode: Database["public"]["Enums"]["duel_game_mode"]
           id: string
@@ -176,6 +285,7 @@ export type Database = {
           salon_name: string
           started_at: string | null
           status: Database["public"]["Enums"]["duel_status"]
+          temp_questions: Json | null
           timer_seconds: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
           updated_at: string | null
@@ -186,6 +296,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_question_index?: number | null
+          custom_prompt?: string | null
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
@@ -198,6 +309,7 @@ export type Database = {
           salon_name: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["duel_status"]
+          temp_questions?: Json | null
           timer_seconds?: number | null
           universe: Database["public"]["Enums"]["quiz_universe"]
           updated_at?: string | null
@@ -208,6 +320,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_question_index?: number | null
+          custom_prompt?: string | null
           difficulty?: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
@@ -220,6 +333,7 @@ export type Database = {
           salon_name?: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["duel_status"]
+          temp_questions?: Json | null
           timer_seconds?: number | null
           universe?: Database["public"]["Enums"]["quiz_universe"]
           updated_at?: string | null
@@ -377,10 +491,16 @@ export type Database = {
           ai_quota_reset_date: string
           avatar: string | null
           created_at: string
+          duels_played: number | null
+          duels_won: number | null
           id: string
+          is_admin: boolean
           plan: Database["public"]["Enums"]["user_plan"]
           points: number
           pseudo: string
+          selected_avatar_id: string | null
+          slug: string | null
+          total_score: number | null
           updated_at: string
         }
         Insert: {
@@ -388,10 +508,16 @@ export type Database = {
           ai_quota_reset_date?: string
           avatar?: string | null
           created_at?: string
+          duels_played?: number | null
+          duels_won?: number | null
           id: string
+          is_admin?: boolean
           plan?: Database["public"]["Enums"]["user_plan"]
           points?: number
           pseudo: string
+          selected_avatar_id?: string | null
+          slug?: string | null
+          total_score?: number | null
           updated_at?: string
         }
         Update: {
@@ -399,13 +525,27 @@ export type Database = {
           ai_quota_reset_date?: string
           avatar?: string | null
           created_at?: string
+          duels_played?: number | null
+          duels_won?: number | null
           id?: string
+          is_admin?: boolean
           plan?: Database["public"]["Enums"]["user_plan"]
           points?: number
           pseudo?: string
+          selected_avatar_id?: string | null
+          slug?: string | null
+          total_score?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_selected_avatar_id_fkey"
+            columns: ["selected_avatar_id"]
+            isOneToOne: false
+            referencedRelation: "avatars"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       questions: {
         Row: {
@@ -563,11 +703,120 @@ export type Database = {
           },
         ]
       }
+      user_avatars: {
+        Row: {
+          avatar_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_avatars_avatar_id_fkey"
+            columns: ["avatar_id"]
+            isOneToOne: false
+            referencedRelation: "avatars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      recent_duels: {
+        Row: {
+          completed_at: string | null
+          difficulty: string | null
+          id: string | null
+          player_count: number | null
+          room_id: string | null
+          universe: string | null
+          winner_pseudo: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      check_and_unlock_avatars: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      check_and_unlock_badges: {
+        Args: { p_user_id: string }
+        Returns: {
+          unlocked_badge_ids: string[]
+        }[]
+      }
+      generate_profile_slug: { Args: { p_pseudo: string }; Returns: string }
+      get_duel_leaderboard: {
+        Args: { limit_count?: number }
+        Returns: {
+          duels_played: number
+          duels_won: number
+          player_id: string
+          pseudo: string
+          rank: number
+          total_score: number
+          win_rate: number
+        }[]
+      }
+      get_player_duel_stats: {
+        Args: { player_id: string }
+        Returns: {
+          duels_played: number
+          duels_won: number
+          total_score: number
+          win_rate: number
+        }[]
+      }
+      is_current_user_admin: { Args: never; Returns: boolean }
       match_questions: {
         Args: {
           match_count: number
@@ -578,6 +827,13 @@ export type Database = {
           id: string
           question_id: string
           similarity: number
+        }[]
+      }
+      update_daily_streak: {
+        Args: { p_user_id: string }
+        Returns: {
+          current_streak: number
+          longest_streak: number
         }[]
       }
     }
