@@ -56,8 +56,12 @@ export default function StartGameButton({
         timeoutRef.current = null;
       }
       
-      setIsLoading(false);
-      window.location.href = `/duel/play?room=${roomId}&salon=${salonId}`;
+      // ⚠️ IMPORTANT : Garder isLoading à true jusqu'à la redirection pour que le loader reste visible
+      // La redirection se fera automatiquement, mais on garde le loader visible pendant la transition
+      setTimeout(() => {
+        setIsLoading(false);
+        window.location.href = `/duel/play?room=${roomId}&salon=${salonId}`;
+      }, 100); // Petit délai pour s'assurer que le loader est visible
     };
 
     socket.on('game:question', onGameQuestion);
@@ -93,6 +97,8 @@ export default function StartGameButton({
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Récupérer les questions depuis Supabase
+      // ⚠️ IMPORTANT : Cette étape peut prendre du temps si génération IA nécessaire
+      console.log('⏳ Fetching questions from /api/duel/start...');
       const formData = new FormData();
       formData.append('salon_id', salonId);
 
@@ -100,6 +106,8 @@ export default function StartGameButton({
         method: 'POST',
         body: formData,
       });
+      
+      console.log('📥 Response received from /api/duel/start:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -131,7 +139,15 @@ export default function StartGameButton({
         id: socketQuestions[0]?.id,
         question: socketQuestions[0]?.question.substring(0, 50) + '...',
         choicesCount: socketQuestions[0]?.choices.length,
+        correctIndex: socketQuestions[0]?.correctIndex,
+        choices: socketQuestions[0]?.choices,
       });
+      
+      // ⚠️ DEBUG : Vérifier que toutes les questions ont un correctIndex valide
+      const invalidQuestions = socketQuestions.filter(q => q.correctIndex === undefined || q.correctIndex === null);
+      if (invalidQuestions.length > 0) {
+        console.error('❌ Questions invalides (pas de correctIndex):', invalidQuestions);
+      }
 
       // Écouter les erreurs de jeu
       const onGameError = (data: { message: string }) => {
@@ -188,15 +204,33 @@ export default function StartGameButton({
         disabled={isDisabled}
       >
         {isLoading
-          ? 'Démarrage...'
+          ? '⏳ Démarrage...'
           : `Démarrer le duel (${currentPlayersCount} joueur${currentPlayersCount > 1 ? 's' : ''})`}
       </button>
+      {isLoading && (
+        <div style={{ 
+          marginTop: '0.5rem', 
+          padding: '0.75rem', 
+          background: '#F3F4F6', 
+          borderRadius: '4px', 
+          fontSize: '0.875rem', 
+          color: '#6B7280',
+          textAlign: 'center',
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        }}>
+          ⏳ Récupération des questions... (Génération IA si nécessaire)
+          <br />
+          <small style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+            Cette opération peut prendre quelques secondes...
+          </small>
+        </div>
+      )}
       {error && (
         <p style={{ color: '#EF4444', marginTop: '0.5rem', fontSize: '0.875rem' }}>
           {error}
         </p>
       )}
-      {currentPlayersCount < minPlayers && (
+      {currentPlayersCount < minPlayers && !isLoading && (
         <p style={{ color: '#FACC15', marginTop: '0.5rem', fontSize: '0.875rem' }}>
           Minimum {minPlayers} joueurs requis
         </p>

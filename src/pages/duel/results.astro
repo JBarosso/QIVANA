@@ -37,9 +37,45 @@ if (!salon) {
   return Astro.redirect('/duel/create?error=salon-not-found');
 }
 
-// Vérifier que le duel est terminé
-if (salon.status !== 'completed') {
+// Vérifier que le duel est terminé OU qu'il y a des résultats dans duel_results
+// (car le statut peut ne pas être mis à jour immédiatement, mais les résultats existent)
+let hasResults = false;
+if (supabase) {
+  const { data: duelResult, error: resultError } = await supabase
+    .from('duel_results')
+    .select('id')
+    .eq('room_id', salon.salon_code)
+    .limit(1)
+    .maybeSingle();
+  
+  hasResults = !!duelResult && !resultError;
+}
+
+// Si le statut n'est pas 'completed' ET qu'il n'y a pas de résultats, rediriger
+if (salon.status !== 'completed' && !hasResults) {
   return Astro.redirect(`/duel/play?salon=${salonId}&error=duel-not-completed`);
+}
+
+// Si le statut n'est pas 'completed' mais qu'il y a des résultats, mettre à jour le statut automatiquement
+if (salon.status !== 'completed' && hasResults && supabase) {
+  await supabase
+    .from('duel_sessions')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', salonId);
+  
+  // Recharger le salon avec le nouveau statut
+  const { data: updatedSalon } = await supabase
+    .from('duel_sessions')
+    .select('*')
+    .eq('id', salonId)
+    .single();
+  
+  if (updatedSalon) {
+    salon = updatedSalon;
+  }
 }
 
 // Récupérer les résultats du duel depuis duel_results (Socket.IO sauvegarde ici)

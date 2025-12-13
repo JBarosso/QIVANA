@@ -7,8 +7,6 @@
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import { createSalon } from '../../../lib/duel';
-import { generateQuiz } from '../../../lib/ai';
-import { getRecentUserQuestions } from '../../../lib/quiz';
 import type { Universe, Difficulty, QuizType } from '../../../types';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -72,7 +70,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const salon_name = formData.get('salon_name')?.toString().trim();
     const game_mode = formData.get('game_mode')?.toString() as 'classic' | 'deathmatch';
     const mode = formData.get('mode')?.toString() as QuizType;
-    const universe = formData.get('universe')?.toString() as Universe;
+    // Pour le mode custom quiz, l'univers n'est pas requis (on utilise 'other' par défaut)
+    let universe = (formData.get('universe')?.toString() || (mode === 'ai-custom-quiz' ? 'other' : null)) as Universe | null;
     const difficulty = formData.get('difficulty')?.toString() as Difficulty;
     const questions_count = parseInt(formData.get('questions_count')?.toString() || '10', 10);
     const timer_seconds = formData.get('timer_seconds')?.toString();
@@ -121,11 +120,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       );
     }
 
-    // Pour le custom quiz, vérifier le prompt
+    // ⚠️ IMPORTANT : AUCUNE génération de questions à la création du salon
+    // Toutes les générations (DB + Custom Quiz) se feront au démarrage du duel dans /api/duel/start
     let customPrompt: string | null = null;
-    let tempQuestions: any[] | null = null;
     
     if (mode === 'ai-custom-quiz') {
+      // Pour le custom quiz, on stocke seulement le prompt, pas les questions
       customPrompt = formData.get('custom_prompt')?.toString().trim() || null;
       
       if (!customPrompt || customPrompt.length < 10) {
@@ -137,92 +137,27 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
           }
         );
       }
-
-      // Vérifier le quota IA
-      const { data: quotaProfile } = await supabase
-        .from('profiles')
-        .select('ai_quizzes_used_this_month, ai_quota_reset_date')
-        .eq('id', user.id)
-        .single();
-
-      if (quotaProfile) {
-        const now = new Date();
-        const resetDate = new Date(quotaProfile.ai_quota_reset_date);
-        
-        // Si la date de reset est passée, réinitialiser le quota
-        if (now > resetDate) {
-          await supabase
-            .from('profiles')
-            .update({
-              ai_quizzes_used_this_month: 0,
-              ai_quota_reset_date: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
-            })
-            .eq('id', user.id);
-        }
-      }
-
-      const currentQuota = quotaProfile?.ai_quizzes_used_this_month || 0;
-      const maxQuota = 200; // Premium+ a 200 quiz IA par mois
       
-      if (currentQuota >= maxQuota) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Quota mensuel de quiz IA épuisé',
-            message: `Vous avez utilisé ${currentQuota}/${maxQuota} quiz IA ce mois. Le quota sera réinitialisé le mois prochain.`
-          }),
-          {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
-
-      // Générer le custom quiz
-      try {
-        const contextQuestions = await getRecentUserQuestions(supabase, user.id, 'other', 20);
-        
-        const aiResponse = await generateQuiz({
-          universe: 'other',
-          difficulty: difficulty as Difficulty,
-          numberOfQuestions: questions_count,
-          customPrompt: customPrompt,
-          contextQuestions: contextQuestions.length > 0 ? contextQuestions : undefined,
-        });
-
-        tempQuestions = aiResponse.questions;
-        
-        // Incrémenter le quota
-        await supabase
-          .from('profiles')
-          .update({
-            ai_quizzes_used_this_month: currentQuota + 1,
-          })
-          .eq('id', user.id);
-
-        console.log(`✅ Custom quiz generated: ${tempQuestions.length} questions`);
-      } catch (error) {
-        console.error('Error generating custom quiz:', error);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Erreur lors de la génération du quiz custom',
-            details: error instanceof Error ? error.message : 'Erreur inconnue'
-          }),
-          {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-      }
+      // ⚠️ IMPORTANT : On ne vérifie PAS le quota ici, ni on génère les questions
+      // Tout sera fait au démarrage du duel dans /api/duel/start
+      console.log(`📝 Custom prompt saved (will be generated at game start): ${customPrompt.substring(0, 50)}...`);
     }
 
-    if (!universe || !['anime', 'manga', 'comics', 'games', 'movies', 'series', 'other'].includes(universe)) {
-      return new Response(
-        JSON.stringify({ error: 'Univers invalide' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+    // Pour le mode custom quiz, l'univers est automatiquement 'other'
+    // Pour le mode DB, l'univers est requis
+    if (mode !== 'ai-custom-quiz') {
+      if (!universe || !['anime', 'manga', 'comics', 'games', 'movies', 'series', 'other'].includes(universe)) {
+        return new Response(
+          JSON.stringify({ error: 'Univers invalide' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    } else {
+      // Mode custom quiz : forcer 'other'
+      universe = 'other';
     }
 
     if (!difficulty || !['easy', 'medium', 'hard'].includes(difficulty)) {
@@ -255,17 +190,20 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     }
 
     // Créer le salon
+    // ⚠️ IMPORTANT : universe est garanti d'être défini (soit depuis le form, soit 'other' pour custom quiz)
+    // ⚠️ IMPORTANT : On ne stocke PAS les questions ici, seulement le prompt custom si présent
     const salonId = await createSalon(supabase, {
       salon_name,
       game_mode,
       mode,
-      universe,
+      universe: universe!, // Non-null car vérifié ci-dessus
       difficulty,
       questions_count,
       timer_seconds: parsedTimerSeconds,
       is_public,
       chef_id: user.id,
-      temp_questions: tempQuestions, // Questions temporaires si custom quiz
+      custom_prompt: customPrompt, // Stocker seulement le prompt, pas les questions
+      temp_questions: null, // ⚠️ IMPORTANT : Plus de génération à la création
     });
 
     // Retourner le succès avec redirection vers le lobby

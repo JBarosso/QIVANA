@@ -75,7 +75,8 @@ export interface CreateSalonData {
   timer_seconds: number | null;
   is_public: boolean;
   chef_id: string;
-  temp_questions?: any[] | null; // Questions temporaires pour custom quiz
+  custom_prompt?: string | null; // Prompt custom pour génération au démarrage
+  temp_questions?: any[] | null; // ⚠️ DEPRECATED : Ne plus utiliser, génération au démarrage uniquement
 }
 
 /**
@@ -104,7 +105,14 @@ export async function createSalon(
     participants: [],
   };
 
-  // Ajouter temp_questions si fourni (pour custom quiz)
+  // Ajouter custom_prompt si fourni (pour custom quiz - génération au démarrage uniquement)
+  if (data.custom_prompt) {
+    insertData.custom_prompt = data.custom_prompt;
+  }
+  
+  // ⚠️ DEPRECATED : temp_questions n'est plus utilisé (génération au démarrage uniquement)
+  // Ne plus utiliser cette option, utiliser custom_prompt à la place
+  // Gardé pour compatibilité avec les anciens salons
   if (data.temp_questions) {
     insertData.temp_questions = data.temp_questions;
   }

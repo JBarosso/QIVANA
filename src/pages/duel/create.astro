@@ -141,7 +141,7 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
               placeholder="Ex: Crée un quiz sur les répliques cultes de Breaking Bad"
               rows="4"
               maxlength="500"
-              style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border, #ddd); border-radius: 4px; font-family: inherit; resize: vertical;"
+              class="custom-quiz-textarea"
             ></textarea>
             <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-secondary, #666);">
               <span id="customCharCount">0</span> / 500 caractères
@@ -149,8 +149,8 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
           </div>
         </section>
 
-        <!-- Sélection Univers -->
-        <section class="duel-create__section">
+        <!-- Sélection Univers (cachée si mode custom) -->
+        <section class="duel-create__section" id="universe-section">
           <h2 class="duel-create__section-title">
             <span class="duel-create__section-icon">🌍</span>
             Univers
@@ -164,6 +164,7 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
                   value={universe.id}
                   required
                   class="duel-create__card__input"
+                  id={`universe-${universe.id}`}
                 />
                 <div class="duel-create__card__content">
                   <span class="duel-create__card__icon">{universe.icon}</span>
@@ -250,32 +251,83 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
   </div>
 </BaseLayout>
 
+<style>
+  /* Style pour le textarea du quiz custom - amélioration de la lisibilité */
+  .custom-quiz-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-family: inherit;
+    resize: vertical;
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  .custom-quiz-textarea::placeholder {
+    color: #9CA3AF !important;
+    opacity: 1;
+  }
+  
+  .custom-quiz-textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+</style>
+
 <script>
   import { showAlert } from '../../lib/showAlert';
 
   const form = document.getElementById('duelCreateForm') as HTMLFormElement;
   const customQuizSection = document.getElementById('custom-quiz-section');
+  const universeSection = document.getElementById('universe-section');
   const customPromptInput = document.getElementById('customPromptInput') as HTMLTextAreaElement;
   const customCharCount = document.getElementById('customCharCount');
   const modeInputs = document.querySelectorAll('input[name="mode"]') as NodeListOf<HTMLInputElement>;
+  const universeInputs = document.querySelectorAll('input[name="universe"]') as NodeListOf<HTMLInputElement>;
   
-  // Afficher/masquer la section custom quiz selon le mode sélectionné
-  if (modeInputs && customQuizSection) {
+  // Afficher/masquer la section custom quiz et univers selon le mode sélectionné
+  if (modeInputs && customQuizSection && universeSection) {
+    const updateUI = (isCustomMode: boolean) => {
+      if (isCustomMode) {
+        // Mode custom : afficher le prompt, cacher l'univers
+        customQuizSection.style.display = 'block';
+        universeSection.style.display = 'none';
+        if (customPromptInput) {
+          customPromptInput.required = true;
+        }
+        // Désactiver l'obligation de choisir un univers
+        universeInputs.forEach((input) => {
+          input.removeAttribute('required');
+        });
+      } else {
+        // Mode DB : cacher le prompt, afficher l'univers
+        customQuizSection.style.display = 'none';
+        universeSection.style.display = 'block';
+        if (customPromptInput) {
+          customPromptInput.required = false;
+        }
+        // Réactiver l'obligation de choisir un univers
+        universeInputs.forEach((input) => {
+          input.setAttribute('required', 'required');
+        });
+      }
+    };
+
     modeInputs.forEach((input) => {
       input.addEventListener('change', () => {
-        if (input.value === 'ai-custom-quiz') {
-          customQuizSection.style.display = 'block';
-          if (customPromptInput) {
-            customPromptInput.required = true;
-          }
-        } else {
-          customQuizSection.style.display = 'none';
-          if (customPromptInput) {
-            customPromptInput.required = false;
-          }
-        }
+        updateUI(input.value === 'ai-custom-quiz');
       });
     });
+
+    // Initialiser l'UI selon le mode sélectionné par défaut
+    const defaultMode = document.querySelector('input[name="mode"]:checked') as HTMLInputElement;
+    if (defaultMode) {
+      updateUI(defaultMode.value === 'ai-custom-quiz');
+    }
   }
 
   // Compteur de caractères pour le prompt custom
@@ -299,6 +351,16 @@ const questionCounts = [5, 10, 15, 20, 25, 30];
         if (!customPrompt || customPrompt.length < 10) {
           showAlert({ 
             message: 'Le prompt custom doit contenir au moins 10 caractères', 
+            type: 'error' 
+          });
+          return;
+        }
+      } else {
+        // Mode DB : vérifier que l'univers est sélectionné
+        const selectedUniverse = formData.get('universe');
+        if (!selectedUniverse) {
+          showAlert({ 
+            message: 'Veuillez sélectionner un univers', 
             type: 'error' 
           });
           return;

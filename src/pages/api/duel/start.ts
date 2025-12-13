@@ -8,7 +8,9 @@ import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import {
   fetchQuestionsWithAutoGeneration,
+  getRecentUserQuestions,
 } from '../../../lib/quiz';
+import { generateQuiz } from '../../../lib/ai';
 import type { Universe, Difficulty, Question } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -152,30 +154,127 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     let tempQuestions: any[] | null = null;
 
     if (mode === 'ai-custom-quiz') {
-      // Mode Custom Quiz : récupérer depuis temp_questions
-      if (!salon.temp_questions || !Array.isArray(salon.temp_questions)) {
-        return new Response(
-          JSON.stringify({ error: 'Questions custom introuvables. Le salon doit être créé avec un custom quiz.' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
+      // Mode Custom Quiz : générer les questions au démarrage depuis le prompt stocké
+      const customPrompt = (salon as any).custom_prompt;
+      
+      if (!customPrompt || typeof customPrompt !== 'string' || customPrompt.length < 10) {
+        // Fallback : vérifier si temp_questions existe (ancien système)
+        if (salon.temp_questions && Array.isArray(salon.temp_questions)) {
+          console.log('⚠️ Using deprecated temp_questions (migration from old system)');
+          const customQuestions: any[] = salon.temp_questions;
+          tempQuestions = customQuestions;
+          
+          questions = customQuestions.map((q: any, index: number) => ({
+            id: q.id || `temp-${index}`,
+            question: q.question,
+            choices: q.choices,
+            correct_index: q.correct_index,
+            explanation: q.explanation || '',
+            difficulty: q.difficulty || difficulty,
+            universe: q.universe || universe,
+          }));
+          
+          console.log('✅ Custom quiz questions loaded from temp_questions (deprecated):', questions.length);
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Prompt custom introuvable. Le salon doit être créé avec un custom quiz.' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      } else {
+        // ⚠️ IMPORTANT : Générer les questions au démarrage depuis le prompt
+        console.log('🎨 Generating custom quiz from prompt at game start...');
+        
+        // Vérifier le quota IA
+        const { data: quotaProfile } = await supabase
+          .from('profiles')
+          .select('ai_quizzes_used_this_month, ai_quota_reset_date')
+          .eq('id', user.id)
+          .single();
+
+        if (quotaProfile) {
+          const now = new Date();
+          const resetDate = new Date(quotaProfile.ai_quota_reset_date);
+          
+          // Si la date de reset est passée, réinitialiser le quota
+          if (now > resetDate) {
+            await supabase
+              .from('profiles')
+              .update({
+                ai_quizzes_used_this_month: 0,
+                ai_quota_reset_date: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+              })
+              .eq('id', user.id);
           }
-        );
+        }
+
+        const currentQuota = quotaProfile?.ai_quizzes_used_this_month || 0;
+        const maxQuota = 200; // Premium+ a 200 quiz IA par mois
+        
+        if (currentQuota >= maxQuota) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Quota mensuel de quiz IA épuisé',
+              message: `Vous avez utilisé ${currentQuota}/${maxQuota} quiz IA ce mois. Le quota sera réinitialisé le mois prochain.`
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        // Générer le custom quiz au démarrage
+        try {
+          const contextQuestions = await getRecentUserQuestions(supabase, user.id, 'other', 20);
+          
+          const aiResponse = await generateQuiz({
+            universe: 'other',
+            difficulty: difficulty as Difficulty,
+            numberOfQuestions: questionsCount,
+            customPrompt: customPrompt,
+            contextQuestions: contextQuestions.length > 0 ? contextQuestions : undefined,
+          });
+
+          tempQuestions = aiResponse.questions;
+          
+          // Convertir en format Question
+          questions = tempQuestions.map((q: any, index: number) => ({
+            id: q.id || `temp-${index}`,
+            question: q.question,
+            choices: q.choices,
+            correct_index: q.correct_index,
+            explanation: q.explanation || '',
+            difficulty: q.difficulty || difficulty,
+            universe: q.universe || universe,
+          }));
+          
+          // Incrémenter le quota
+          await supabase
+            .from('profiles')
+            .update({
+              ai_quizzes_used_this_month: currentQuota + 1,
+            })
+            .eq('id', user.id);
+
+          console.log(`✅ Custom quiz generated at game start: ${questions.length} questions`);
+        } catch (error) {
+          console.error('Error generating custom quiz:', error);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Erreur lors de la génération du quiz custom',
+              details: error instanceof Error ? error.message : 'Erreur inconnue'
+            }),
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
       }
-
-      // Convertir temp_questions en format Question
-      tempQuestions = salon.temp_questions;
-      questions = tempQuestions.map((q: any, index: number) => ({
-        id: q.id || `temp-${index}`,
-        question: q.question,
-        choices: q.choices,
-        correctIndex: q.correct_index,
-        explanation: q.explanation || '',
-        difficulty: q.difficulty || difficulty,
-        universe: q.universe || universe,
-      }));
-
-      console.log('✅ Custom quiz questions loaded:', questions.length);
     } else {
       // Mode DB : utiliser la fonction unifiée avec génération IA automatique si nécessaire
       // Pour les duels, on n'exclut PAS les questions déjà vues (toutes les questions sont disponibles)
@@ -227,7 +326,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       salonId,
       questionsCount: questions.length,
       totalPlayers,
+      mode,
     });
+    
+    // ⚠️ DEBUG : Vérifier le format des questions
+    if (questions.length > 0) {
+      const firstQuestion = questions[0];
+      console.log('📋 First question format check:', {
+        id: firstQuestion.id,
+        hasCorrectIndex: 'correct_index' in firstQuestion,
+        correctIndex: firstQuestion.correct_index,
+        choicesCount: firstQuestion.choices?.length,
+      });
+    }
 
     // Retourner les questions complètes pour Socket.IO
     return new Response(
