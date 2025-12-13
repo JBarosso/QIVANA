@@ -105,6 +105,7 @@ export interface GameQuestionEvent {
     choices: string[];
     difficulty: 'easy' | 'medium' | 'hard';
     universe: string;
+    explanation?: string; // Explication disponible après la réponse
   };
   questionIndex: number;
   totalQuestions: number;

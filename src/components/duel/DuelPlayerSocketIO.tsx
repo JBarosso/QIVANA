@@ -38,6 +38,7 @@ export default function DuelPlayerSocketIO({
   const [showPlayersPanel, setShowPlayersPanel] = useState(false);
   const [isWaitingForQuestion, setIsWaitingForQuestion] = useState(true);
   const [canAdvance, setCanAdvance] = useState(false); // Peut-on passer à la question suivante ?
+  const [questionExplanation, setQuestionExplanation] = useState<string | null>(null); // Explication de la question actuelle
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isAnsweredRef = useRef(false); // Ref pour suivre si on a répondu (pour le timer)
 
@@ -62,6 +63,7 @@ export default function DuelPlayerSocketIO({
         choicesCount: data.question.choices.length,
         questionIndex: data.questionIndex,
         totalQuestions: data.totalQuestions,
+        hasExplanation: !!data.question.explanation,
       });
       setCurrentQuestion(data);
       setSelectedAnswer(null);
@@ -71,6 +73,7 @@ export default function DuelPlayerSocketIO({
       setPointsEarned(0);
       setIsWaitingForQuestion(false);
       setCanAdvance(false); // Reset : on ne peut pas avancer tant que tous n'ont pas répondu ou que le timer n'est pas terminé
+      setQuestionExplanation(data.question.explanation || null); // Stocker l'explication si disponible
       isAnsweredRef.current = false; // Reset la ref
       
       console.log('📋 New question received, canAdvance reset to false');
@@ -363,6 +366,12 @@ export default function DuelPlayerSocketIO({
           <p className="duel-player__result-points">
             +{pointsEarned.toFixed(2)} points
           </p>
+          {questionExplanation && (
+            <div className="duel-player__result-explanation">
+              <strong>💡 Explication :</strong>
+              <p>{questionExplanation}</p>
+            </div>
+          )}
         </div>
       )}
 

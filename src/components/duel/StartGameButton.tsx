@@ -197,44 +197,80 @@ export default function StartGameButton({
   const isDisabled = !isConnected || isLoading || currentPlayersCount < minPlayers;
 
   return (
-    <div>
-      <button
-        className="btn btn--primary btn--block"
-        onClick={handleStart}
-        disabled={isDisabled}
-      >
-        {isLoading
-          ? '⏳ Démarrage...'
-          : `Démarrer le duel (${currentPlayersCount} joueur${currentPlayersCount > 1 ? 's' : ''})`}
-      </button>
+    <>
+      <div>
+        <button
+          className="btn btn--primary btn--block"
+          onClick={handleStart}
+          disabled={isDisabled}
+        >
+          {isLoading
+            ? '⏳ Démarrage...'
+            : `Démarrer le duel (${currentPlayersCount} joueur${currentPlayersCount > 1 ? 's' : ''})`}
+        </button>
+        {error && (
+          <p style={{ color: '#EF4444', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+            {error}
+          </p>
+        )}
+        {currentPlayersCount < minPlayers && !isLoading && (
+          <p style={{ color: '#FACC15', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+            Minimum {minPlayers} joueurs requis
+          </p>
+        )}
+      </div>
+      
+      {/* Loader full-screen pour la génération IA (comme custom-quiz) */}
       {isLoading && (
-        <div style={{ 
-          marginTop: '0.5rem', 
-          padding: '0.75rem', 
-          background: '#F3F4F6', 
-          borderRadius: '4px', 
-          fontSize: '0.875rem', 
-          color: '#6B7280',
-          textAlign: 'center',
-          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        }}>
-          ⏳ Récupération des questions... (Génération IA si nécessaire)
-          <br />
-          <small style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-            Cette opération peut prendre quelques secondes...
-          </small>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div 
+              style={{
+                width: '64px',
+                height: '64px',
+                border: '6px solid #1F2937',
+                borderTopColor: '#ec4899',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 1rem',
+              }}
+            />
+            <p style={{ 
+              fontSize: '1.25rem', 
+              color: '#F9FAFB', 
+              marginBottom: '0.5rem',
+              fontWeight: 500,
+            }}>
+              ✨ L'IA génère les questions...
+            </p>
+            <p style={{ 
+              fontSize: '0.875rem', 
+              color: '#9CA3AF',
+            }}>
+              Cela peut prendre 10-30 secondes
+            </p>
+          </div>
         </div>
       )}
-      {error && (
-        <p style={{ color: '#EF4444', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-          {error}
-        </p>
-      )}
-      {currentPlayersCount < minPlayers && !isLoading && (
-        <p style={{ color: '#FACC15', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-          Minimum {minPlayers} joueurs requis
-        </p>
-      )}
-    </div>
+      
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </>
   );
 }
