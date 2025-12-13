@@ -1,0 +1,245 @@
+---
+// ============================================
+// LEADERBOARD PAGE (Par Univers)
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '../../types/supabase';
+import type { Universe } from '../../types';
+
+const supabase = createServerClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  {
+    cookies: {
+      get(key) {
+        return Astro.cookies.get(key)?.value;
+      },
+      set(key, value, options) {
+        Astro.cookies.set(key, value, options);
+      },
+      remove(key, options) {
+        Astro.cookies.delete(key, options);
+      },
+    },
+  }
+);
+
+const universes: { value: Universe; label: string; emoji: string }[] = [
+  { value: 'anime', label: 'Anime', emoji: '🎌' },
+  { value: 'manga', label: 'Manga', emoji: '📚' },
+  { value: 'comics', label: 'Comics', emoji: '🦸' },
+  { value: 'games', label: 'Jeux Vidéo', emoji: '🎮' },
+  { value: 'movies', label: 'Films', emoji: '🎬' },
+  { value: 'series', label: 'Séries', emoji: '📺' },
+  { value: 'other', label: 'Autre', emoji: '🌟' },
+];
+
+// Récupérer l'univers depuis l'URL (défaut: anime)
+const selectedUniverse = (Astro.url.searchParams.get('universe') as Universe) || 'anime';
+
+// Récupérer le classement basé uniquement sur les quiz solo
+// Calculer le score des quiz solo depuis quiz_sessions
+const { data: quizScores, error: quizScoresError } = await supabase
+  .from('quiz_sessions')
+  .select('user_id, score, universe')
+  .not('completed_at', 'is', null)
+  .eq('universe', selectedUniverse); // Filtrer par univers
+
+// Agréger les scores par utilisateur pour cet univers
+const userScores = new Map<string, number>();
+if (quizScores) {
+  for (const session of quizScores) {
+    const currentScore = userScores.get(session.user_id) || 0;
+    userScores.set(session.user_id, currentScore + (session.score || 0));
+  }
+}
+
+// Récupérer les profils et ajouter leur score de quiz solo pour cet univers
+const { data: allProfiles, error } = await supabase
+  .from('profiles')
+  .select('id, pseudo, avatar, plan, slug');
+
+// Mapper les profils avec leur score de quiz solo pour cet univers et trier
+const leaderboard = (allProfiles || [])
+  .map(profile => ({
+    ...profile,
+    solo_quiz_score: userScores.get(profile.id) || 0
+  }))
+  .filter(profile => profile.solo_quiz_score > 0) // Afficher uniquement ceux qui ont des points
+  .sort((a, b) => b.solo_quiz_score - a.solo_quiz_score)
+  .slice(0, 100); // Limiter à 100
+
+if (error) {
+  console.error('Error fetching leaderboard:', error);
+}
+
+const leaderboardData = leaderboard || [];
+
+// Récupérer l'utilisateur actuel
+let currentUserId = null;
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+  currentUserId = user.id;
+}
+---
+
+<BaseLayout title="Classement par Univers - Qivana" description="Classement des meilleurs joueurs par univers">
+  <main class="leaderboard-page leaderboard-page--universe">
+    <div class="container">
+      <header class="leaderboard-header">
+        <h1 class="leaderboard-header__title">🏆 Classement par Univers</h1>
+        <p class="leaderboard-header__subtitle">Choisis un univers pour voir le classement</p>
+      </header>
+
+      <div class="leaderboard-universe-selector">
+        {universes.map((universe) => (
+          <a
+            href={`/leaderboard/universe?universe=${universe.value}`}
+            class={`leaderboard-universe-btn ${selectedUniverse === universe.value ? 'leaderboard-universe-btn--active' : ''}`}
+          >
+            <span class="leaderboard-universe-btn__emoji">{universe.emoji}</span>
+            <span class="leaderboard-universe-btn__label">{universe.label}</span>
+          </a>
+        ))}
+      </div>
+
+      <div class="leaderboard-universe-header">
+        <h2 class="leaderboard-universe-header__title">
+          {universes.find(u => u.value === selectedUniverse)?.emoji} {universes.find(u => u.value === selectedUniverse)?.label}
+        </h2>
+      </div>
+
+      <div class="leaderboard-list">
+        {leaderboardData.length === 0 ? (
+          <div class="leaderboard-empty">
+            <p>Aucun joueur dans le classement pour cet univers.</p>
+          </div>
+        ) : (
+          <ol class="leaderboard-list__items">
+            {leaderboardData.map((player, index) => {
+              const rank = index + 1;
+              const isCurrentUser = currentUserId === player.id;
+              // Calculer isTopThree de manière explicite pour éviter les erreurs Astro
+              const isTopThree = rank === 1 || rank === 2 || rank === 3;
+              let itemClasses = 'leaderboard-item';
+              if (isCurrentUser) itemClasses += ' leaderboard-item--current';
+              if (rank === 1) itemClasses += ' leaderboard-item--rank-1';
+              if (rank === 2) itemClasses += ' leaderboard-item--rank-2';
+              if (rank === 3) itemClasses += ' leaderboard-item--rank-3';
+              
+              return (
+                <li class={itemClasses}>
+                  <a href={`/profile/${player.slug}`} class="leaderboard-item__link">
+                    <div class="leaderboard-item__rank">
+                      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                    </div>
+                    
+                    <div class="leaderboard-item__avatar">
+                      {player.avatar ? (
+                        <img src={player.avatar} alt={player.pseudo} />
+                      ) : (
+                        <div class="leaderboard-item__avatar-placeholder">
+                          {player.pseudo.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div class="leaderboard-item__info">
+                      <div class="leaderboard-item__name">
+                        {player.pseudo}
+                        {isCurrentUser ? <span class="leaderboard-item__you">(Vous)</span> : ''}
+                      </div>
+                      <div class="leaderboard-item__stats">
+                        <span class="leaderboard-item__stat">
+                          {Math.round(Number(player.solo_quiz_score) || 0)} pts
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div class="leaderboard-item__plan">
+                      {player.plan === 'premium+' ? '💎' : player.plan === 'premium' ? '⭐' : '🆓'}
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+
+      <div class="leaderboard-actions">
+        <a href="/leaderboard" class="btn btn--secondary">
+          Classement global
+        </a>
+        <a href="/profile" class="btn btn--outline">
+          Mon profil
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @use '../../styles/pages/_quiz.scss';
+
+  .leaderboard-page--universe {
+    .leaderboard-universe-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      justify-content: center;
+      margin-bottom: var(--space-6);
+    }
+
+    .leaderboard-universe-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-3);
+      text-decoration: none;
+      color: var(--color-text);
+      transition: all var(--transition-base);
+      min-width: 100px;
+
+      &:hover {
+        background: var(--color-neutral-800);
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+
+      &--active {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-indigo));
+        border-color: var(--color-primary);
+        color: var(--color-text-on-primary);
+        box-shadow: var(--shadow-lg);
+      }
+    }
+
+    .leaderboard-universe-btn__emoji {
+      font-size: var(--fs-7);
+    }
+
+    .leaderboard-universe-btn__label {
+      font-size: var(--fs-3);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .leaderboard-universe-header {
+      text-align: center;
+      margin-bottom: var(--space-6);
+    }
+
+    .leaderboard-universe-header__title {
+      font-family: var(--font-secondary);
+      font-size: var(--fs-6);
+      color: var(--color-text);
+    }
+  }
+</style>

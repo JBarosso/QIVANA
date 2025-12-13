@@ -5,6 +5,8 @@
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getUser, getProfile } from '@/lib/auth';
+import BadgeGrid from '@/components/badges/BadgeGrid';
+import type { BadgeData } from '@/components/badges/Badge';
 
 // Type assertion pour supabase
 const supabase = (Astro.locals as { supabase?: any }).supabase;
@@ -15,12 +17,100 @@ if (!user) {
   return Astro.redirect('/auth/login');
 }
 
-// Fetch user profile
-const profile = supabase ? await getProfile(supabase, user.id) : null;
-
-if (!profile) {
-  return Astro.redirect('/auth/login?error=Profil+introuvable');
+// Fetch user profile with all fields including duel stats
+let profile: any = null;
+if (supabase) {
+  const { data: profileData, error } = await supabase
+    .from('profiles')
+    .select('*, total_score, duels_played, duels_won')
+    .eq('id', user.id)
+    .single();
+  
+  if (error || !profileData) {
+    return Astro.redirect('/auth/login?error=Profil+introuvable');
+  }
+  
+  profile = profileData;
 }
+
+// Fetch streak
+let streak = null;
+if (supabase) {
+  const { data: streakData } = await supabase
+    .from('streaks')
+    .select('*')
+    .eq('user_id', user.id)
+    .single();
+  streak = streakData;
+}
+
+  // Fetch all badges
+  let allBadges: BadgeData[] = [];
+  let unlockedBadgeIds = new Set<string>();
+  if (supabase) {
+    // Récupérer tous les badges
+    const { data: badgesData } = await supabase
+      .from('badges')
+      .select('*')
+      .order('rarity', { ascending: false });
+    
+    if (badgesData) {
+      allBadges = badgesData.map((b: any) => ({
+        id: b.id,
+        code: b.code,
+        name: b.name,
+        description: b.description,
+        icon_url: b.icon_url,
+        rarity: b.rarity as BadgeData['rarity'],
+        category: b.category as BadgeData['category'],
+      }));
+    }
+
+    // Récupérer les badges débloqués par l'utilisateur
+    const { data: userBadgesData } = await supabase
+      .from('user_badges')
+      .select('badge_id, unlocked_at')
+      .eq('user_id', user.id);
+    
+    if (userBadgesData) {
+      unlockedBadgeIds = new Set(userBadgesData.map((ub: any) => ub.badge_id));
+      // Ajouter unlocked_at aux badges débloqués
+      allBadges = allBadges.map(badge => {
+        const userBadge = userBadgesData.find((ub: any) => ub.badge_id === badge.id);
+        return {
+          ...badge,
+          unlocked_at: userBadge?.unlocked_at || null,
+        };
+      });
+    }
+  }
+
+  // Fetch quiz count and solo quiz score
+  let quizCount = 0;
+  let soloQuizScore = 0;
+  if (supabase) {
+    const { data: quizData, count } = await supabase
+      .from('quiz_sessions')
+      .select('score', { count: 'exact' })
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null);
+    
+    quizCount = count || 0;
+    
+    // Calculer le score solo total
+    if (quizData) {
+      soloQuizScore = quizData.reduce((acc: number, q: any) => acc + (q.score || 0), 0);
+    }
+  }
+
+  // Fetch duel stats (from profile or default to 0)
+  const profileAny = profile as any;
+  let duelsPlayed = profileAny.duels_played || 0;
+  let duelsWon = profileAny.duels_won || 0;
+  let totalScore = profileAny.total_score || 0;
+  
+  // Vérifier si l'utilisateur peut voir les stats de duels (Premium/Premium+ seulement)
+  const canAccessDuels = profile.plan === 'premium' || profile.plan === 'premium+';
 ---
 
 <BaseLayout
@@ -58,33 +148,89 @@ if (!profile) {
         </div>
 
         <div class="profile-card__stats">
+          {/* Points Solo (quiz) */}
           <div class="stat-card">
-            <div class="stat-card__icon">🏆</div>
-            <div class="stat-card__value">{profile.points}</div>
-            <div class="stat-card__label">Points</div>
+            <div class="stat-card__icon">📊</div>
+            <div class="stat-card__value">{Math.round(soloQuizScore)}</div>
+            <div class="stat-card__label">Points Solo</div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-card__icon">🎯</div>
-            <div class="stat-card__value">{profile.ai_quizzes_used_this_month}</div>
-            <div class="stat-card__label">Quiz AI ce mois</div>
-          </div>
+          {/* Quiz joués */}
+          {quizCount > 0 && (
+            <div class="stat-card">
+              <div class="stat-card__icon">🎯</div>
+              <div class="stat-card__value">{quizCount}</div>
+              <div class="stat-card__label">Quiz joués</div>
+            </div>
+          )}
 
-          <div class="stat-card">
-            <div class="stat-card__icon">🎮</div>
-            <div class="stat-card__value">-</div>
-            <div class="stat-card__label">Quiz joués</div>
-          </div>
+          {/* Streak - affiché seulement si existe */}
+          {streak && streak.current_streak > 0 && (
+            <div class="stat-card stat-card--streak">
+              <div class="stat-card__icon stat-card__icon--fire">🔥</div>
+              <div class="stat-card__value">{streak.current_streak}</div>
+              <div class="stat-card__label">Streak actuel</div>
+              {streak.longest_streak > streak.current_streak && (
+                <div class="stat-card__subtext">Record: {streak.longest_streak} jours</div>
+              )}
+            </div>
+          )}
+
+          {/* Duels - affiché seulement pour Premium/Premium+ et si > 0 */}
+          {canAccessDuels && duelsPlayed > 0 && (
+            <div class="stat-card">
+              <div class="stat-card__icon">⚔️</div>
+              <div class="stat-card__value">{duelsPlayed}</div>
+              <div class="stat-card__label">Duels joués</div>
+            </div>
+          )}
+
+          {canAccessDuels && duelsWon > 0 && (
+            <div class="stat-card">
+              <div class="stat-card__icon">👑</div>
+              <div class="stat-card__value">{duelsWon}</div>
+              <div class="stat-card__label">Duels gagnés</div>
+            </div>
+          )}
+
+          {/* Quiz AI ce mois - affiché seulement si > 0 */}
+          {profile.ai_quizzes_used_this_month > 0 && (
+            <div class="stat-card">
+              <div class="stat-card__icon">✨</div>
+              <div class="stat-card__value">{profile.ai_quizzes_used_this_month}</div>
+              <div class="stat-card__label">Quiz AI ce mois</div>
+            </div>
+          )}
         </div>
 
         <div class="profile-card__actions">
           <a href="/" class="btn btn--secondary">
             <span class="btn__text">Retour à l'accueil</span>
           </a>
+          <a href="/profile/edit" class="btn btn--primary">
+            <span class="btn__text">✏️ Éditer le profil</span>
+          </a>
+          <button 
+            class="btn btn--outline" 
+            id="share-profile-btn"
+            data-url={`${Astro.url.origin}/profile/${profile.slug}`}
+          >
+            <span class="btn__text">📤 Partager</span>
+          </button>
           <a href="/auth/logout" class="btn btn--outline">
             <span class="btn__text">Se déconnecter</span>
           </a>
         </div>
+      </div>
+
+      <div class="profile-section">
+        <h2 class="profile-section__title">Mes badges</h2>
+        <BadgeGrid 
+          client:load
+          badges={JSON.stringify(allBadges)}
+          unlockedBadgeIds={JSON.stringify(Array.from(unlockedBadgeIds))}
+          showLocked={true}
+        />
       </div>
 
       <div class="profile-section">
@@ -117,6 +263,34 @@ if (!profile) {
     </div>
   </main>
 </BaseLayout>
+
+<script>
+  const shareBtn = document.getElementById('share-profile-btn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      const url = shareBtn.getAttribute('data-url');
+      
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Mon profil Qivana',
+            url: url || window.location.href,
+          });
+        } catch (err) {
+          // User cancelled
+        }
+      } else {
+        // Fallback: copier dans le presse-papier
+        try {
+          await navigator.clipboard.writeText(url || window.location.href);
+          alert('Lien copié dans le presse-papier !');
+        } catch (err) {
+          alert('Impossible de copier le lien');
+        }
+      }
+    });
+  }
+</script>
 
 <style lang="scss">
   .profile-page {
@@ -218,6 +392,34 @@ if (!profile) {
   .stat-card__label {
     font-size: var(--fs-2);
     color: var(--color-text-muted);
+  }
+
+  .stat-card__subtext {
+    font-size: var(--fs-1);
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+    font-style: italic;
+  }
+
+  .stat-card--streak {
+    position: relative;
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(236, 72, 153, 0.1));
+    border: 1px solid rgba(250, 204, 21, 0.3);
+  }
+
+  .stat-card__icon--fire {
+    animation: fire-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes fire-glow {
+    0%, 100% {
+      filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.6));
+      transform: scale(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.9));
+      transform: scale(1.1);
+    }
   }
 
   .profile-card__actions {

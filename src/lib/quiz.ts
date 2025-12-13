@@ -216,7 +216,7 @@ export async function completeQuizSession(
   // Récupérer les points actuels du profil
   const { data: profile, error: profileFetchError } = await supabase
     .from('profiles')
-    .select('points')
+    .select('total_score')
     .eq('id', session.user_id)
     .single();
 
@@ -226,17 +226,17 @@ export async function completeQuizSession(
   }
 
   // Ajouter les points du quiz au profil
-  const newPoints = (profile.points || 0) + session.score;
+  const newTotalScore = (Number(profile.total_score) || 0) + session.score;
 
   const { error: profileUpdateError } = await supabase
     .from('profiles')
     .update({
-      points: newPoints,
+      total_score: newTotalScore,
     })
     .eq('id', session.user_id);
 
   if (profileUpdateError) {
-    console.error('Error updating profile points:', profileUpdateError);
+    console.error('Error updating profile total_score:', profileUpdateError);
     // Ne pas bloquer si l'ajout de points échoue
   }
 }
