@@ -328,17 +328,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       totalPlayers,
       mode,
     });
-    
-    // ⚠️ DEBUG : Vérifier le format des questions
-    if (questions.length > 0) {
-      const firstQuestion = questions[0];
-      console.log('📋 First question format check:', {
-        id: firstQuestion.id,
-        hasCorrectIndex: 'correct_index' in firstQuestion,
-        correctIndex: firstQuestion.correct_index,
-        choicesCount: firstQuestion.choices?.length,
-      });
-    }
 
     // Retourner les questions complètes pour Socket.IO
     return new Response(

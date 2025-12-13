@@ -135,15 +135,8 @@ export default function StartGameButton({
       }));
 
       console.log('📤 Starting game with', socketQuestions.length, 'questions');
-      console.log('📋 First question sample:', {
-        id: socketQuestions[0]?.id,
-        question: socketQuestions[0]?.question.substring(0, 50) + '...',
-        choicesCount: socketQuestions[0]?.choices.length,
-        correctIndex: socketQuestions[0]?.correctIndex,
-        choices: socketQuestions[0]?.choices,
-      });
       
-      // ⚠️ DEBUG : Vérifier que toutes les questions ont un correctIndex valide
+      // Vérifier que toutes les questions ont un correctIndex valide
       const invalidQuestions = socketQuestions.filter(q => q.correctIndex === undefined || q.correctIndex === null);
       if (invalidQuestions.length > 0) {
         console.error('❌ Questions invalides (pas de correctIndex):', invalidQuestions);
