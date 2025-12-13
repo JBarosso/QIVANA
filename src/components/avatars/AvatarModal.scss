@@ -1,0 +1,83 @@
+// ============================================
+// AVATAR MODAL STYLES
+// ============================================
+
+.avatar-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  padding: var(--space-4);
+
+  &--open {
+    opacity: 1;
+  }
+}
+
+.avatar-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-xl);
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: all var(--transition-base);
+
+  &--open {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.avatar-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.avatar-modal__title {
+  font-family: var(--font-secondary);
+  font-size: var(--fs-6);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.avatar-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--fs-7);
+  cursor: pointer;
+  padding: var(--space-2);
+  line-height: 1;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-2);
+
+  &:hover {
+    background: var(--color-background);
+    color: var(--color-text);
+    transform: scale(1.1);
+  }
+}
+
+.avatar-modal__content {
+  padding: var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+}

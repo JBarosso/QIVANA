@@ -1,4 +1,5 @@
-import Badge, { BadgeData } from './Badge';
+import Badge from './Badge';
+import type { BadgeData } from './types';
 import '../../styles/components/BadgeGrid.scss';
 
 interface BadgeGridProps {

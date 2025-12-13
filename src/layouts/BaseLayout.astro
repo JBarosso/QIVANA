@@ -6,6 +6,7 @@
 
 // Import des styles (Astro compile automatiquement SCSS → CSS)
 import '../styles/main.scss';
+import ToastContainer from '../components/ui/ToastContainer';
 
 interface Props {
   title: string;
@@ -66,5 +67,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   </head>
   <body>
     <slot />
+    
+    <!-- Toast Notifications -->
+    <ToastContainer client:only="react" />
   </body>
 </html>

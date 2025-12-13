@@ -6,7 +6,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { createServerClient } from '@supabase/ssr';
 import BadgeGrid from '@/components/badges/BadgeGrid';
-import type { BadgeData } from '@/components/badges/Badge';
+import type { BadgeData } from '@/components/badges/types';
 
 const { slug } = Astro.params;
 
@@ -31,12 +31,26 @@ const supabase = createServerClient(
 // Récupérer le profil par slug
 const { data: profile, error } = await supabase
   .from('profiles')
-  .select('id, pseudo, avatar, plan, slug')
+  .select('id, pseudo, plan, slug, selected_avatar_id')
   .eq('slug', slug)
   .single();
 
 if (error || !profile) {
   return Astro.redirect('/leaderboard?error=profil-introuvable');
+}
+
+// Récupérer l'avatar sélectionné
+let selectedAvatar: any = null;
+if (profile.selected_avatar_id) {
+  const { data: avatarData } = await supabase
+    .from('avatars')
+    .select('*')
+    .eq('id', profile.selected_avatar_id)
+    .single();
+  
+  if (avatarData) {
+    selectedAvatar = avatarData;
+  }
 }
 
 // Vérifier si l'utilisateur actuel est le propriétaire du profil
@@ -110,10 +124,10 @@ const shareUrl = `${Astro.url.origin}/profile/${slug}`;
       <div class="profile-card">
         <div class="profile-card__header">
           <div class="profile-avatar">
-            {profile.avatar ? (
+            {selectedAvatar ? (
               <img
-                src={profile.avatar}
-                alt={`Avatar de ${profile.pseudo}`}
+                src={selectedAvatar.image_url}
+                alt={selectedAvatar.name}
                 class="profile-avatar__img"
               />
             ) : (

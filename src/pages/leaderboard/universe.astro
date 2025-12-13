@@ -59,7 +59,14 @@ if (quizScores) {
 // Récupérer les profils et ajouter leur score de quiz solo pour cet univers
 const { data: allProfiles, error } = await supabase
   .from('profiles')
-  .select('id, pseudo, avatar, plan, slug');
+  .select('id, pseudo, plan, slug, selected_avatar_id');
+
+// Récupérer tous les avatars pour pouvoir les afficher
+const { data: allAvatars } = await supabase
+  .from('avatars')
+  .select('id, image_url');
+
+const avatarsMap = new Map(allAvatars?.map(a => [a.id, a.image_url]) || []);
 
 // Mapper les profils avec leur score de quiz solo pour cet univers et trier
 const leaderboard = (allProfiles || [])
@@ -137,8 +144,8 @@ if (user) {
                     </div>
                     
                     <div class="leaderboard-item__avatar">
-                      {player.avatar ? (
-                        <img src={player.avatar} alt={player.pseudo} />
+                      {player.selected_avatar_id && avatarsMap.get(player.selected_avatar_id) ? (
+                        <img src={avatarsMap.get(player.selected_avatar_id)} alt={player.pseudo} />
                       ) : (
                         <div class="leaderboard-item__avatar-placeholder">
                           {player.pseudo.charAt(0).toUpperCase()}
@@ -185,6 +192,10 @@ if (user) {
   @use '../../styles/pages/_quiz.scss';
 
   .leaderboard-page--universe {
+    min-height: 100vh;
+    padding: var(--space-8) 0;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-indigo) 100%);
+
     .leaderboard-universe-selector {
       display: flex;
       flex-wrap: wrap;
@@ -240,6 +251,175 @@ if (user) {
       font-family: var(--font-secondary);
       font-size: var(--fs-6);
       color: var(--color-text);
+    }
+
+    // Styles réutilisés du leaderboard global
+    .leaderboard-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+      color: var(--color-text);
+    }
+
+    .leaderboard-header__title {
+      font-family: var(--font-secondary);
+      font-size: var(--fs-8);
+      font-weight: var(--font-weight-bold);
+      margin-bottom: var(--space-2);
+    }
+
+    .leaderboard-header__subtitle {
+      font-size: var(--fs-4);
+      color: var(--color-text-muted);
+      opacity: 0.9;
+    }
+
+    .leaderboard-list {
+      background: var(--color-surface);
+      border-radius: var(--radius-4);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-lg);
+      margin-bottom: var(--space-6);
+    }
+
+    .leaderboard-empty {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--color-text-muted);
+    }
+
+    .leaderboard-list__items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .leaderboard-item {
+      background: var(--color-background);
+      border-radius: var(--radius-3);
+      border: 2px solid transparent;
+      transition: all var(--transition-base);
+
+      &:hover {
+        background: var(--color-neutral-800);
+        transform: translateX(4px);
+      }
+
+      &--current {
+        background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(236, 72, 153, 0.1));
+        border-color: var(--color-warning);
+        box-shadow: 0 0 12px rgba(250, 204, 21, 0.3);
+      }
+
+      &--rank-1 {
+        background: linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(250, 204, 21, 0.05));
+        border-color: var(--color-warning);
+        box-shadow: 0 0 16px rgba(250, 204, 21, 0.4);
+      }
+
+      &--rank-2 {
+        background: linear-gradient(135deg, rgba(156, 163, 175, 0.15), rgba(156, 163, 175, 0.05));
+        border-color: #9CA3AF;
+        box-shadow: 0 0 12px rgba(156, 163, 175, 0.3);
+      }
+
+      &--rank-3 {
+        background: linear-gradient(135deg, rgba(180, 83, 9, 0.15), rgba(180, 83, 9, 0.05));
+        border-color: #B45309;
+        box-shadow: 0 0 12px rgba(180, 83, 9, 0.3);
+      }
+    }
+
+    .leaderboard-item__link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      text-decoration: none;
+      color: inherit;
+      width: 100%;
+    }
+
+    .leaderboard-item__rank {
+      font-size: var(--fs-6);
+      font-weight: var(--font-weight-bold);
+      min-width: 60px;
+      text-align: center;
+      color: var(--color-primary);
+    }
+
+    .leaderboard-item__avatar {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--color-neutral-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .leaderboard-item__avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      color: var(--color-text-on-primary);
+      font-size: var(--fs-5);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .leaderboard-item__info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .leaderboard-item__name {
+      font-family: var(--font-secondary);
+      font-size: var(--fs-4);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .leaderboard-item__you {
+      font-size: var(--fs-2);
+      color: var(--color-warning);
+      font-weight: var(--font-weight-normal);
+    }
+
+    .leaderboard-item__stats {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--fs-2);
+      color: var(--color-text-muted);
+    }
+
+    .leaderboard-item__plan {
+      font-size: var(--fs-5);
+      flex-shrink: 0;
+    }
+
+    .leaderboard-actions {
+      display: flex;
+      justify-content: center;
+      gap: var(--space-4);
+      flex-wrap: wrap;
     }
   }
 </style>

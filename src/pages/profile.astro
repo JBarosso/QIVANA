@@ -6,7 +6,18 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getUser, getProfile } from '@/lib/auth';
 import BadgeGrid from '@/components/badges/BadgeGrid';
-import type { BadgeData } from '@/components/badges/Badge';
+import AvatarModalWrapper from '@/components/avatars/AvatarModalWrapper';
+import type { BadgeData } from '@/components/badges/types';
+
+interface AvatarData {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  image_url: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  unlocked: boolean;
+}
 
 // Type assertion pour supabase
 const supabase = (Astro.locals as { supabase?: any }).supabase;
@@ -85,6 +96,59 @@ if (supabase) {
     }
   }
 
+  // Fetch all avatars and user's unlocked avatars
+  let allAvatars: AvatarData[] = [];
+  let unlockedAvatarIds = new Set<string>();
+  let selectedAvatar: any = null;
+  let hasNewAvatars = false;
+  
+  if (supabase) {
+    // Récupérer tous les avatars
+    const { data: avatarsData } = await supabase
+      .from('avatars')
+      .select('*')
+      .order('rarity', { ascending: true });
+    
+    // Récupérer les avatars débloqués par l'utilisateur
+    const { data: userAvatarsData } = await supabase
+      .from('user_avatars')
+      .select('avatar_id, unlocked_at')
+      .eq('user_id', user.id);
+    
+    if (userAvatarsData) {
+      unlockedAvatarIds = new Set(userAvatarsData.map((ua: any) => ua.avatar_id));
+      
+      // Vérifier s'il y a des avatars débloqués récemment (dans les dernières 24h)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      hasNewAvatars = userAvatarsData.some((ua: any) => ua.unlocked_at > oneDayAgo);
+    }
+    
+    if (avatarsData) {
+      allAvatars = avatarsData.map((a: any) => ({
+        id: a.id,
+        code: a.code,
+        name: a.name,
+        description: a.description,
+        image_url: a.image_url,
+        rarity: a.rarity as AvatarData['rarity'],
+        unlocked: unlockedAvatarIds.has(a.id),
+      }));
+    }
+
+    // Récupérer l'avatar sélectionné
+    if (profile.selected_avatar_id) {
+      const { data: avatarData } = await supabase
+        .from('avatars')
+        .select('*')
+        .eq('id', profile.selected_avatar_id)
+        .single();
+      
+      if (avatarData) {
+        selectedAvatar = avatarData;
+      }
+    }
+  }
+
   // Fetch quiz count and solo quiz score
   let quizCount = 0;
   let soloQuizScore = 0;
@@ -121,11 +185,15 @@ if (supabase) {
     <div class="container">
       <div class="profile-card">
         <div class="profile-card__header">
-          <div class="profile-avatar">
-            {profile.avatar ? (
+          <button 
+            class="profile-avatar profile-avatar--clickable"
+            id="avatar-trigger"
+            aria-label="Changer d'avatar"
+          >
+            {selectedAvatar ? (
               <img
-                src={profile.avatar}
-                alt={`Avatar de ${profile.pseudo}`}
+                src={selectedAvatar.image_url}
+                alt={selectedAvatar.name}
                 class="profile-avatar__img"
               />
             ) : (
@@ -133,7 +201,15 @@ if (supabase) {
                 {profile.pseudo.charAt(0).toUpperCase()}
               </div>
             )}
-          </div>
+            {hasNewAvatars && (
+              <div class="profile-avatar__badge">
+                <span class="profile-avatar__badge-dot"></span>
+              </div>
+            )}
+            <div class="profile-avatar__overlay">
+              <span class="profile-avatar__overlay-icon">✏️</span>
+            </div>
+          </button>
           <div class="profile-info">
             <h1 class="profile-info__name">{profile.pseudo}</h1>
             <p class="profile-info__email">{user.email}</p>
@@ -262,9 +338,28 @@ if (supabase) {
       </div>
     </div>
   </main>
+
+  <!-- Avatar Modal -->
+  <AvatarModalWrapper 
+    client:only="react"
+    avatars={JSON.stringify(allAvatars)}
+    selectedAvatarId={profile.selected_avatar_id}
+  />
 </BaseLayout>
 
 <script>
+  // Avatar modal toggle
+  const avatarTrigger = document.getElementById('avatar-trigger');
+  
+  if (avatarTrigger) {
+    avatarTrigger.addEventListener('click', () => {
+      // Dispatcher un événement pour ouvrir le modal React
+      const event = new CustomEvent('open-avatar-modal');
+      window.dispatchEvent(event);
+    });
+  }
+
+  // Share profile
   const shareBtn = document.getElementById('share-profile-btn');
   if (shareBtn) {
     shareBtn.addEventListener('click', async () => {
@@ -290,6 +385,7 @@ if (supabase) {
       }
     });
   }
+
 </script>
 
 <style lang="scss">
@@ -317,17 +413,41 @@ if (supabase) {
 
   .profile-avatar {
     flex-shrink: 0;
-  }
-
-  .profile-avatar__img,
-  .profile-avatar__placeholder {
+    position: relative;
     width: 80px;
     height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: default;
+
+    &--clickable {
+      cursor: pointer;
+      transition: transform var(--transition-base);
+
+      &:hover {
+        transform: scale(1.05);
+
+        .profile-avatar__overlay {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  .profile-avatar__img {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     object-fit: cover;
   }
 
   .profile-avatar__placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -335,6 +455,58 @@ if (supabase) {
     color: var(--color-text-on-primary);
     font-size: var(--fs-8);
     font-weight: var(--font-weight-bold);
+  }
+
+  .profile-avatar__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    border-radius: 50%;
+  }
+
+  .profile-avatar__overlay-icon {
+    font-size: var(--fs-6);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+
+  .profile-avatar__badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: var(--color-error);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--color-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .profile-avatar__badge-dot {
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.8;
+    }
   }
 
   .profile-info__name {
@@ -440,6 +612,13 @@ if (supabase) {
     font-size: var(--fs-5);
     color: var(--color-text);
     margin-bottom: var(--space-4);
+  }
+
+  .profile-section__subtitle {
+    font-size: var(--fs-3);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-6);
+    text-align: center;
   }
 
   .info-list {
