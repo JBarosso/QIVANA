@@ -1,0 +1,307 @@
+---
+// ============================================
+// ADMIN DASHBOARD
+// ============================================
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+// Protection déjà gérée par le middleware
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+// Récupérer les stats
+let stats = {
+  totalQuestions: 0,
+  approvedQuestions: 0,
+  pendingQuestions: 0,
+  totalUsers: 0,
+  premiumUsers: 0,
+  premiumPlusUsers: 0,
+  totalFlags: 0,
+  pendingFlags: 0,
+  totalQuizSessions: 0,
+  totalDuels: 0,
+  aiUsageThisMonth: 0,
+  aiCostThisMonth: 0,
+};
+
+let recentFlags: any[] = [];
+let recentQuestions: any[] = [];
+
+if (supabase) {
+  // Stats questions
+  const { count: totalQuestions } = await supabase
+    .from('questions')
+    .select('*', { count: 'exact', head: true });
+  stats.totalQuestions = totalQuestions || 0;
+
+  const { count: approvedQuestions } = await supabase
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_approved', true);
+  stats.approvedQuestions = approvedQuestions || 0;
+
+  stats.pendingQuestions = stats.totalQuestions - stats.approvedQuestions;
+
+  // Stats users
+  const { count: totalUsers } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true });
+  stats.totalUsers = totalUsers || 0;
+
+  const { count: premiumUsers } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan', 'premium');
+  stats.premiumUsers = premiumUsers || 0;
+
+  const { count: premiumPlusUsers } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('plan', 'premium+');
+  stats.premiumPlusUsers = premiumPlusUsers || 0;
+
+  // Stats flags
+  const { count: totalFlags } = await supabase
+    .from('flags')
+    .select('*', { count: 'exact', head: true });
+  stats.totalFlags = totalFlags || 0;
+
+  const { count: pendingFlags } = await supabase
+    .from('flags')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  stats.pendingFlags = pendingFlags || 0;
+
+  // Stats quiz/duels
+  const { count: totalQuizSessions } = await supabase
+    .from('quiz_sessions')
+    .select('*', { count: 'exact', head: true });
+  stats.totalQuizSessions = totalQuizSessions || 0;
+
+  const { count: totalDuels } = await supabase
+    .from('duel_results')
+    .select('*', { count: 'exact', head: true });
+  stats.totalDuels = totalDuels || 0;
+
+  // AI Usage ce mois
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const { data: aiUsageData } = await supabase
+    .from('ai_usage')
+    .select('questions_count, estimated_cost_cents')
+    .gte('created_at', startOfMonth.toISOString());
+
+  if (aiUsageData) {
+    stats.aiUsageThisMonth = aiUsageData.reduce((acc: number, u: any) => acc + (u.questions_count || 0), 0);
+    stats.aiCostThisMonth = aiUsageData.reduce((acc: number, u: any) => acc + (u.estimated_cost_cents || 0), 0);
+  }
+
+  // Signalements récents
+  const { data: flagsData } = await supabase
+    .from('flags')
+    .select(`
+      id,
+      reason,
+      status,
+      created_at,
+      question:question_id (question),
+      reporter:reported_by (pseudo)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  recentFlags = flagsData || [];
+
+  // Questions récentes
+  const { data: questionsData } = await supabase
+    .from('questions')
+    .select('id, question, universe, difficulty, is_approved, created_at')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  recentQuestions = questionsData || [];
+}
+
+const universeLabels: Record<string, string> = {
+  anime: 'Anime',
+  manga: 'Manga',
+  comics: 'Comics',
+  games: 'Jeux',
+  movies: 'Films',
+  series: 'Séries',
+  other: 'Autre',
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: 'Facile',
+  medium: 'Moyen',
+  hard: 'Difficile',
+};
+---
+
+<AdminLayout title="Dashboard" currentPage="dashboard">
+  <!-- Stats Grid -->
+  <div class="admin-stats">
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">❓</div>
+      <div class="admin-stat-card__value">{stats.totalQuestions}</div>
+      <div class="admin-stat-card__label">Questions totales</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">✅</div>
+      <div class="admin-stat-card__value">{stats.approvedQuestions}</div>
+      <div class="admin-stat-card__label">Questions approuvées</div>
+    </div>
+
+    <div class="admin-stat-card admin-stat-card--highlight">
+      <div class="admin-stat-card__icon">⏳</div>
+      <div class="admin-stat-card__value">{stats.pendingQuestions}</div>
+      <div class="admin-stat-card__label">En attente de review</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">👥</div>
+      <div class="admin-stat-card__value">{stats.totalUsers}</div>
+      <div class="admin-stat-card__label">Utilisateurs</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">⭐</div>
+      <div class="admin-stat-card__value">{stats.premiumUsers}</div>
+      <div class="admin-stat-card__label">Premium</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">💎</div>
+      <div class="admin-stat-card__value">{stats.premiumPlusUsers}</div>
+      <div class="admin-stat-card__label">Premium+</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">🎮</div>
+      <div class="admin-stat-card__value">{stats.totalQuizSessions}</div>
+      <div class="admin-stat-card__label">Quiz joués</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">⚔️</div>
+      <div class="admin-stat-card__value">{stats.totalDuels}</div>
+      <div class="admin-stat-card__label">Duels terminés</div>
+    </div>
+  </div>
+
+  <!-- AI Usage Stats -->
+  <div class="admin-stats">
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">🤖</div>
+      <div class="admin-stat-card__value">{stats.aiUsageThisMonth}</div>
+      <div class="admin-stat-card__label">Questions IA ce mois</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">💰</div>
+      <div class="admin-stat-card__value">{(stats.aiCostThisMonth / 100).toFixed(2)}€</div>
+      <div class="admin-stat-card__label">Coût IA ce mois</div>
+    </div>
+
+    <div class="admin-stat-card admin-stat-card--highlight">
+      <div class="admin-stat-card__icon">🚩</div>
+      <div class="admin-stat-card__value">{stats.pendingFlags}</div>
+      <div class="admin-stat-card__label">Signalements en attente</div>
+    </div>
+  </div>
+
+  <!-- Recent Flags -->
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">🚩 Signalements récents</h2>
+      <a href="/admin/flags" class="btn btn--outline btn--sm">Voir tout</a>
+    </div>
+
+    {recentFlags.length > 0 ? (
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Raison</th>
+            <th>Par</th>
+            <th>Statut</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentFlags.map((flag) => (
+            <tr>
+              <td>{(flag.question as any)?.question?.substring(0, 50)}...</td>
+              <td>{flag.reason.substring(0, 30)}...</td>
+              <td>{(flag.reporter as any)?.pseudo || 'Inconnu'}</td>
+              <td>
+                <span class={`admin-badge admin-badge--${flag.status === 'pending' ? 'warning' : 'success'}`}>
+                  {flag.status === 'pending' ? 'En attente' : 'Résolu'}
+                </span>
+              </td>
+              <td>{new Date(flag.created_at).toLocaleDateString('fr-FR')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <div class="admin-empty">
+        <div class="admin-empty__icon">✨</div>
+        <p class="admin-empty__text">Aucun signalement</p>
+      </div>
+    )}
+  </section>
+
+  <!-- Recent Questions -->
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">❓ Questions récentes</h2>
+      <a href="/admin/questions" class="btn btn--outline btn--sm">Gérer</a>
+    </div>
+
+    {recentQuestions.length > 0 ? (
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Univers</th>
+            <th>Difficulté</th>
+            <th>Statut</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentQuestions.map((q) => (
+            <tr>
+              <td>{q.question.substring(0, 50)}...</td>
+              <td>
+                <span class="admin-badge admin-badge--primary">
+                  {universeLabels[q.universe] || q.universe}
+                </span>
+              </td>
+              <td>
+                <span class={`admin-badge admin-badge--${q.difficulty === 'easy' ? 'success' : q.difficulty === 'medium' ? 'warning' : 'error'}`}>
+                  {difficultyLabels[q.difficulty] || q.difficulty}
+                </span>
+              </td>
+              <td>
+                <span class={`admin-badge admin-badge--${q.is_approved ? 'success' : 'warning'}`}>
+                  {q.is_approved ? 'Approuvée' : 'En attente'}
+                </span>
+              </td>
+              <td>{new Date(q.created_at).toLocaleDateString('fr-FR')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <div class="admin-empty">
+        <div class="admin-empty__icon">📝</div>
+        <p class="admin-empty__text">Aucune question</p>
+      </div>
+    )}
+  </section>
+</AdminLayout>

@@ -1,0 +1,384 @@
+---
+// ============================================
+// ADMIN - ÉDITION/CRÉATION DE QUESTION
+// ============================================
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+const { id } = Astro.params;
+const isNew = id === 'new';
+
+let question: any = null;
+const errorMessage = Astro.url.searchParams.get('error');
+
+if (!isNew && supabase) {
+  const { data } = await supabase
+    .from('questions')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  question = data;
+  
+  if (!question) {
+    return Astro.redirect('/admin/questions?error=Question+introuvable');
+  }
+}
+
+const universeOptions = [
+  { value: 'anime', label: 'Anime' },
+  { value: 'manga', label: 'Manga' },
+  { value: 'comics', label: 'Comics' },
+  { value: 'games', label: 'Jeux vidéo' },
+  { value: 'movies', label: 'Films' },
+  { value: 'series', label: 'Séries' },
+  { value: 'other', label: 'Autre' },
+];
+
+const difficultyOptions = [
+  { value: 'easy', label: 'Facile' },
+  { value: 'medium', label: 'Moyen' },
+  { value: 'hard', label: 'Difficile' },
+];
+
+// Valeurs par défaut pour nouvelle question
+const defaultQuestion = {
+  question: '',
+  choices: ['', '', '', ''],
+  correct_index: 0,
+  explanation: '',
+  universe: 'anime',
+  difficulty: 'medium',
+  is_approved: false,
+};
+
+const q = question || defaultQuestion;
+const choices = Array.isArray(q.choices) ? q.choices : [];
+---
+
+<AdminLayout title={isNew ? 'Nouvelle Question' : 'Éditer Question'} currentPage="questions">
+  <div class="admin-form-page">
+    <a href="/admin/questions" class="admin-back-link">
+      ← Retour aux questions
+    </a>
+
+    {errorMessage && (
+      <div class="admin-alert admin-alert--error">
+        ❌ {decodeURIComponent(errorMessage)}
+      </div>
+    )}
+
+    <section class="admin-section">
+      <div class="admin-section__header">
+        <h2 class="admin-section__title">
+          {isNew ? '➕ Nouvelle Question' : '✏️ Modifier Question'}
+        </h2>
+      </div>
+
+      <form method="post" action="/api/admin/questions/save" class="admin-form">
+        <input type="hidden" name="id" value={id} />
+
+        <!-- Question -->
+        <div class="admin-form-group">
+          <label for="question" class="admin-label">Question *</label>
+          <textarea 
+            id="question"
+            name="question"
+            required
+            minlength="10"
+            rows="3"
+            class="admin-textarea"
+            placeholder="Ex: Quel est le nom du protagoniste de Naruto ?"
+          >{q.question}</textarea>
+        </div>
+
+        <!-- Choix de réponses -->
+        <div class="admin-form-group">
+          <label class="admin-label">Réponses * (cochez la bonne réponse)</label>
+          
+          <div class="admin-choices">
+            {[0, 1, 2, 3].map((i) => (
+              <div class="admin-choice">
+                <input 
+                  type="radio" 
+                  name="correct_index" 
+                  value={i}
+                  id={`correct_${i}`}
+                  checked={q.correct_index === i}
+                  class="admin-radio"
+                />
+                <input 
+                  type="text" 
+                  name={`choice_${i}`}
+                  id={`choice_${i}`}
+                  value={choices[i] || ''}
+                  placeholder={`Réponse ${i + 1}${i < 2 ? ' *' : ' (optionnel)'}`}
+                  class="admin-input admin-input--choice"
+                  required={i < 2}
+                />
+                <label for={`correct_${i}`} class="admin-choice-label">
+                  {q.correct_index === i ? '✅' : '○'}
+                </label>
+              </div>
+            ))}
+          </div>
+          <p class="admin-hint">Sélectionnez le bouton radio à côté de la bonne réponse</p>
+        </div>
+
+        <!-- Explication -->
+        <div class="admin-form-group">
+          <label for="explanation" class="admin-label">Explication *</label>
+          <textarea 
+            id="explanation"
+            name="explanation"
+            required
+            minlength="10"
+            rows="3"
+            class="admin-textarea"
+            placeholder="Explication de la bonne réponse..."
+          >{q.explanation}</textarea>
+        </div>
+
+        <!-- Univers et Difficulté -->
+        <div class="admin-form-row">
+          <div class="admin-form-group">
+            <label for="universe" class="admin-label">Univers *</label>
+            <select id="universe" name="universe" required class="admin-select">
+              {universeOptions.map((opt) => (
+                <option value={opt.value} selected={q.universe === opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div class="admin-form-group">
+            <label for="difficulty" class="admin-label">Difficulté *</label>
+            <select id="difficulty" name="difficulty" required class="admin-select">
+              {difficultyOptions.map((opt) => (
+                <option value={opt.value} selected={q.difficulty === opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <!-- Statut -->
+        <div class="admin-form-group">
+          <label class="admin-checkbox-label">
+            <input 
+              type="checkbox" 
+              name="is_approved"
+              checked={q.is_approved}
+              class="admin-checkbox"
+            />
+            <span>✅ Approuver cette question (visible dans les quiz)</span>
+          </label>
+        </div>
+
+        <!-- Actions -->
+        <div class="admin-form-actions">
+          <a href="/admin/questions" class="btn btn--outline">Annuler</a>
+          <button type="submit" class="btn btn--primary">
+            {isNew ? 'Créer la question' : 'Enregistrer les modifications'}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    {!isNew && question && (
+      <section class="admin-section admin-section--info">
+        <h3 class="admin-section__title">Informations</h3>
+        <div class="admin-info-grid">
+          <div class="admin-info-item">
+            <span class="admin-info-label">ID</span>
+            <span class="admin-info-value">{question.id}</span>
+          </div>
+          <div class="admin-info-item">
+            <span class="admin-info-label">Créée par</span>
+            <span class="admin-info-value">{question.created_by === 'ia' ? '🤖 IA' : '👤 Admin'}</span>
+          </div>
+          <div class="admin-info-item">
+            <span class="admin-info-label">Créée le</span>
+            <span class="admin-info-value">{new Date(question.created_at).toLocaleString('fr-FR')}</span>
+          </div>
+          {question.reviewed_at && (
+            <div class="admin-info-item">
+              <span class="admin-info-label">Reviewée le</span>
+              <span class="admin-info-value">{new Date(question.reviewed_at).toLocaleString('fr-FR')}</span>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+  </div>
+</AdminLayout>
+
+<style lang="scss">
+  .admin-form-page {
+    max-width: 800px;
+  }
+
+  .admin-back-link {
+    display: inline-block;
+    margin-bottom: var(--space-4);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: var(--fs-3);
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+
+  .admin-alert {
+    padding: var(--space-4);
+    border-radius: var(--radius-2);
+    margin-bottom: var(--space-4);
+    font-weight: var(--font-weight-medium);
+
+    &--error {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-error);
+      border: 1px solid var(--color-error);
+    }
+  }
+
+  .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .admin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .admin-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .admin-label {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    font-size: var(--fs-3);
+  }
+
+  .admin-input,
+  .admin-textarea,
+  .admin-select {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-2);
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: var(--fs-3);
+    font-family: inherit;
+    transition: border-color var(--transition-fast);
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+  }
+
+  .admin-textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .admin-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .admin-choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .admin-radio {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-success);
+    cursor: pointer;
+  }
+
+  .admin-input--choice {
+    flex: 1;
+  }
+
+  .admin-choice-label {
+    font-size: var(--fs-5);
+    cursor: pointer;
+  }
+
+  .admin-hint {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-top: var(--space-1);
+  }
+
+  .admin-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    font-size: var(--fs-3);
+  }
+
+  .admin-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-success);
+  }
+
+  .admin-form-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-end;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-section--info {
+    background: var(--color-background);
+    margin-top: var(--space-6);
+  }
+
+  .admin-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .admin-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .admin-info-label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .admin-info-value {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    font-family: monospace;
+  }
+</style>

@@ -1,0 +1,364 @@
+---
+// ============================================
+// ADMIN - RÉSOLUTION DES DOUBLONS
+// ============================================
+// Utilise les embeddings pour détecter les questions similaires
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+interface DuplicateGroup {
+  question: any;
+  similars: Array<{
+    question: any;
+    similarity: number;
+  }>;
+}
+
+let duplicateGroups: DuplicateGroup[] = [];
+let pendingCount = 0;
+
+if (supabase) {
+  // Récupérer les questions non approuvées qui pourraient être des doublons
+  const { data: pendingQuestions } = await supabase
+    .from('questions')
+    .select(`
+      *,
+      embedding:embeddings (embedding)
+    `)
+    .eq('is_approved', false)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  pendingCount = pendingQuestions?.length || 0;
+
+  // Pour chaque question en attente, chercher des similaires parmi les approuvées
+  if (pendingQuestions && pendingQuestions.length > 0) {
+    for (const question of pendingQuestions) {
+      // On compare les textes directement pour détecter les doublons potentiels
+      // (La comparaison par embedding nécessiterait une fonction RPC plus complexe)
+      const { data: similars } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('is_approved', true)
+        .ilike('question', `%${question.question.substring(0, 50)}%`)
+        .neq('id', question.id)
+        .limit(5);
+
+      if (similars && similars.length > 0) {
+        duplicateGroups.push({
+          question,
+          similars: similars.map((s: any) => ({
+            question: s,
+            similarity: calculateTextSimilarity(question.question, s.question),
+          })).filter((s: any) => s.similarity > 0.5)
+            .sort((a: any, b: any) => b.similarity - a.similarity),
+        });
+      }
+    }
+
+    // Filtrer les groupes qui ont des similaires
+    duplicateGroups = duplicateGroups.filter(g => g.similars.length > 0);
+  }
+}
+
+// Fonction simple de similarité textuelle (Jaccard)
+function calculateTextSimilarity(text1: string, text2: string): number {
+  const words1 = new Set(text1.toLowerCase().split(/\s+/));
+  const words2 = new Set(text2.toLowerCase().split(/\s+/));
+  
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  
+  return intersection.size / union.size;
+}
+
+const universeLabels: Record<string, string> = {
+  anime: 'Anime',
+  manga: 'Manga',
+  comics: 'Comics',
+  games: 'Jeux',
+  movies: 'Films',
+  series: 'Séries',
+  other: 'Autre',
+};
+
+const successMessage = Astro.url.searchParams.get('success');
+const errorMessage = Astro.url.searchParams.get('error');
+---
+
+<AdminLayout title="Résolution des Doublons" currentPage="duplicates">
+  {successMessage && (
+    <div class="admin-alert admin-alert--success">
+      ✅ {decodeURIComponent(successMessage)}
+    </div>
+  )}
+
+  {errorMessage && (
+    <div class="admin-alert admin-alert--error">
+      ❌ {decodeURIComponent(errorMessage)}
+    </div>
+  )}
+
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">
+        📋 Doublons potentiels ({duplicateGroups.length})
+      </h2>
+      <div class="admin-section__info">
+        {pendingCount} questions en attente de review
+      </div>
+    </div>
+
+    <p class="admin-description">
+      Cette page identifie les questions non approuvées qui ressemblent à des questions déjà existantes.
+      Vous pouvez approuver la nouvelle question (si elle est suffisamment différente), 
+      la supprimer (si c'est un doublon), ou l'éditer pour la rendre unique.
+    </p>
+
+    {duplicateGroups.length > 0 ? (
+      <div class="duplicates-list">
+        {duplicateGroups.map((group) => (
+          <div class="duplicate-card">
+            <div class="duplicate-card__new">
+              <div class="duplicate-card__label">
+                <span class="admin-badge admin-badge--warning">⏳ Nouvelle (en attente)</span>
+              </div>
+              <div class="duplicate-card__question">
+                <span class="admin-badge admin-badge--primary">
+                  {universeLabels[group.question.universe] || group.question.universe}
+                </span>
+                <p class="duplicate-card__text">{group.question.question}</p>
+                <div class="duplicate-card__choices">
+                  {(group.question.choices as string[]).map((choice: string, i: number) => (
+                    <span class={`duplicate-card__choice ${i === group.question.correct_index ? 'duplicate-card__choice--correct' : ''}`}>
+                      {i === group.question.correct_index ? '✅' : '○'} {choice}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div class="duplicate-card__actions">
+                <form method="post" action="/api/admin/questions/toggle-approve" style="display: inline;">
+                  <input type="hidden" name="id" value={group.question.id} />
+                  <input type="hidden" name="approved" value="true" />
+                  <button type="submit" class="btn btn--success btn--sm">
+                    ✅ Approuver (pas un doublon)
+                  </button>
+                </form>
+                <a href={`/admin/questions/${group.question.id}`} class="btn btn--primary btn--sm">
+                  ✏️ Éditer
+                </a>
+                <form method="post" action="/api/admin/questions/delete" style="display: inline;" onsubmit="return confirm('Supprimer cette question ?')">
+                  <input type="hidden" name="id" value={group.question.id} />
+                  <button type="submit" class="btn btn--danger btn--sm">
+                    🗑️ Supprimer (doublon)
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="duplicate-card__arrow">⬇️</div>
+            <div class="duplicate-card__label duplicate-card__label--similars">
+              Questions similaires existantes:
+            </div>
+
+            <div class="duplicate-card__similars">
+              {group.similars.map((similar) => (
+                <div class="similar-item">
+                  <div class="similar-item__header">
+                    <span class="admin-badge admin-badge--success">✅ Approuvée</span>
+                    <span class="similar-item__similarity">
+                      Similarité: {Math.round(similar.similarity * 100)}%
+                    </span>
+                  </div>
+                  <p class="similar-item__text">{similar.question.question}</p>
+                  <div class="similar-item__choices">
+                    {(similar.question.choices as string[]).map((choice: string, i: number) => (
+                      <span class={`duplicate-card__choice ${i === similar.question.correct_index ? 'duplicate-card__choice--correct' : ''}`}>
+                        {i === similar.question.correct_index ? '✅' : '○'} {choice}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="admin-empty">
+        <div class="admin-empty__icon">✨</div>
+        <p class="admin-empty__text">Aucun doublon potentiel détecté</p>
+        <p class="admin-empty__subtext">
+          Toutes les questions en attente semblent uniques.
+        </p>
+      </div>
+    )}
+  </section>
+</AdminLayout>
+
+<style lang="scss">
+  .admin-alert {
+    padding: var(--space-4);
+    border-radius: var(--radius-2);
+    margin-bottom: var(--space-4);
+    font-weight: var(--font-weight-medium);
+
+    &--success {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--color-success);
+      border: 1px solid var(--color-success);
+    }
+
+    &--error {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-error);
+      border: 1px solid var(--color-error);
+    }
+  }
+
+  .admin-section__info {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+  }
+
+  .admin-description {
+    color: var(--color-text-muted);
+    font-size: var(--fs-3);
+    margin-bottom: var(--space-6);
+    line-height: 1.6;
+  }
+
+  .duplicates-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .duplicate-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+  }
+
+  .duplicate-card__new {
+    margin-bottom: var(--space-4);
+  }
+
+  .duplicate-card__label {
+    margin-bottom: var(--space-3);
+
+    &--similars {
+      font-size: var(--fs-2);
+      color: var(--color-text-muted);
+      font-weight: var(--font-weight-semibold);
+      margin-top: var(--space-4);
+    }
+  }
+
+  .duplicate-card__question {
+    background: var(--color-surface);
+    border-radius: var(--radius-2);
+    padding: var(--space-4);
+    border-left: 3px solid var(--color-warning);
+    margin-bottom: var(--space-4);
+  }
+
+  .duplicate-card__text {
+    font-size: var(--fs-3);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    margin: var(--space-3) 0;
+  }
+
+  .duplicate-card__choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .duplicate-card__choice {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+
+    &--correct {
+      color: var(--color-success);
+      font-weight: var(--font-weight-medium);
+    }
+  }
+
+  .duplicate-card__actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .duplicate-card__arrow {
+    text-align: center;
+    font-size: var(--fs-6);
+    color: var(--color-text-muted);
+  }
+
+  .duplicate-card__similars {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .similar-item {
+    background: var(--color-surface);
+    border-radius: var(--radius-2);
+    padding: var(--space-4);
+    border-left: 3px solid var(--color-success);
+  }
+
+  .similar-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .similar-item__similarity {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .similar-item__text {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    margin-bottom: var(--space-2);
+  }
+
+  .similar-item__choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .btn--success {
+    background: var(--color-success);
+    color: white;
+    border-color: var(--color-success);
+  }
+
+  .btn--danger {
+    background: var(--color-error);
+    color: white;
+    border-color: var(--color-error);
+  }
+
+  .btn--sm {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-2);
+  }
+
+  .admin-empty__subtext {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-top: var(--space-2);
+  }
+</style>
