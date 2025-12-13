@@ -3,7 +3,6 @@
 // ============================================
 
 import { useEffect, useState } from 'react';
-import './Toast.scss';
 
 interface ToastProps {
   message: string;

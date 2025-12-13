@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import '../../styles/components/Badge.scss';
 import type { BadgeData } from './types';
 
 interface BadgeProps {

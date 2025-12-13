@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSocketIO } from '../../lib/useSocketIO';
 import type { RoomSettings, Player } from '../../lib/socket';
-import '../../styles/components/LobbyRealtime.scss';
 
 interface LobbyRealtimeProps {
   roomId: string;

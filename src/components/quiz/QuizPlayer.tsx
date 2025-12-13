@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Question } from '../../lib/quiz';
 import { calculateScore } from '../../lib/quiz';
-import '../../styles/components/QuizPlayer.scss';
 
 interface QuizPlayerProps {
   sessionId: string;

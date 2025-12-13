@@ -1,6 +1,5 @@
 import Badge from './Badge';
 import type { BadgeData } from './types';
-import '../../styles/components/BadgeGrid.scss';
 
 interface BadgeGridProps {
   badges: string; // JSON string from Astro

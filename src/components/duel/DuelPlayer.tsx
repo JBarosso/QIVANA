@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../types/supabase';
 import type { Question } from '../../lib/quiz';
 import { calculateScore } from '../../lib/quiz';
-import '../../styles/components/DuelPlayer.scss';
 
 interface DuelData {
   salonId: string;

@@ -3,7 +3,6 @@
 // ============================================
 
 import { useState, useEffect } from 'react';
-import './AvatarSelector.scss';
 
 export interface Avatar {
   id: string;

@@ -4,7 +4,6 @@
 
 import { useState, useEffect } from 'react';
 import AvatarSelector from './AvatarSelector';
-import './AvatarModal.scss';
 
 interface AvatarModalProps {
   isOpen: boolean;

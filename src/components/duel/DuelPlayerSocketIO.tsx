@@ -6,7 +6,6 @@ import type {
   GameScoresUpdate,
   GameEnd,
 } from '../../lib/socket';
-import '../../styles/components/DuelPlayer.scss';
 
 interface DuelPlayerSocketIOProps {
   roomId: string;
