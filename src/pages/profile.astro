@@ -33,7 +33,7 @@ let profile: any = null;
 if (supabase) {
   const { data: profileData, error } = await supabase
     .from('profiles')
-    .select('*, total_score, duels_played, duels_won')
+    .select('*, total_score, duels_played, duels_won, subscription_end_date')
     .eq('id', user.id)
     .single();
   
@@ -228,9 +228,20 @@ if (supabase) {
                   💎 Passer Premium
                 </a>
               ) : (
-                <button id="manageSubscription" class="btn btn--outline btn--sm">
-                  ⚙️ Gérer mon abonnement
-                </button>
+                <>
+                  {profile.subscription_end_date && (
+                    <p class="profile-subscription__notice">
+                      ⏰ Abonnement valide jusqu'au {new Date(profile.subscription_end_date).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  )}
+                  <button id="manageSubscription" class="btn btn--outline btn--sm">
+                    ⚙️ Gérer mon abonnement
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -685,6 +696,17 @@ if (supabase) {
 
   .profile-subscription {
     margin-top: var(--space-4);
+  }
+
+  .profile-subscription__notice {
+    font-size: var(--fs-2);
+    color: var(--color-warning);
+    background: rgba(250, 204, 21, 0.1);
+    padding: var(--space-3);
+    border-radius: var(--radius-2);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    margin-bottom: var(--space-3);
+    text-align: center;
   }
 
   .btn--sm {

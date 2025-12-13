@@ -218,10 +218,13 @@ async function handleSubscriptionDeleted(subscription: any) {
 
   console.log(`🔴 Subscription deleted for user ${userId}`);
 
-  // Downgrade vers Freemium
+  // Downgrade vers Freemium et nettoyer la date de fin
   const { error } = await supabaseAdmin
     .from('profiles')
-    .update({ plan: 'freemium' })
+    .update({ 
+      plan: 'freemium',
+      subscription_end_date: null // Nettoyer la date de fin
+    })
     .eq('id', userId);
 
   if (error) {
@@ -240,6 +243,34 @@ async function handleSubscriptionUpdated(subscription: any) {
   const priceId = subscription.items.data[0]?.price.id;
   const plan = getPlanFromPriceId(priceId);
 
+  // Gérer l'annulation programmée (cancel_at_period_end)
+  if (subscription.cancel_at_period_end && subscription.current_period_end) {
+    const endDate = new Date(subscription.current_period_end * 1000).toISOString();
+    
+    await supabaseAdmin
+      .from('profiles')
+      .update({ subscription_end_date: endDate })
+      .eq('id', userId);
+
+    console.log(`⏰ Subscription will end for user ${userId} on ${endDate}`);
+    return;
+  }
+
+  // Si l'abonnement est réactivé (annulation annulée)
+  if (!subscription.cancel_at_period_end && subscription.status === 'active') {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        plan: plan,
+        subscription_end_date: null // Réinitialiser la date de fin
+      })
+      .eq('id', userId);
+
+    console.log(`🔄 Subscription reactivated for user ${userId}, plan: ${plan}`);
+    return;
+  }
+
+  // Mise à jour normale du plan (changement de plan)
   if (plan && subscription.status === 'active') {
     await supabaseAdmin
       .from('profiles')
