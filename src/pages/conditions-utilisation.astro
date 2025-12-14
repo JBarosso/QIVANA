@@ -1,0 +1,152 @@
+---
+// ============================================
+// CONDITIONS GÉNÉRALES D'UTILISATION (CGU)
+// ============================================
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const YEAR = new Date().getFullYear();
+const LAST_UPDATE = '5 décembre 2024';
+---
+
+<BaseLayout
+  title="Conditions d'utilisation - Qivana"
+  description="Conditions générales d'utilisation de la plateforme Qivana."
+>
+  <main class="legal-page">
+    <div class="container">
+      <header class="legal-page__header">
+        <a href="/" class="legal-page__back">← Retour à l'accueil</a>
+        <h1 class="legal-page__title">Conditions Générales d'Utilisation</h1>
+        <p class="legal-page__subtitle">Règles d'utilisation de Qivana</p>
+        <p class="legal-page__updated">Dernière mise à jour : {LAST_UPDATE}</p>
+      </header>
+
+      <div class="legal-page__content">
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">1. Objet</h2>
+          <p class="legal-page__text">
+            Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation 
+            de la plateforme Qivana, accessible à l'adresse qivana.app.
+          </p>
+          <p class="legal-page__text">
+            Qivana est une plateforme de quiz interactive proposant des quiz solo et multijoueur 
+            sur de nombreux univers : culture pop, cinéma, séries, jeux vidéo, anime, manga et bien plus.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">2. Acceptation des CGU</h2>
+          <p class="legal-page__text">
+            L'utilisation de Qivana implique l'acceptation pleine et entière des présentes CGU.
+            Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser le service.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">3. Inscription et compte</h2>
+          <ul class="legal-page__list">
+            <li>L'inscription est gratuite et ouverte à toute personne majeure ou mineure avec autorisation parentale</li>
+            <li>Vous êtes responsable de la confidentialité de vos identifiants</li>
+            <li>Un seul compte par personne est autorisé</li>
+            <li>Les informations fournies doivent être exactes et à jour</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">4. Services proposés</h2>
+          <p class="legal-page__text"><strong>Offre Freemium (gratuite) :</strong></p>
+          <ul class="legal-page__list">
+            <li>Quiz solo illimités sur base de données</li>
+            <li>Accès au classement</li>
+            <li>Système de badges et avatars</li>
+          </ul>
+          <p class="legal-page__text"><strong>Offre Premium (4,99€/mois ou 49,99€/an) :</strong></p>
+          <ul class="legal-page__list">
+            <li>Duels multijoueurs</li>
+            <li>5 quiz personnalisés par mois</li>
+            <li>Badges et avatars exclusifs</li>
+          </ul>
+          <p class="legal-page__text"><strong>Offre Premium+ (7,99€/mois ou 79,99€/an) :</strong></p>
+          <ul class="legal-page__list">
+            <li>Tous les avantages Premium</li>
+            <li>200 quiz personnalisés par mois</li>
+            <li>Accès prioritaire aux nouveautés</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">5. Comportement des utilisateurs</h2>
+          <p class="legal-page__text">Il est interdit de :</p>
+          <ul class="legal-page__list">
+            <li>Utiliser le service à des fins illégales</li>
+            <li>Tricher ou exploiter des failles du système</li>
+            <li>Harceler ou insulter d'autres utilisateurs</li>
+            <li>Créer plusieurs comptes pour contourner les limitations</li>
+            <li>Tenter d'accéder aux données d'autres utilisateurs</li>
+            <li>Utiliser des robots ou scripts automatisés</li>
+          </ul>
+          <p class="legal-page__text">
+            Tout manquement peut entraîner la suspension ou la suppression définitive du compte.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">6. Propriété intellectuelle</h2>
+          <p class="legal-page__text">
+            Le contenu de Qivana (code, design, textes, questions) est protégé par le droit d'auteur
+            et reste la propriété de Qivana.
+          </p>
+          <p class="legal-page__text">
+            Les marques et noms de personnages cités dans les quiz appartiennent à leurs propriétaires respectifs
+            et sont utilisés à des fins de divertissement et d'information.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">7. Limitation de responsabilité</h2>
+          <p class="legal-page__text">
+            Qivana est fourni "en l'état". Nous ne garantissons pas :
+          </p>
+          <ul class="legal-page__list">
+            <li>L'absence d'erreurs dans les questions</li>
+            <li>La disponibilité continue du service</li>
+            <li>L'exactitude des classements en cas de bug</li>
+          </ul>
+          <p class="legal-page__text">
+            Nous déclinons toute responsabilité pour les dommages indirects liés à l'utilisation du service.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">8. Modification des CGU</h2>
+          <p class="legal-page__text">
+            Nous nous réservons le droit de modifier ces CGU à tout moment.
+            Les utilisateurs seront informés par email des modifications importantes.
+            La poursuite de l'utilisation vaut acceptation des nouvelles conditions.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">9. Droit applicable</h2>
+          <p class="legal-page__text">
+            Les présentes CGU sont soumises au droit français.
+            En cas de litige, les tribunaux de Paris seront seuls compétents,
+            après tentative de résolution amiable.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">10. Contact</h2>
+          <p class="legal-page__text">
+            Pour toute question : <a href="mailto:contact@qivana.app" class="legal-page__link">contact@qivana.app</a>
+          </p>
+        </section>
+
+        <footer class="legal-page__footer">
+          <p>© {YEAR} Qivana. Tous droits réservés.</p>
+        </footer>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

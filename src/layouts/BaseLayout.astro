@@ -7,6 +7,7 @@
 // Import des styles (Astro compile automatiquement SCSS → CSS)
 import '../styles/main.scss';
 import ToastContainer from '../components/ui/ToastContainer';
+import UpgradeModal from '../components/ui/UpgradeModal';
 import Seo from '../components/Seo.astro';
 
 interface Props {
@@ -65,5 +66,8 @@ const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin;
     
     <!-- Toast Notifications -->
     <ToastContainer client:only="react" />
+    
+    <!-- Upgrade Modal (affiché via événement global) -->
+    <UpgradeModal client:only="react" />
   </body>
 </html>

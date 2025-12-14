@@ -391,17 +391,13 @@ const difficulties = [
             const data = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
             
             if (data.requiresPremium) {
-              // Afficher l'alerte avec showAlert (cohérent avec le reste de l'app)
-              showAlert({
-                type: 'warning',
-                message: data.message || 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
-                duration: 0, // Pas d'auto-dismiss pour les warnings
-              });
-              
-              // Optionnel : Ajouter le paramètre d'erreur dans l'URL pour persistance
-              const url = new URL(window.location.href);
-              url.searchParams.set('error', 'stock_insufficient');
-              window.history.replaceState({}, '', url.toString());
+              // Afficher le modal d'upgrade au lieu d'une alerte
+              window.dispatchEvent(new CustomEvent('show-upgrade-modal', {
+                detail: {
+                  feature: 'les quiz personnalisés',
+                  requiredPlan: 'premium'
+                }
+              }));
               
               return; // ⚠️ IMPORTANT : Ne pas continuer, le quiz ne doit PAS se lancer
             }

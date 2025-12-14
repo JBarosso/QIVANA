@@ -76,15 +76,15 @@ export default function UpgradeModal({
         <div className="upgrade-modal__features">
           {requiredPlan === 'premium' ? (
             <>
-              <div className="upgrade-modal__feature">✓ 5 quiz IA par mois</div>
+              <div className="upgrade-modal__feature">✓ 5 quiz personnalisés par mois</div>
               <div className="upgrade-modal__feature">✓ Mode All-in-One</div>
               <div className="upgrade-modal__feature">✓ Timer personnalisable</div>
               <div className="upgrade-modal__feature">✓ Accès multijoueur</div>
             </>
           ) : (
             <>
-              <div className="upgrade-modal__feature">✓ Quiz IA illimités</div>
-              <div className="upgrade-modal__feature">✓ Mode Infini IA</div>
+              <div className="upgrade-modal__feature">✓ Quiz personnalisés illimités</div>
+              <div className="upgrade-modal__feature">✓ Mode Infini</div>
               <div className="upgrade-modal__feature">✓ Création de salons</div>
               <div className="upgrade-modal__feature">✓ Timer custom (3-20s)</div>
             </>

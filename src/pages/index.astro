@@ -20,7 +20,7 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
       <section class="hero">
         <h1 class="hero__title">Qivana</h1>
         <p class="hero__subtitle">
-          La plateforme de quiz geek alimentée par l'IA
+          La plateforme de quiz nouvelle génération
         </p>
         
         {!user ? (
@@ -78,6 +78,101 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
           ✅ Milestone 5 - Quiz Custom (IA)
         </p>
       </section>
+
+      <!-- Section de test - Liens vers toutes les pages -->
+      <section class="test-links">
+        <h2 class="test-links__title">🔗 Liens de test (développement)</h2>
+        
+        <div class="test-links__grid">
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Pages principales</h3>
+            <ul class="test-links__list">
+              <li><a href="/pricing">💎 Pricing</a></li>
+              <li><a href="/leaderboard">🏆 Leaderboard</a></li>
+              <li><a href="/leaderboard/universe?universe=anime">🏆 Leaderboard par univers</a></li>
+              <li><a href="/profile">👤 Mon profil</a></li>
+              <li><a href="/profile/edit">✏️ Éditer profil</a></li>
+              <li><a href="/quiz/setup">🎮 Nouveau quiz</a></li>
+              <li><a href="/quiz/custom-quiz">✨ Quiz custom</a></li>
+              <li><a href="/quiz/ai-setup">🤖 Quiz AI setup</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Duels multijoueurs</h3>
+            <ul class="test-links__list">
+              <li><a href="/duel/create">⚔️ Créer un salon</a></li>
+              <li><a href="/duel/join">🔗 Rejoindre un salon</a></li>
+              <li><a href="/duel/lobby?salon=TEST123">🏠 Lobby (test)</a></li>
+              <li><a href="/duel/play?room=TEST123">🎮 Play (test)</a></li>
+              <li><a href="/duel/results?salon=TEST123">🏆 Results (test)</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Pages légales</h3>
+            <ul class="test-links__list">
+              <li><a href="/mentions-legales">📄 Mentions légales</a></li>
+              <li><a href="/confidentialite">🔒 Confidentialité</a></li>
+              <li><a href="/conditions-utilisation">📋 CGU</a></li>
+              <li><a href="/conditions-vente">💳 CGV</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Pages d'erreur</h3>
+            <ul class="test-links__list">
+              <li><a href="/404">❌ Page 404</a></li>
+              <li><a href="/500">⚡ Page 500</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Admin</h3>
+            <ul class="test-links__list">
+              <li><a href="/admin">🔧 Dashboard admin</a></li>
+              <li><a href="/admin/questions">❓ Gestion questions</a></li>
+              <li><a href="/admin/duplicates">🔄 Doublons</a></li>
+              <li><a href="/admin/flags">🚩 Signalements</a></li>
+              <li><a href="/admin/analytics">📊 Analytics</a></li>
+              <li><a href="/admin/questions/new">➕ Nouvelle question</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Authentification</h3>
+            <ul class="test-links__list">
+              <li><a href="/auth/login">🔐 Login</a></li>
+              <li><a href="/auth/signup">📝 Signup</a></li>
+              <li><a href="/auth/reset-password">🔑 Reset password</a></li>
+              <li><a href="/auth/update-password">🔄 Update password</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Paiement</h3>
+            <ul class="test-links__list">
+              <li><a href="/payment/success">✅ Payment success</a></li>
+              <li><a href="/payment/cancel">❌ Payment cancel</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Quiz & Résultats</h3>
+            <ul class="test-links__list">
+              <li><a href="/quiz/play?session=TEST123">▶️ Play quiz (test)</a></li>
+              <li><a href="/quiz/results?session=TEST123">📊 Résultats quiz (test)</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Profils publics</h3>
+            <ul class="test-links__list">
+              <li><a href="/profile/test-user">👤 Profil public (test)</a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 </BaseLayout>
@@ -134,6 +229,69 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
       color: var(--color-text-muted);
       font-weight: var(--font-weight-medium);
       line-height: 1.6;
+    }
+  }
+
+  .test-links {
+    margin-top: var(--space-12);
+    padding: var(--space-6);
+    background: var(--color-surface);
+    border-radius: var(--radius-4);
+    border: 2px dashed var(--color-border);
+
+    &__title {
+      font-size: var(--fs-5);
+      color: var(--color-text);
+      margin-bottom: var(--space-6);
+      text-align: center;
+      font-weight: var(--font-weight-semibold);
+    }
+
+    &__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-6);
+    }
+
+    &__group {
+      &-title {
+        font-size: var(--fs-4);
+        color: var(--color-primary);
+        margin-bottom: var(--space-3);
+        font-weight: var(--font-weight-semibold);
+      }
+    }
+
+    &__list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+
+      li {
+        margin-bottom: var(--space-2);
+
+        a {
+          display: block;
+          padding: var(--space-2) var(--space-3);
+          color: var(--color-text);
+          text-decoration: none;
+          border-radius: var(--radius-2);
+          transition: all var(--transition-fast);
+          font-size: var(--fs-3);
+
+          &:hover {
+            background: var(--color-background);
+            color: var(--color-primary);
+            transform: translateX(4px);
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .test-links__grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>

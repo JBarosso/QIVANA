@@ -492,12 +492,12 @@ export async function fetchQuestionsWithAutoGeneration(
   if (availableStock < questionsRequested) {
     // ⚠️ SÉCURITÉ FREEMIUM : Bloquer la génération IA
     if (userPlan === 'freemium') {
-      throw new Error('Stock insuffisant. Passe Premium pour débloquer la génération IA.');
+      throw new Error('Stock insuffisant. Passe Premium pour accéder aux quiz personnalisés.');
     }
 
     // Pour Premium/Premium+ : génération IA contrôlée
     const missingCount = questionsRequested - availableStock;
-    console.log(`🤖 Stock insuffisant. Génération IA contrôlée: ${missingCount} questions manquantes`);
+    console.log(`📊 Stock insuffisant. Génération contrôlée: ${missingCount} questions manquantes`);
 
     try {
       const { generateControlledAIQuestions } = await import('./ai-generation');
@@ -550,7 +550,7 @@ export async function fetchQuestionsWithAutoGeneration(
     
     // ⚠️ SÉCURITÉ FREEMIUM : Bloquer si erreur de récupération
     if (userPlan === 'freemium') {
-      throw new Error('Stock insuffisant. Passe Premium pour débloquer la génération IA.');
+      throw new Error('Stock insuffisant. Passe Premium pour accéder aux quiz personnalisés.');
     }
     
     // ⚠️ IMPORTANT : Pour Premium/Premium+, si toutes les questions ont été vues,
@@ -604,7 +604,7 @@ export async function fetchQuestionsWithAutoGeneration(
   // Si toujours insuffisant après génération, accepter ce qui est disponible (sauf si 0)
   if (questions.length < questionsMinimum) {
     if (questions.length === 0) {
-      throw new Error('Impossible de générer un quiz. Stock insuffisant même après génération IA.');
+      throw new Error('Impossible de générer un quiz. Stock insuffisant même après génération.');
     }
 
     console.log(`⚠️ Moins de questions que demandé: ${questions.length}/${questionsRequested}`);

@@ -110,7 +110,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         return new Response(
           JSON.stringify({
             error: 'Stock insuffisant',
-            message: 'Stock insuffisant. Passe Premium pour débloquer la génération IA.',
+            message: 'Plus assez de questions disponibles. Passe Premium pour accéder aux quiz personnalisés !',
             requiresPremium: true,
           }),
           {
