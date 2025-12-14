@@ -244,8 +244,8 @@ async function handleSubscriptionUpdated(subscription: any) {
   const plan = getPlanFromPriceId(priceId);
 
   // Gérer l'annulation programmée (cancel_at_period_end)
-  if (subscription.cancel_at_period_end && subscription.current_period_end) {
-    const endDate = new Date(subscription.current_period_end * 1000).toISOString();
+  if (subscription.cancel_at_period_end && subscription.cancel_at) {
+    const endDate = new Date(subscription.cancel_at * 1000).toISOString();
     
     await supabaseAdmin
       .from('profiles')
