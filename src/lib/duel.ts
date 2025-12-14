@@ -67,7 +67,7 @@ export async function generateUniqueSalonCode(
  */
 export interface CreateSalonData {
   salon_name: string;
-  game_mode: 'classic' | 'deathmatch';
+  game_mode: 'classic' | 'battle_royal';
   mode: QuizType;
   universe: Universe;
   difficulty: Difficulty;
@@ -77,6 +77,7 @@ export interface CreateSalonData {
   chef_id: string;
   custom_prompt?: string | null; // Prompt custom pour génération au démarrage
   temp_questions?: any[] | null; // ⚠️ DEPRECATED : Ne plus utiliser, génération au démarrage uniquement
+  initial_lives?: number | null; // Nombre de vies initiales pour Battle Royal (défaut: 10)
 }
 
 /**
@@ -108,6 +109,12 @@ export async function createSalon(
   // Ajouter custom_prompt si fourni (pour custom quiz - génération au démarrage uniquement)
   if (data.custom_prompt) {
     insertData.custom_prompt = data.custom_prompt;
+  }
+  
+  // Ajouter initial_lives si mode Battle Royal
+  if (data.game_mode === 'battle_royal') {
+    insertData.initial_lives = data.initial_lives || 10;
+    insertData.player_lives = {}; // Initialiser avec un objet vide
   }
   
   // ⚠️ DEPRECATED : temp_questions n'est plus utilisé (génération au démarrage uniquement)

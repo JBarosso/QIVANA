@@ -68,7 +68,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     const formData = await request.formData();
     
     const salon_name = formData.get('salon_name')?.toString().trim();
-    const game_mode = formData.get('game_mode')?.toString() as 'classic' | 'deathmatch';
+    const game_mode = formData.get('game_mode')?.toString() as 'classic' | 'battle_royal';
+    const initial_lives = game_mode === 'battle_royal' 
+      ? parseInt(formData.get('initial_lives')?.toString() || '10', 10)
+      : null;
     const mode = formData.get('mode')?.toString() as QuizType;
     // Pour le mode custom quiz, l'univers n'est pas requis (on utilise 'other' par défaut)
     let universe = (formData.get('universe')?.toString() || (mode === 'ai-custom-quiz' ? 'other' : null)) as Universe | null;
@@ -89,7 +92,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       );
     }
 
-    if (!game_mode || (game_mode !== 'classic' && game_mode !== 'deathmatch')) {
+    if (!game_mode || (game_mode !== 'classic' && game_mode !== 'battle_royal')) {
       return new Response(
         JSON.stringify({ error: 'Mode de jeu invalide' }),
         {
@@ -99,16 +102,20 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       );
     }
 
-    // Pour l'instant, seul "classic" est implémenté
-    if (game_mode !== 'classic') {
-      return new Response(
-        JSON.stringify({ error: 'Le mode Deathmatch n\'est pas encore disponible' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+    // Validation initial_lives pour Battle Royal
+    if (game_mode === 'battle_royal') {
+      if (!initial_lives || initial_lives < 5 || initial_lives > 20) {
+        return new Response(
+          JSON.stringify({ error: 'Le nombre de vies initiales doit être entre 5 et 20' }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
     }
+
+    // Battle Royal est maintenant disponible
 
     if (!mode || !['db', 'ai-custom-quiz'].includes(mode)) {
       return new Response(
@@ -204,6 +211,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       chef_id: user.id,
       custom_prompt: customPrompt, // Stocker seulement le prompt, pas les questions
       temp_questions: null, // ⚠️ IMPORTANT : Plus de génération à la création
+      initial_lives: game_mode === 'battle_royal' ? initial_lives : null,
     });
 
     // Retourner le succès avec redirection vers le lobby

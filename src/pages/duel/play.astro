@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { requirePremiumPlus } from '../../lib/auth';
 import DuelPlayerSocketIO from '../../components/duel/DuelPlayerSocketIO';
+import DuelPlayerBattleRoyal from '../../components/duel/DuelPlayerBattleRoyal';
 
 // Protection de la route - Premium+ uniquement
 const authResult = await requirePremiumPlus(Astro);
@@ -62,15 +63,28 @@ if (!isChef && !isParticipant) {
   <div class="duel-play">
     <div class="duel-play__container">
       {finalRoomId && (
-        <DuelPlayerSocketIO
-          client:load
-          roomId={finalRoomId}
-          salonId={salonId || undefined}
-          salonName={salon.salon_name}
-          currentUserId={user.id}
-          currentUserPseudo={profile.pseudo}
-          isChef={isChef}
-        />
+        salon.game_mode === 'battle_royal' ? (
+          <DuelPlayerBattleRoyal
+            client:load
+            roomId={finalRoomId}
+            salonId={salonId || undefined}
+            salonName={salon.salon_name}
+            currentUserId={user.id}
+            currentUserPseudo={profile.pseudo}
+            isChef={isChef}
+            initialLives={salon.initial_lives || 10}
+          />
+        ) : (
+          <DuelPlayerSocketIO
+            client:load
+            roomId={finalRoomId}
+            salonId={salonId || undefined}
+            salonName={salon.salon_name}
+            currentUserId={user.id}
+            currentUserPseudo={profile.pseudo}
+            isChef={isChef}
+          />
+        )
       )}
     </div>
   </div>
