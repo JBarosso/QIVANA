@@ -5,6 +5,7 @@ import { getQuizSession, completeQuizSession } from '../../lib/quiz';
 import type { Answers, Question } from '../../types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../types/supabase';
+import RatingModal from '../../components/quiz/RatingModal';
 
 // Protection de la route
 const authResult = await requireAuth(Astro);
@@ -190,7 +191,7 @@ if (accuracy >= 90) {
         <a href={session.quiz_type === 'ai-custom-quiz' ? '/quiz/custom-quiz' : '/quiz/setup'} class="btn btn--primary btn--large">
           Nouveau Quiz 🚀
         </a>
-        <a href="/profil" class="btn btn--secondary btn--large">
+        <a href="/profile" class="btn btn--secondary btn--large">
           Mon Profil
         </a>
       </div>
@@ -210,6 +211,15 @@ if (accuracy >= 90) {
       </div>
     </div>
   </div>
+
+  {/* Modal de notation - s'affiche après 2 secondes */}
+  <RatingModal 
+    client:only="react"
+    sessionId={sessionId}
+    quizType={session.quiz_type as 'db' | 'ai-predefined' | 'ai-custom-quiz' | 'duel'}
+    theme={session.universe}
+    promptUsed={(session as any).prompt_used}
+  />
 </BaseLayout>
 
 <style lang="scss">

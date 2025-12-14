@@ -179,9 +179,29 @@ function buildCustomPrompt(
   contextQuestions?: string[]
 ): string {
   const difficultyCalibration = {
-    easy: 'EASY: known by ~80% of fans - Culture populaire, personnages principaux, éléments iconiques',
-    medium: 'MEDIUM: requires solid knowledge (~40-60%) - Personnages secondaires, détails d\'intrigue, années de sortie',
-    hard: 'HARD: expert-level, precise but fair - Détails obscurs, anecdotes de production, références croisées, trivia expert, dates précises',
+    easy: 'EASY: known by ~80% of fans - Culture populaire, personnages principaux, éléments iconiques, questions que la majorité peut répondre',
+    medium: 'MEDIUM: requires solid knowledge (~40-60%) - Personnages secondaires, détails d\'intrigue, années de sortie, éléments moins évidents',
+    hard: `HARD: EXPERT-LEVEL ONLY (~10-20% success rate expected)
+    
+    HARD QUESTION REQUIREMENTS:
+    - Secondary knowledge, NOT the most famous facts
+    - Structural, historical, or contextual facts
+    - Cross-referenced information between works
+    - Production anecdotes, behind-the-scenes facts
+    - Precise dates, episode numbers, chapter numbers
+    - Questions that only TRUE experts can answer confidently
+    
+    HARD ANTI-PATTERNS (FORBIDDEN):
+    - The answer must NOT be inferable from the wording
+    - The answer must NOT be a title/name explicitly hinted in the question
+    - The question must NOT be solvable by common sense or elimination
+    - NO surface-level trivia that casual fans would know
+    
+    HARD FACTUAL SAFETY (CRITICAL):
+    - INTERNALLY VERIFY that the correct answer is 100% factually true
+    - VERIFY that ALL wrong answers are factually false
+    - If ANY doubt exists, DISCARD and generate another question
+    - Iterate until valid - NEVER lower difficulty`,
   };
 
   // Construire la section de contexte si des questions récentes sont fournies
@@ -314,7 +334,21 @@ Generate the response now.`;
 }
 
 /**
+ * Sélectionne le modèle OpenAI en fonction de la difficulté
+ * HARD utilise gpt-4o pour une meilleure qualité factuelle
+ */
+function selectOpenAIModel(difficulty: Difficulty): string {
+  // Modèle par défaut depuis l'environnement
+  const defaultModel = import.meta.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const hardModel = import.meta.env.OPENAI_MODEL_HARD || 'gpt-4o';
+  
+  // HARD utilise un modèle plus puissant pour éviter les hallucinations
+  return difficulty === 'hard' ? hardModel : defaultModel;
+}
+
+/**
  * Appel à OpenAI pour générer un quiz
+ * Utilise un modèle différent pour HARD (gpt-4o vs gpt-4o-mini)
  */
 async function generateWithOpenAI(request: AIQuizRequest): Promise<AIQuizResponse> {
   const apiKey = import.meta.env.OPENAI_API_KEY;
@@ -324,6 +358,10 @@ async function generateWithOpenAI(request: AIQuizRequest): Promise<AIQuizRespons
   }
 
   const prompt = buildPrompt(request);
+  const model = selectOpenAIModel(request.difficulty);
+  
+  // Température plus basse pour HARD (moins de créativité, plus de précision)
+  const temperature = request.difficulty === 'hard' ? 0.5 : 0.8;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -332,19 +370,21 @@ async function generateWithOpenAI(request: AIQuizRequest): Promise<AIQuizRespons
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: import.meta.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model,
       messages: [
         {
           role: 'system',
-          content: 'Tu es un générateur de quiz geek. Tu réponds UNIQUEMENT en JSON strict, sans markdown.',
+          content: request.difficulty === 'hard' 
+            ? 'Tu es un expert en quiz de culture geek. Tu génères des questions de niveau EXPERT avec une précision factuelle absolue. Tu vérifies CHAQUE fait avant de le proposer. Tu réponds UNIQUEMENT en JSON strict, sans markdown.'
+            : 'Tu es un générateur de quiz geek. Tu réponds UNIQUEMENT en JSON strict, sans markdown.',
         },
         {
           role: 'user',
           content: prompt,
         },
       ],
-      temperature: 0.8,
-      max_tokens: 2000,
+      temperature,
+      max_tokens: request.difficulty === 'hard' ? 3000 : 2000, // Plus de tokens pour HARD (itérations internes)
       response_format: { type: 'json_object' },
     }),
   });
@@ -533,18 +573,27 @@ function validateQuizQuestions(questions: unknown[], result: AIQuizResponse): AI
 
 /**
  * Fonction principale: génère un quiz via IA
+ * Applique les règles de qualité (cap HARD à 10 questions)
  */
 export async function generateQuiz(request: AIQuizRequest): Promise<AIQuizResponse> {
   const provider = request.provider || (import.meta.env.AI_PROVIDER as AIProvider) || 'openai';
+
+  // CAP HARD: Maximum 10 questions pour garantir la qualité
+  // Selon context-quiz-ia-v2.md - HARD difficulty requires higher quality
+  let effectiveRequest = { ...request };
+  if (request.difficulty === 'hard' && request.numberOfQuestions > 10) {
+    console.log(`🔴 HARD mode: capping questions from ${request.numberOfQuestions} to 10 for quality`);
+    effectiveRequest.numberOfQuestions = 10;
+  }
 
   let response: AIQuizResponse;
 
   switch (provider) {
     case 'openai':
-      response = await generateWithOpenAI(request);
+      response = await generateWithOpenAI(effectiveRequest);
       break;
     case 'anthropic':
-      response = await generateWithAnthropic(request);
+      response = await generateWithAnthropic(effectiveRequest);
       break;
     default:
       throw new Error(`Unknown AI provider: ${provider}`);

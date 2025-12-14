@@ -796,6 +796,14 @@ const minQuestions = 5;
         clarificationZone.hidden = true;
         selectedClarification = null;
       }
+      
+      // Redémarrer la rotation du placeholder si le champ est vidé
+      if (promptInput.value.length === 0 && !placeholderInterval) {
+        startPlaceholderRotation();
+      } else if (promptInput.value.length > 0 && placeholderInterval) {
+        // Arrêter la rotation si l'utilisateur tape
+        stopPlaceholderRotation();
+      }
     });
 
     // Arrêter la rotation quand l'utilisateur commence à taper

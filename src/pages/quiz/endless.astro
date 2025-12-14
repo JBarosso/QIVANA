@@ -19,7 +19,7 @@ const { user, profile } = authResult;
 
 // Vérifier que l'utilisateur est Premium ou Premium+
 if (profile.plan === 'freemium') {
-  return Astro.redirect('/tarifs?upgrade=endless');
+  return Astro.redirect('/pricing?upgrade=endless');
 }
 ---
 
@@ -37,8 +37,11 @@ if (profile.plan === 'freemium') {
 </BaseLayout>
 
 <style lang="scss">
+  @use '../../styles/pages/quiz' as *;
+
   .endless-page {
     min-height: 100vh;
     padding: var(--space-4);
+    background: linear-gradient(135deg, var(--color-neutral-900) 0%, var(--color-neutral-800) 100%);
   }
 </style>

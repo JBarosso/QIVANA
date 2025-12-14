@@ -207,6 +207,15 @@ const difficulties = [
           </button>
         </div>
       </form>
+
+      <!-- Loading overlay (pour génération IA) -->
+      <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p class="loading-text">✨ Préparation de ton quiz...</p>
+          <p class="loading-subtext" id="loadingSubtext">Chargement des questions</p>
+        </div>
+      </div>
     </div>
   </div>
 </BaseLayout>
@@ -317,12 +326,69 @@ const difficulties = [
   color: var(--color-text);
   display: block;
 }
+
+// Loading overlay styles
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: var(--space-6);
+}
+
+.spinner {
+  width: 64px;
+  height: 64px;
+  border: 6px solid var(--color-surface);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto var(--space-4);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: var(--fs-5);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.loading-subtext {
+  font-size: var(--fs-2);
+  color: var(--color-text-muted);
+}
 </style>
 
 <script>
   // Gestion des erreurs depuis l'API
   // ⚠️ IMPORTANT : Empêcher le comportement par défaut pour gérer toutes les erreurs
   const form = document.getElementById('quizSetupForm') as HTMLFormElement;
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const loadingSubtext = document.getElementById('loadingSubtext');
+  
+  // Fonction pour afficher/masquer le loader
+  function showLoader(show: boolean, message?: string) {
+    if (loadingOverlay) {
+      loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+    if (loadingSubtext && message) {
+      loadingSubtext.textContent = message;
+    }
+  }
   
   if (form) {
     form.addEventListener('submit', async (e) => {
@@ -332,18 +398,29 @@ const difficulties = [
       const formData = new FormData(form);
       const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
       
-      // Désactiver le bouton pendant le traitement
+      // Désactiver le bouton et afficher le loader
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Chargement...';
       }
       
+      // Afficher le loader
+      showLoader(true, 'Recherche des questions en base...');
+      
       try {
+        // Mettre à jour le message après 2 secondes (indication de génération IA possible)
+        const aiTimeout = setTimeout(() => {
+          showLoader(true, '✨ Génération de questions via IA en cours...');
+        }, 2000);
+        
         const response = await fetch('/api/quiz/start', {
           method: 'POST',
           body: formData,
           redirect: 'manual', // Ne pas suivre automatiquement
         });
+        
+        // Annuler le timeout si la réponse arrive avant
+        clearTimeout(aiTimeout);
 
         console.log('📡 Response status:', response.status);
         console.log('📡 Response type:', response.type);
@@ -378,7 +455,8 @@ const difficulties = [
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
           
-          // Réactiver le bouton
+          // Masquer le loader et réactiver le bouton
+          showLoader(false);
           if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Lancer le Quiz 🚀';
@@ -460,6 +538,7 @@ const difficulties = [
               duration: 0,
             });
             
+            showLoader(false);
             if (submitButton) {
               submitButton.disabled = false;
               submitButton.textContent = 'Lancer le Quiz 🚀';
@@ -475,6 +554,7 @@ const difficulties = [
             duration: 0,
           });
           
+          showLoader(false);
           if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Lancer le Quiz 🚀';
@@ -483,7 +563,8 @@ const difficulties = [
       } catch (error) {
         console.error('Error submitting form:', error);
         
-        // Réactiver le bouton
+        // Masquer le loader et réactiver le bouton
+        showLoader(false);
         if (submitButton) {
           submitButton.disabled = false;
           submitButton.textContent = 'Lancer le Quiz 🚀';

@@ -1,0 +1,227 @@
+---
+// ============================================
+// LEADERBOARD PAGE (Mode Endless)
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createServerClient } from '@supabase/ssr';
+
+const supabase = createServerClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  {
+    cookies: {
+      get(key) {
+        return Astro.cookies.get(key)?.value;
+      },
+      set(key, value, options) {
+        Astro.cookies.set(key, value, options);
+      },
+      remove(key, options) {
+        Astro.cookies.delete(key, options);
+      },
+    },
+  }
+);
+
+const limit = 50;
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const offset = (page - 1) * limit;
+
+// Récupérer les meilleurs scores du mode Endless
+// On prend le meilleur score de chaque joueur
+const { data: endlessScores, error: scoresError } = await supabase
+  .from('endless_scores')
+  .select('user_id, score, questions_answered, max_difficulty, created_at')
+  .order('score', { ascending: false });
+
+if (scoresError) {
+  console.error('Error fetching endless scores:', scoresError);
+}
+
+// Agréger pour garder le meilleur score de chaque joueur
+const bestScores = new Map<string, { score: number; questions_answered: number; max_difficulty: string; date: string }>();
+if (endlessScores) {
+  for (const entry of endlessScores) {
+    const existing = bestScores.get(entry.user_id);
+    if (!existing || entry.score > existing.score) {
+      bestScores.set(entry.user_id, {
+        score: entry.score,
+        questions_answered: entry.questions_answered,
+        max_difficulty: entry.max_difficulty,
+        date: entry.created_at
+      });
+    }
+  }
+}
+
+// Récupérer les profils des joueurs
+const userIds = Array.from(bestScores.keys());
+const { data: profiles } = userIds.length > 0 
+  ? await supabase
+      .from('profiles')
+      .select('id, pseudo, plan, slug, selected_avatar_id')
+      .in('id', userIds)
+  : { data: [] };
+
+// Récupérer les avatars
+const { data: allAvatars } = await supabase
+  .from('avatars')
+  .select('id, image_url');
+
+const avatarsMap = new Map(allAvatars?.map(a => [a.id, a.image_url]) || []);
+const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+// Construire le leaderboard trié par score
+const leaderboard = Array.from(bestScores.entries())
+  .map(([userId, data]) => ({
+    userId,
+    profile: profilesMap.get(userId),
+    ...data
+  }))
+  .filter(entry => entry.profile)
+  .sort((a, b) => b.score - a.score)
+  .slice(offset, offset + limit);
+
+const totalCount = bestScores.size;
+const hasMore = offset + limit < totalCount;
+
+// Récupérer l'utilisateur actuel
+const { data: { user } } = await supabase.auth.getUser();
+let currentUserRank = 0;
+let currentUserScore = 0;
+
+if (user && bestScores.has(user.id)) {
+  const sortedUsers = Array.from(bestScores.entries())
+    .sort((a, b) => b[1].score - a[1].score);
+  currentUserRank = sortedUsers.findIndex(([id]) => id === user.id) + 1;
+  currentUserScore = bestScores.get(user.id)?.score || 0;
+}
+
+const difficultyLabels: Record<string, string> = {
+  easy: '🟢 Facile',
+  medium: '🟡 Moyen',
+  hard: '🔴 Difficile'
+};
+---
+
+<BaseLayout
+  title="Classement Endless - Qivana"
+  description="Les meilleurs scores du mode Endless - Qui tiendra le plus longtemps ?"
+>
+  <main class="leaderboard-page">
+    <div class="container">
+      <header class="leaderboard-header">
+        <h1 class="leaderboard-header__title">🔥 Classement Endless</h1>
+        <p class="leaderboard-header__subtitle">
+          Les meilleurs scores du mode Duel vs Machine
+        </p>
+        
+        <nav class="leaderboard-nav">
+          <a href="/leaderboard" class="leaderboard-nav__link">
+            🏆 Classement Global
+          </a>
+          <a href="/leaderboard/endless" class="leaderboard-nav__link leaderboard-nav__link--active">
+            🔥 Mode Endless
+          </a>
+        </nav>
+      </header>
+
+      {currentUserRank > 0 && (
+        <div class="current-user-rank">
+          <span class="current-user-rank__label">Ta position :</span>
+          <span class="current-user-rank__value">#{currentUserRank}</span>
+          <span class="current-user-rank__score">{Math.round(currentUserScore)} pts</span>
+        </div>
+      )}
+
+      <div class="leaderboard-table">
+        <div class="leaderboard-table__header">
+          <span class="leaderboard-table__col leaderboard-table__col--rank">Rang</span>
+          <span class="leaderboard-table__col leaderboard-table__col--player">Joueur</span>
+          <span class="leaderboard-table__col leaderboard-table__col--score">Score</span>
+          <span class="leaderboard-table__col leaderboard-table__col--questions">Questions</span>
+          <span class="leaderboard-table__col leaderboard-table__col--difficulty">Max Difficulté</span>
+        </div>
+
+        {leaderboard.length > 0 ? (
+          <ul class="leaderboard-list">
+            {leaderboard.map((entry, index) => {
+              const rank = offset + index + 1;
+              const isCurrentUser = user && entry.userId === user.id;
+              // Calculer isTopThree de manière explicite pour éviter les erreurs Astro
+              const isTopThree = rank === 1 || rank === 2 || rank === 3;
+              const profile = entry.profile;
+              const avatarUrl = profile?.selected_avatar_id ? avatarsMap.get(profile.selected_avatar_id) : null;
+
+              return (
+                <li class={`leaderboard-item ${isCurrentUser ? 'leaderboard-item--current' : ''} ${isTopThree ? `leaderboard-item--rank-${rank}` : ''}`}>
+                  <span class="leaderboard-item__rank">
+                    {rank === 1 && '🥇'}
+                    {rank === 2 && '🥈'}
+                    {rank === 3 && '🥉'}
+                    {rank > 3 && `#${rank}`}
+                  </span>
+                  
+                  <a href={`/profile/${profile?.slug || profile?.id}`} class="leaderboard-item__player">
+                    <div class="leaderboard-item__avatar">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={profile?.pseudo} class="leaderboard-item__avatar-img" />
+                      ) : (
+                        <span class="leaderboard-item__avatar-placeholder">
+                          {profile?.pseudo?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div class="leaderboard-item__info">
+                      <span class="leaderboard-item__name">{profile?.pseudo}</span>
+                      <span class={`leaderboard-item__plan leaderboard-item__plan--${profile?.plan}`}>
+                        {profile?.plan === 'premium+' ? '💎' : profile?.plan === 'premium' ? '⭐' : ''}
+                      </span>
+                    </div>
+                  </a>
+                  
+                  <span class="leaderboard-item__score">{Math.round(entry.score)}</span>
+                  <span class="leaderboard-item__questions">{entry.questions_answered}</span>
+                  <span class="leaderboard-item__difficulty">
+                    {difficultyLabels[entry.max_difficulty] || entry.max_difficulty}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div class="leaderboard-empty">
+            <p>🔥 Aucun score enregistré pour le moment.</p>
+            <p>Sois le premier à relever le défi !</p>
+            <a href="/quiz/endless" class="btn btn--primary">
+              Jouer au mode Endless
+            </a>
+          </div>
+        )}
+      </div>
+
+      {totalCount > limit && (
+        <div class="leaderboard-pagination">
+          {page > 1 && (
+            <a href={`/leaderboard/endless?page=${page - 1}`} class="btn btn--secondary">
+              ← Précédent
+            </a>
+          )}
+          <span class="leaderboard-pagination__info">
+            Page {page} / {Math.ceil(totalCount / limit)}
+          </span>
+          {hasMore && (
+            <a href={`/leaderboard/endless?page=${page + 1}`} class="btn btn--secondary">
+              Suivant →
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  @use '../../styles/pages/leaderboard' as *;
+</style>

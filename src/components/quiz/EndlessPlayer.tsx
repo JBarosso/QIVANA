@@ -100,7 +100,10 @@ export default function EndlessPlayer({ userId, userPseudo }: EndlessPlayerProps
       const response = await fetch('/api/quiz/endless-question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ difficulty: newDifficulty }),
+        body: JSON.stringify({ 
+          difficulty: newDifficulty,
+          questionNumber: questionsAnswered + 1, // Pour le système de batch
+        }),
       });
 
       const data = await response.json();
@@ -293,7 +296,7 @@ export default function EndlessPlayer({ userId, userPseudo }: EndlessPlayerProps
             <button className="btn btn--primary" onClick={startGame}>
               🔄 Rejouer
             </button>
-            <a href="/classement?tab=endless" className="btn btn--secondary">
+            <a href="/leaderboard/endless" className="btn btn--secondary">
               🏆 Leaderboard
             </a>
             <a href="/" className="btn btn--outline">
