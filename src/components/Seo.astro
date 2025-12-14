@@ -24,8 +24,8 @@ const {
   noindex = false,
 }: Props = Astro.props;
 
-const siteName = 'Qivana - Quiz Geek IA';
-const defaultDescription = 'Qivana, la plateforme de quiz geek alimentée par l\'intelligence artificielle. Teste tes connaissances en anime, manga, jeux vidéo, films et séries. Défie tes amis en duel !';
+const siteName = 'Qivana - La plateforme de quiz';
+const defaultDescription = 'Qivana, la plateforme de quiz nouvelle génération. Teste tes connaissances sur tous les sujets : culture pop, cinéma, séries, jeux vidéo, et bien plus. Crée tes propres quiz et défie tes amis en duel !';
 
 // Build canonical URL
 const baseUrl = import.meta.env.PUBLIC_SITE_URL?.replace(/\/$/, '') ?? Astro.url.origin;
@@ -45,7 +45,7 @@ const metaDescription = description ?? defaultDescription;
 <meta name="title" content={metaTitle} />
 <meta name="description" content={metaDescription} />
 <meta name="author" content="Jordan BAROSSO" />
-<meta name="keywords" content="quiz, geek, anime, manga, jeux vidéo, films, séries, trivia, IA, intelligence artificielle, duel, multijoueur" />
+<meta name="keywords" content="quiz, trivia, culture pop, cinéma, séries, jeux vidéo, anime, manga, duel, multijoueur, quiz personnalisé, quiz en ligne" />
 
 {noindex && <meta name="robots" content="noindex, nofollow" />}
 
@@ -83,7 +83,7 @@ const metaDescription = description ?? defaultDescription;
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "Qivana",
-  "description": metaDescription,
+  "description": "Plateforme de quiz interactive avec des milliers de questions sur tous les sujets. Mode solo, duels multijoueurs et quiz personnalisés.",
   "url": baseUrl,
   "applicationCategory": "GameApplication",
   "operatingSystem": "Web",

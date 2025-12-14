@@ -1,7 +1,7 @@
 {
-  "name": "Qivana - Quiz Geek IA",
+  "name": "Qivana - La plateforme de quiz",
   "short_name": "Qivana",
-  "description": "La plateforme de quiz geek alimentée par l'intelligence artificielle",
+  "description": "La plateforme de quiz nouvelle génération. Quiz solo, duels et quiz personnalisés.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",
