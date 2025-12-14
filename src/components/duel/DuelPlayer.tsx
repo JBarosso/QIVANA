@@ -184,8 +184,8 @@ export default function DuelPlayer({
                 
                 if (!isStillParticipant) {
                   console.log('🚫 User has been expelled from duel');
-                  alert('Vous avez été expulsé du duel par le chef.');
-                  window.location.href = '/';
+                  window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vous avez été expulsé du duel par le chef.', type: 'error' } }));
+                  setTimeout(() => { window.location.href = '/'; }, 2000);
                   return;
                 }
               }
@@ -346,7 +346,7 @@ export default function DuelPlayer({
         console.log('✅ Answer saved successfully');
       } catch (error) {
         console.error('Error saving answer:', error);
-        alert('Erreur lors de la sauvegarde de la réponse');
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur lors de la sauvegarde de la réponse', type: 'error' } }));
       } finally {
         setIsLoading(false);
       }
@@ -445,7 +445,7 @@ export default function DuelPlayer({
 
                         if (!response.ok) {
                           const errorData = await response.json().catch(() => ({}));
-                          alert(`Erreur: ${errorData.error || 'Impossible d\'expulser le joueur'}`);
+                          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${errorData.error || 'Impossible d\'expulser le joueur'}`, type: 'error' } }));
                         } else {
                           // Realtime devrait mettre à jour automatiquement, mais on recharge pour être sûr
                           setTimeout(() => {
@@ -454,7 +454,7 @@ export default function DuelPlayer({
                         }
                       } catch (error) {
                         console.error('Error expelling player:', error);
-                        alert('Erreur lors de l\'expulsion');
+                        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur lors de l\'expulsion', type: 'error' } }));
                       }
                     }}
                     title={`Expulser ${player.pseudo}`}
@@ -600,7 +600,7 @@ export default function DuelPlayer({
 
                             if (!forceResponse.ok) {
                               const forceErrorData = await forceResponse.json().catch(() => ({}));
-                              alert(`Erreur: ${forceErrorData.error || 'Impossible de forcer le passage'}`);
+                              window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${forceErrorData.error || 'Impossible de forcer le passage'}`, type: 'error' } }));
                             }
                           }
                         }
@@ -624,12 +624,12 @@ export default function DuelPlayer({
 
                           if (!forceResponse.ok) {
                             const forceErrorData = await forceResponse.json().catch(() => ({}));
-                            alert(`Erreur: ${forceErrorData.error || 'Impossible de forcer le passage'}`);
+                            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${forceErrorData.error || 'Impossible de forcer le passage'}`, type: 'error' } }));
                           }
                         }
                       }
                     } else {
-                      alert(`Erreur: ${errorData.error || 'Impossible de passer à la question suivante'}`);
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${errorData.error || 'Impossible de passer à la question suivante'}`, type: 'error' } }));
                     }
                   } else {
                     // Succès, recharger le statut des joueurs
@@ -639,7 +639,7 @@ export default function DuelPlayer({
                   }
                 } catch (error) {
                   console.error('Error moving to next question:', error);
-                  alert('Erreur lors du passage à la question suivante');
+                  window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur lors du passage à la question suivante', type: 'error' } }));
                 }
               }}
             >

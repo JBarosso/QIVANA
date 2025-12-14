@@ -402,9 +402,9 @@ if (supabase) {
         // Fallback: copier dans le presse-papier
         try {
           await navigator.clipboard.writeText(url || window.location.href);
-          alert('Lien copié dans le presse-papier !');
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lien copié dans le presse-papier !', type: 'success' } }));
         } catch (err) {
-          alert('Impossible de copier le lien');
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Impossible de copier le lien', type: 'error' } }));
         }
       }
     });
@@ -432,7 +432,7 @@ if (supabase) {
         }
       } catch (error) {
         console.error('Portal error:', error);
-        alert('Erreur: ' + (error instanceof Error ? error.message : 'Impossible d\'ouvrir le portail'));
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur: ' + (error instanceof Error ? error.message : 'Impossible d\'ouvrir le portail'), type: 'error' } }));
         manageSubscriptionBtn.removeAttribute('disabled');
         manageSubscriptionBtn.textContent = '⚙️ Gérer mon abonnement';
       }

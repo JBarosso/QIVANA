@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@astrojs/react": "^3.0.9",
-    "@astrojs/vercel": "^9.0.2",
+    "@astrojs/sitemap": "^3.2.1",
+    "@astrojs/vercel": "^8.0.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.39.3",
     "astro": "^5.16.4",

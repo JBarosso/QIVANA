@@ -28,6 +28,8 @@
 // 4. Import des pages
 @use 'pages/pricing';
 @use 'pages/payment';
+@use 'pages/error';
+@use 'pages/legal';
 
 // ============================================
 // GLOBAL OVERRIDES QIVANA

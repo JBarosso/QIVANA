@@ -161,7 +161,7 @@ export default function DuelPlayerSocketIO({
 
     const onGameError = (data: { message: string }) => {
       console.error('❌ Game error:', data.message);
-      alert(`Erreur: ${data.message}`);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${data.message}`, type: 'error' } }));
     };
 
     // Écouter room:joined pour savoir quand on a rejoint
@@ -262,7 +262,7 @@ export default function DuelPlayerSocketIO({
       <div className="duel-player">
         <div className="duel-player__loading">
           <p>⏳ En attente de la première question...</p>
-          <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.5rem' }}>
+          <p className="duel-player__waiting-hint">
             Le jeu va démarrer dans quelques instants.
           </p>
         </div>
@@ -382,7 +382,7 @@ export default function DuelPlayerSocketIO({
             // Ne pas désactiver le bouton : le serveur validera de toute façon
             // disabled={!canAdvance}
             title={!canAdvance ? 'En attente : tous les joueurs doivent répondre ou le timer doit être terminé (le serveur validera)' : ''}
-            style={!canAdvance ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+            disabled={!canAdvance}
           >
             {currentQuestion && currentQuestion.questionIndex < currentQuestion.totalQuestions - 1
               ? 'Question Suivante ➡️'

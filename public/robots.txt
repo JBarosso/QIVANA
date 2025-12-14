@@ -1,0 +1,13 @@
+# Robots.txt for Qivana
+
+User-agent: *
+Allow: /
+
+# Disallow private/admin areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/callback
+Disallow: /payment/
+
+# Sitemap
+Sitemap: https://qivana.app/sitemap-index.xml

@@ -1,0 +1,84 @@
+---
+// ============================================
+// MENTIONS LÉGALES
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const YEAR = new Date().getFullYear();
+---
+
+<BaseLayout
+  title="Mentions légales - Qivana"
+  description="Mentions légales de Qivana, plateforme de quiz geek alimentée par l'IA."
+>
+  <main class="legal-page">
+    <div class="container">
+      <header class="legal-page__header">
+        <a href="/" class="legal-page__back">← Retour à l'accueil</a>
+        <h1 class="legal-page__title">Mentions légales</h1>
+        <p class="legal-page__subtitle">Informations sur l'éditeur et l'hébergeur</p>
+      </header>
+
+      <div class="legal-page__content">
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">1. Éditeur du site</h2>
+          <p class="legal-page__text">
+            <strong>Nom :</strong> Jordan BAROSSO<br />
+            <strong>Statut :</strong> Entrepreneur individuel<br />
+            <strong>Email :</strong> <a href="mailto:contact@qivana.app" class="legal-page__link">contact@qivana.app</a><br />
+            <strong>Adresse :</strong> [Sur demande auprès des autorités compétentes]
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">2. Hébergement</h2>
+          <p class="legal-page__text">
+            <strong>Hébergeur :</strong> Vercel Inc.<br />
+            <strong>Adresse :</strong> 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis<br />
+            <strong>Site web :</strong> <a href="https://vercel.com" class="legal-page__link" target="_blank" rel="noopener noreferrer">vercel.com</a>
+          </p>
+          <p class="legal-page__text">
+            <strong>Base de données :</strong> Supabase Inc.<br />
+            <strong>Site web :</strong> <a href="https://supabase.com" class="legal-page__link" target="_blank" rel="noopener noreferrer">supabase.com</a>
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">3. Propriété intellectuelle</h2>
+          <p class="legal-page__text">
+            L'ensemble du contenu du site Qivana (textes, graphismes, logo, code source) est protégé par le droit d'auteur.
+            Toute reproduction, représentation ou diffusion, totale ou partielle, est interdite sans autorisation préalable.
+          </p>
+          <p class="legal-page__text">
+            Les questions générées par IA sont créées à partir de connaissances publiques et restent la propriété de Qivana.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">4. Responsabilité</h2>
+          <p class="legal-page__text">
+            L'éditeur s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées sur ce site.
+            Toutefois, il ne peut garantir l'exactitude, la précision ou l'exhaustivité des informations mises à disposition.
+          </p>
+          <p class="legal-page__text">
+            Le site Qivana est fourni "en l'état". L'éditeur décline toute responsabilité en cas de dommages directs ou indirects
+            liés à l'utilisation du site.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">5. Droit applicable</h2>
+          <p class="legal-page__text">
+            Les présentes mentions légales sont régies par le droit français.
+            En cas de litige, les tribunaux français seront seuls compétents.
+          </p>
+        </section>
+
+        <footer class="legal-page__footer">
+          <p>© {YEAR} Qivana. Tous droits réservés.</p>
+        </footer>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

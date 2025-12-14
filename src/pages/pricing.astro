@@ -264,7 +264,7 @@ const plans = Object.values(PLANS);
         }
       } catch (error) {
         console.error('Checkout error:', error);
-        alert('Une erreur est survenue. Veuillez réessayer.');
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Une erreur est survenue. Veuillez réessayer.', type: 'error' } }));
         btn.removeAttribute('disabled');
         btn.textContent = 'Réessayer';
       }

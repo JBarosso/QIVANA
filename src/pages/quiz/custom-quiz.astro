@@ -693,7 +693,7 @@ const minQuestions = 5;
       } catch (error) {
         console.error('❌ Erreur:', error);
         loadingOverlay.style.display = 'none';
-        alert(error instanceof Error ? error.message : 'Erreur lors de la génération du quiz');
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: error instanceof Error ? error.message : 'Erreur lors de la génération du quiz', type: 'error' } }));
       }
     });
   }

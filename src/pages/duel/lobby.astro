@@ -405,7 +405,7 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
     
     qrElement.onerror = function() {
       if (qrElement.parentElement) {
-        qrElement.parentElement.innerHTML = '<p style="color: var(--color-text-muted);">Erreur chargement QR code</p>';
+        qrElement.parentElement.innerHTML = '<p class="lobby-qr__error">Erreur chargement QR code</p>';
       }
     };
   })();
@@ -482,7 +482,7 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          alert(`Erreur: ${errorData.error || 'Impossible de démarrer le duel'}`);
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Erreur: ${errorData.error || 'Impossible de démarrer le duel'}`, type: 'error' } }));
           startDuelBtn.removeAttribute('disabled');
           updateStartButton(0); // Réinitialiser
           return;
@@ -494,7 +494,7 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
         }
       } catch (error) {
         console.error('Error starting duel:', error);
-        alert('Erreur lors du démarrage du duel');
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur lors du démarrage du duel', type: 'error' } }));
         startDuelBtn.removeAttribute('disabled');
         updateStartButton(0);
       }

@@ -1,0 +1,35 @@
+---
+// ============================================
+// PAGE 404 - Not Found
+// ============================================
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Page introuvable - Qivana"
+  description="La page que tu cherches n'existe pas ou a été déplacée."
+>
+  <main class="error-page">
+    <div class="container">
+      <div class="error-page__content">
+        <div class="error-page__icon" aria-hidden="true">🔍</div>
+        <h1 class="error-page__code">404</h1>
+        <h2 class="error-page__title">Page introuvable</h2>
+        <p class="error-page__message">
+          Oups ! La page que tu cherches n'existe pas ou a été déplacée.
+          <br />
+          Peut-être qu'un quiz te remontera le moral ?
+        </p>
+        <div class="error-page__actions">
+          <a href="/" class="btn btn--primary btn--lg">
+            🏠 Retour à l'accueil
+          </a>
+          <a href="/quiz/setup" class="btn btn--secondary btn--lg">
+            🎮 Jouer un quiz
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

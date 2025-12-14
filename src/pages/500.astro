@@ -1,0 +1,39 @@
+---
+// ============================================
+// PAGE 500 - Server Error
+// ============================================
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Erreur serveur - Qivana"
+  description="Une erreur inattendue s'est produite. Nos équipes sont sur le coup !"
+>
+  <main class="error-page error-page--500">
+    <div class="container">
+      <div class="error-page__content">
+        <div class="error-page__icon" aria-hidden="true">⚡</div>
+        <h1 class="error-page__code">500</h1>
+        <h2 class="error-page__title">Erreur serveur</h2>
+        <p class="error-page__message">
+          Aïe ! Quelque chose s'est mal passé de notre côté.
+          <br />
+          Nos techniciens sont probablement en train de réparer ça avec du café et du code.
+        </p>
+        <div class="error-page__actions">
+          <a href="/" class="btn btn--primary btn--lg">
+            🏠 Retour à l'accueil
+          </a>
+          <button 
+            type="button" 
+            class="btn btn--secondary btn--lg"
+            onclick="window.location.reload()"
+          >
+            🔄 Réessayer
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

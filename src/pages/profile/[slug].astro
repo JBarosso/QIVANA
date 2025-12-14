@@ -222,9 +222,9 @@ const shareUrl = `${Astro.url.origin}/profile/${slug}`;
         // Fallback: copier dans le presse-papier
         try {
           await navigator.clipboard.writeText(url || window.location.href);
-          alert('Lien copié dans le presse-papier !');
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lien copié dans le presse-papier !', type: 'success' } }));
         } catch (err) {
-          alert('Impossible de copier le lien');
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Impossible de copier le lien', type: 'error' } }));
         }
       }
     });

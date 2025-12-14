@@ -61,7 +61,7 @@ export default function AvatarSelector({
       window.location.reload();
     } catch (error) {
       console.error('Error saving avatar:', error);
-      alert('Erreur lors de la sauvegarde de l\'avatar');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Erreur lors de la sauvegarde de l\'avatar', type: 'error' } }));
     }
   };
 

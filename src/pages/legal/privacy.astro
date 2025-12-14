@@ -1,0 +1,142 @@
+---
+// ============================================
+// POLITIQUE DE CONFIDENTIALITÉ
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const YEAR = new Date().getFullYear();
+const LAST_UPDATE = '5 décembre 2024';
+---
+
+<BaseLayout
+  title="Politique de confidentialité - Qivana"
+  description="Politique de confidentialité et protection des données personnelles de Qivana."
+>
+  <main class="legal-page">
+    <div class="container">
+      <header class="legal-page__header">
+        <a href="/" class="legal-page__back">← Retour à l'accueil</a>
+        <h1 class="legal-page__title">Politique de confidentialité</h1>
+        <p class="legal-page__subtitle">Protection de vos données personnelles</p>
+        <p class="legal-page__updated">Dernière mise à jour : {LAST_UPDATE}</p>
+      </header>
+
+      <div class="legal-page__content">
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">1. Données collectées</h2>
+          <p class="legal-page__text">Dans le cadre de l'utilisation de Qivana, nous collectons les données suivantes :</p>
+          <ul class="legal-page__list">
+            <li><strong>Données d'inscription :</strong> adresse email, pseudo, mot de passe (hashé)</li>
+            <li><strong>Données de profil :</strong> avatar, scores, badges, statistiques de jeu</li>
+            <li><strong>Données de paiement :</strong> gérées exclusivement par Stripe (nous ne stockons pas vos coordonnées bancaires)</li>
+            <li><strong>Données techniques :</strong> adresse IP, type de navigateur, pages visitées</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">2. Finalités du traitement</h2>
+          <p class="legal-page__text">Vos données sont utilisées pour :</p>
+          <ul class="legal-page__list">
+            <li>Créer et gérer votre compte utilisateur</li>
+            <li>Fournir les fonctionnalités de quiz et de duels</li>
+            <li>Gérer les abonnements Premium et Premium+</li>
+            <li>Personnaliser votre expérience de jeu</li>
+            <li>Améliorer nos services et détecter les bugs</li>
+            <li>Vous contacter en cas de besoin (support, notifications importantes)</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">3. Base légale</h2>
+          <p class="legal-page__text">
+            Le traitement de vos données repose sur :
+          </p>
+          <ul class="legal-page__list">
+            <li><strong>L'exécution du contrat :</strong> pour fournir les services de Qivana</li>
+            <li><strong>Le consentement :</strong> pour les cookies non essentiels et les communications marketing</li>
+            <li><strong>L'intérêt légitime :</strong> pour l'amélioration de nos services et la sécurité</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">4. Conservation des données</h2>
+          <ul class="legal-page__list">
+            <li><strong>Données de compte :</strong> conservées tant que le compte est actif</li>
+            <li><strong>Données de jeu :</strong> conservées pour le classement et les statistiques</li>
+            <li><strong>Données de paiement :</strong> conservées selon les obligations légales (10 ans)</li>
+            <li><strong>Logs techniques :</strong> conservés 12 mois maximum</li>
+          </ul>
+          <p class="legal-page__text">
+            En cas de suppression de compte, vos données personnelles seront effacées sous 30 jours,
+            à l'exception des données requises par la loi.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">5. Vos droits (RGPD)</h2>
+          <p class="legal-page__text">Conformément au RGPD, vous disposez des droits suivants :</p>
+          <ul class="legal-page__list">
+            <li><strong>Droit d'accès :</strong> obtenir une copie de vos données</li>
+            <li><strong>Droit de rectification :</strong> corriger vos données inexactes</li>
+            <li><strong>Droit à l'effacement :</strong> demander la suppression de vos données</li>
+            <li><strong>Droit à la portabilité :</strong> recevoir vos données dans un format lisible</li>
+            <li><strong>Droit d'opposition :</strong> vous opposer au traitement de vos données</li>
+            <li><strong>Droit de retrait du consentement :</strong> retirer votre consentement à tout moment</li>
+          </ul>
+          <p class="legal-page__text">
+            Pour exercer ces droits, contactez-nous à : 
+            <a href="mailto:privacy@qivana.app" class="legal-page__link">privacy@qivana.app</a>
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">6. Cookies</h2>
+          <p class="legal-page__text">
+            Qivana utilise des cookies essentiels pour le fonctionnement du site :
+          </p>
+          <ul class="legal-page__list">
+            <li><strong>Cookies d'authentification :</strong> pour maintenir votre session</li>
+            <li><strong>Cookies de préférences :</strong> pour mémoriser vos choix</li>
+          </ul>
+          <p class="legal-page__text">
+            Nous n'utilisons pas de cookies publicitaires ou de tracking tiers.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">7. Sécurité</h2>
+          <p class="legal-page__text">
+            Nous mettons en œuvre des mesures de sécurité appropriées pour protéger vos données :
+            chiffrement SSL/TLS, hashage des mots de passe, accès restreint aux données,
+            hébergement sécurisé chez Vercel et Supabase.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">8. Transferts de données</h2>
+          <p class="legal-page__text">
+            Vos données peuvent être transférées vers les États-Unis (Vercel, Supabase, Stripe).
+            Ces transferts sont encadrés par les clauses contractuelles types de la Commission européenne.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">9. Contact</h2>
+          <p class="legal-page__text">
+            Pour toute question concernant cette politique :
+            <a href="mailto:privacy@qivana.app" class="legal-page__link">privacy@qivana.app</a>
+          </p>
+          <p class="legal-page__text">
+            Vous pouvez également adresser une réclamation à la CNIL : 
+            <a href="https://www.cnil.fr" class="legal-page__link" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>
+          </p>
+        </section>
+
+        <footer class="legal-page__footer">
+          <p>© {YEAR} Qivana. Tous droits réservés.</p>
+        </footer>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

@@ -189,8 +189,8 @@ const shareUrl = `${siteUrl}/duel/results?salon=${salonId}`;
           <h2 class="duel-results__section-title">Classement</h2>
           <ol class="duel-results__ranking-list">
             {playerScores.length === 0 ? (
-              <li class="duel-results__ranking-item">
-                <p style="color: var(--color-text-muted); text-align: center; width: 100%;">
+              <li class="duel-results__ranking-item duel-results__ranking-item--empty">
+                <p class="duel-results__empty-message">
                   Aucun résultat disponible pour ce duel.
                 </p>
               </li>

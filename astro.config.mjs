@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import vercel from '@astrojs/vercel';
+import sitemap from '@astrojs/sitemap';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -21,11 +22,9 @@ export default defineConfig({
       },
     },
   },
-  // ⚠️ IMPORTANT: La propriété 'site' est optionnelle avec Vercel adapter
-  // Vercel gère automatiquement les URLs. On la définit seulement pour le dev local.
-  // En production, Vercel utilisera automatiquement la bonne URL.
-  // Note: On peut omettre 'site' complètement, mais on la garde pour le dev local
-  site: 'http://localhost:4321',
+  // Site URL pour le sitemap et les URLs canoniques
+  // En production, définir PUBLIC_SITE_URL dans les variables d'environnement
+  site: process.env.PUBLIC_SITE_URL || 'https://qivana.app',
   output: 'server',
   adapter: vercel({
     // Configuration pour les fonctions serverless
@@ -38,6 +37,17 @@ export default defineConfig({
     react({
       // Only load React for components that need it
       include: ['**/react/*'],
+    }),
+    sitemap({
+      // Exclure les pages admin, API et privées du sitemap
+      filter: (page) => 
+        !page.includes('/admin/') &&
+        !page.includes('/api/') &&
+        !page.includes('/auth/callback') &&
+        !page.includes('/payment/'),
+      changefreq: 'weekly',
+      priority: 0.7,
+      lastmod: new Date(),
     }),
   ],
 });

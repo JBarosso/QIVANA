@@ -1,0 +1,162 @@
+---
+// ============================================
+// CONDITIONS GÉNÉRALES DE VENTE (CGV)
+// ============================================
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const YEAR = new Date().getFullYear();
+const LAST_UPDATE = '5 décembre 2024';
+---
+
+<BaseLayout
+  title="Conditions de vente - Qivana"
+  description="Conditions générales de vente des abonnements Premium Qivana."
+>
+  <main class="legal-page">
+    <div class="container">
+      <header class="legal-page__header">
+        <a href="/" class="legal-page__back">← Retour à l'accueil</a>
+        <h1 class="legal-page__title">Conditions Générales de Vente</h1>
+        <p class="legal-page__subtitle">Modalités d'achat des abonnements</p>
+        <p class="legal-page__updated">Dernière mise à jour : {LAST_UPDATE}</p>
+      </header>
+
+      <div class="legal-page__content">
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">1. Objet</h2>
+          <p class="legal-page__text">
+            Les présentes Conditions Générales de Vente (CGV) régissent la vente des abonnements
+            Premium et Premium+ sur la plateforme Qivana.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">2. Prix et tarifs</h2>
+          <p class="legal-page__text"><strong>Abonnement Premium :</strong></p>
+          <ul class="legal-page__list">
+            <li>Mensuel : 4,99€ TTC / mois</li>
+            <li>Annuel : 49,99€ TTC / an (soit environ 4,17€/mois)</li>
+          </ul>
+          <p class="legal-page__text"><strong>Abonnement Premium+ :</strong></p>
+          <ul class="legal-page__list">
+            <li>Mensuel : 9,99€ TTC / mois</li>
+            <li>Annuel : 99,99€ TTC / an (soit environ 8,33€/mois)</li>
+          </ul>
+          <p class="legal-page__text">
+            Les prix sont indiqués en euros TTC. Nous nous réservons le droit de modifier 
+            les tarifs à tout moment, les nouveaux prix s'appliquant aux nouvelles souscriptions.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">3. Modalités de paiement</h2>
+          <p class="legal-page__text">
+            Les paiements sont gérés par <strong>Stripe</strong>, prestataire de paiement sécurisé.
+          </p>
+          <ul class="legal-page__list">
+            <li>Carte bancaire (Visa, Mastercard, American Express)</li>
+            <li>Autres moyens proposés par Stripe selon votre pays</li>
+          </ul>
+          <p class="legal-page__text">
+            Vos coordonnées bancaires ne sont jamais stockées sur nos serveurs.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">4. Renouvellement automatique</h2>
+          <p class="legal-page__text">
+            Les abonnements sont renouvelés automatiquement à chaque échéance (mensuelle ou annuelle).
+            Vous pouvez annuler à tout moment depuis votre espace "Profil" > "Gérer mon abonnement".
+          </p>
+          <p class="legal-page__text">
+            L'annulation prend effet à la fin de la période en cours. Vous conservez l'accès 
+            aux fonctionnalités Premium jusqu'à cette date.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">5. Droit de rétractation</h2>
+          <div class="legal-page__highlight">
+            <p class="legal-page__text">
+              Conformément à l'article L221-28 du Code de la consommation, le droit de rétractation 
+              ne s'applique pas aux contenus numériques fournis sur un support immatériel dont 
+              l'exécution a commencé avec votre accord.
+            </p>
+          </div>
+          <p class="legal-page__text">
+            En souscrivant à un abonnement, vous acceptez que l'accès aux fonctionnalités Premium 
+            commence immédiatement et renoncez expressément à votre droit de rétractation.
+          </p>
+          <p class="legal-page__text">
+            Toutefois, par geste commercial, nous pouvons examiner les demandes de remboursement 
+            dans les 48h suivant la souscription si aucune fonctionnalité Premium n'a été utilisée.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">6. Accès au service</h2>
+          <p class="legal-page__text">
+            L'accès aux fonctionnalités Premium est immédiat après validation du paiement.
+            En cas de problème technique, contactez-nous à 
+            <a href="mailto:support@qivana.app" class="legal-page__link">support@qivana.app</a>.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">7. Suspension et résiliation</h2>
+          <p class="legal-page__text">
+            Nous nous réservons le droit de suspendre ou résilier un abonnement en cas de :
+          </p>
+          <ul class="legal-page__list">
+            <li>Non-paiement ou échec de prélèvement</li>
+            <li>Violation des CGU</li>
+            <li>Fraude ou utilisation abusive</li>
+          </ul>
+          <p class="legal-page__text">
+            En cas de résiliation pour faute de l'utilisateur, aucun remboursement ne sera effectué.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">8. Facturation</h2>
+          <p class="legal-page__text">
+            Une facture électronique est disponible dans votre espace Stripe accessible depuis 
+            "Profil" > "Gérer mon abonnement" > "Historique des paiements".
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">9. Service client</h2>
+          <p class="legal-page__text">
+            Pour toute question concernant votre abonnement :
+          </p>
+          <ul class="legal-page__list">
+            <li>Email : <a href="mailto:support@qivana.app" class="legal-page__link">support@qivana.app</a></li>
+            <li>Délai de réponse : 48h ouvrées maximum</li>
+          </ul>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">10. Médiation</h2>
+          <p class="legal-page__text">
+            En cas de litige non résolu, vous pouvez recourir gratuitement au service de médiation 
+            auquel nous adhérons. Les coordonnées du médiateur seront fournies sur demande.
+          </p>
+        </section>
+
+        <section class="legal-page__section">
+          <h2 class="legal-page__heading">11. Droit applicable</h2>
+          <p class="legal-page__text">
+            Les présentes CGV sont soumises au droit français. Les tribunaux de Paris sont 
+            compétents pour tout litige relatif à leur interprétation et exécution.
+          </p>
+        </section>
+
+        <footer class="legal-page__footer">
+          <p>© {YEAR} Qivana. Tous droits réservés.</p>
+        </footer>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

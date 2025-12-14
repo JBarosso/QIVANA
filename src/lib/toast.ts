@@ -1,41 +1,38 @@
 // ============================================
-// TOAST UTILITIES
+// TOAST UTILITY
+// Helper pour afficher des notifications toast
 // ============================================
 
-export function showToast(
-  message: string,
-  type: 'success' | 'error' | 'info' | 'avatar' = 'info',
-  options?: {
-    avatarUrl?: string;
-    onClick?: () => void;
+export type ToastType = 'success' | 'error' | 'info' | 'avatar';
+
+interface ToastOptions {
+  message: string;
+  type?: ToastType;
+  avatarUrl?: string;
+  onClick?: () => void;
+}
+
+/**
+ * Affiche un toast de notification
+ * Peut être utilisé dans les composants React ou les scripts Astro
+ */
+export function showToast(options: ToastOptions | string): void {
+  const toastData = typeof options === 'string' 
+    ? { message: options, type: 'info' as ToastType }
+    : options;
+  
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('show-toast', { detail: toastData })
+    );
   }
-) {
-  const event = new CustomEvent('show-toast', {
-    detail: {
-      message,
-      type,
-      avatarUrl: options?.avatarUrl,
-      onClick: options?.onClick,
-    },
-  });
-
-  window.dispatchEvent(event);
 }
 
-// Fonction spécifique pour les notifications d'avatars débloqués
-export function showAvatarUnlockedToast(avatarName: string, avatarUrl: string) {
-  showToast(
-    `Nouvel avatar débloqué : ${avatarName} !`,
-    'avatar',
-    {
-      avatarUrl,
-      onClick: () => {
-        // Ouvrir le modal d'avatars
-        const avatarTrigger = document.getElementById('avatar-trigger');
-        if (avatarTrigger) {
-          avatarTrigger.click();
-        }
-      },
-    }
-  );
-}
+/**
+ * Raccourcis pour les types de toast courants
+ */
+export const toast = {
+  success: (message: string) => showToast({ message, type: 'success' }),
+  error: (message: string) => showToast({ message, type: 'error' }),
+  info: (message: string) => showToast({ message, type: 'info' }),
+};

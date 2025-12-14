@@ -91,9 +91,9 @@ export default function LobbyRealtime({
       // Si le joueur est banni, rediriger vers la page d'accueil
       if (data.code === 'BANNED' || data.message.includes('banni') || data.message.includes('banned')) {
         console.log('🚫 Player is banned, redirecting to home...');
-        alert('Vous avez été banni de ce salon et ne pouvez plus y revenir.');
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vous avez été banni de ce salon et ne pouvez plus y revenir.', type: 'error' } }));
         // Rediriger vers la page d'accueil (pas vers le salon)
-        window.location.href = '/';
+        setTimeout(() => { window.location.href = '/'; }, 2000);
         return;
       }
       
@@ -116,15 +116,15 @@ export default function LobbyRealtime({
 
     const onKicked = (data: { roomId: string; reason?: string }) => {
       console.log('👢 Kicked from room:', data.roomId);
-      alert('Vous avez été expulsé du salon par le chef.');
-      window.location.href = '/';
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vous avez été expulsé du salon par le chef.', type: 'error' } }));
+      setTimeout(() => { window.location.href = '/'; }, 2000);
     };
 
     const onBanned = (data: { roomId: string; reason?: string }) => {
       console.log('🚫 Banned from room:', data.roomId);
-      alert('Vous avez été banni de ce salon et ne pouvez plus y revenir.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vous avez été banni de ce salon et ne pouvez plus y revenir.', type: 'error' } }));
       // Rediriger vers la page d'accueil (pas vers le salon)
-      window.location.href = '/';
+      setTimeout(() => { window.location.href = '/'; }, 2000);
     };
 
     // Écouter room:created pour le chef
@@ -270,7 +270,7 @@ export default function LobbyRealtime({
   if (error) {
     return (
       <div className="lobby-realtime">
-        <p className="lobby-realtime__empty" style={{ color: '#EF4444' }}>
+        <p className="lobby-realtime__error">
           Erreur: {error}
         </p>
       </div>

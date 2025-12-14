@@ -144,7 +144,7 @@ const errorMessage = url.searchParams.get('error');
         <table class="admin-table">
           <thead>
             <tr>
-              <th style="width: 40%">Question</th>
+              <th class="admin-table__col--wide">Question</th>
               <th>Univers</th>
               <th>Difficulté</th>
               <th>Source</th>
@@ -187,14 +187,14 @@ const errorMessage = url.searchParams.get('error');
                     <a href={`/admin/questions/${q.id}`} class="admin-action" title="Éditer">
                       ✏️
                     </a>
-                    <form method="post" action="/api/admin/questions/toggle-approve" style="display: inline;">
+                    <form method="post" action="/api/admin/questions/toggle-approve" class="admin-inline-form">
                       <input type="hidden" name="id" value={q.id} />
                       <input type="hidden" name="approved" value={q.is_approved ? 'false' : 'true'} />
                       <button type="submit" class="admin-action admin-action--success" title={q.is_approved ? 'Désapprouver' : 'Approuver'}>
                         {q.is_approved ? '❌' : '✅'}
                       </button>
                     </form>
-                    <form method="post" action="/api/admin/questions/delete" style="display: inline;" onsubmit="return confirm('Supprimer cette question ?')">
+                    <form method="post" action="/api/admin/questions/delete" class="admin-inline-form" onsubmit="return confirm('Supprimer cette question ?')">
                       <input type="hidden" name="id" value={q.id} />
                       <button type="submit" class="admin-action admin-action--danger" title="Supprimer">
                         🗑️
