@@ -1,0 +1,44 @@
+---
+// ============================================
+// ENDLESS MODE - Duel vs Machine
+// ============================================
+// Mode de jeu solo avec progression de difficulté et vies
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { requireAuth } from '../../lib/auth';
+import EndlessPlayer from '../../components/quiz/EndlessPlayer';
+
+// Protection de la route
+const authResult = await requireAuth(Astro);
+
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { user, profile } = authResult;
+
+// Vérifier que l'utilisateur est Premium ou Premium+
+if (profile.plan === 'freemium') {
+  return Astro.redirect('/tarifs?upgrade=endless');
+}
+---
+
+<BaseLayout
+  title="Mode Endless - Qivana"
+  description="Affronte la machine dans un duel sans fin ! Combien de questions peux-tu enchaîner ?"
+>
+  <main class="endless-page">
+    <EndlessPlayer 
+      client:only="react"
+      userId={user.id}
+      userPseudo={profile.pseudo}
+    />
+  </main>
+</BaseLayout>
+
+<style lang="scss">
+  .endless-page {
+    min-height: 100vh;
+    padding: var(--space-4);
+  }
+</style>

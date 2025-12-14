@@ -1,0 +1,201 @@
+---
+// ============================================
+// ADMIN - GESTION DES AVIS
+// ============================================
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+
+const supabase = (Astro.locals as { supabase?: any }).supabase;
+
+// Paramètres de filtrage et pagination
+const url = Astro.url;
+const page = parseInt(url.searchParams.get('page') || '1');
+const limit = 20;
+const offset = (page - 1) * limit;
+
+const filterRating = url.searchParams.get('rating') || '';
+const filterType = url.searchParams.get('type') || '';
+
+// Récupérer les ratings
+let ratings: any[] = [];
+let totalCount = 0;
+
+// Stats globales
+let avgRating = 0;
+let totalRatings = 0;
+let ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+if (supabase) {
+  // Stats globales
+  const { data: allRatings } = await supabase
+    .from('quiz_ratings')
+    .select('rating');
+
+  if (allRatings && allRatings.length > 0) {
+    totalRatings = allRatings.length;
+    const sum = allRatings.reduce((acc: number, r: any) => acc + r.rating, 0);
+    avgRating = sum / totalRatings;
+    
+    allRatings.forEach((r: any) => {
+      ratingDistribution[r.rating as keyof typeof ratingDistribution]++;
+    });
+  }
+
+  // Query avec filtres
+  let query = supabase
+    .from('quiz_ratings')
+    .select(`
+      *,
+      user:user_id (pseudo)
+    `, { count: 'exact' });
+
+  if (filterRating) {
+    query = query.eq('rating', parseInt(filterRating));
+  }
+  if (filterType) {
+    query = query.eq('quiz_type', filterType);
+  }
+
+  query = query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const { data, count, error } = await query;
+
+  if (!error) {
+    ratings = data || [];
+    totalCount = count || 0;
+  }
+}
+
+const totalPages = Math.ceil(totalCount / limit);
+
+const quizTypeLabels: Record<string, string> = {
+  'db': 'Base de données',
+  'ai-predefined': 'IA Prédéfini',
+  'ai-custom-quiz': 'Quiz Custom',
+  'duel': 'Duel',
+};
+---
+
+<AdminLayout title="Avis des Utilisateurs" currentPage="analytics">
+  <!-- Stats globales -->
+  <div class="admin-stats">
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">⭐</div>
+      <div class="admin-stat-card__value">{avgRating.toFixed(1)}</div>
+      <div class="admin-stat-card__label">Note moyenne</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">📊</div>
+      <div class="admin-stat-card__value">{totalRatings}</div>
+      <div class="admin-stat-card__label">Avis totaux</div>
+    </div>
+
+    {[5, 4, 3, 2, 1].map((star) => (
+      <div class="admin-stat-card">
+        <div class="admin-stat-card__icon">{'★'.repeat(star)}</div>
+        <div class="admin-stat-card__value">{ratingDistribution[star as keyof typeof ratingDistribution]}</div>
+        <div class="admin-stat-card__label">{star} étoile{star > 1 ? 's' : ''}</div>
+      </div>
+    ))}
+  </div>
+
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">Avis ({totalCount})</h2>
+    </div>
+
+    <!-- Filtres -->
+    <form method="get" class="admin-filters-form">
+      <div class="admin-filters">
+        <select name="rating" class="admin-select">
+          <option value="">Toutes les notes</option>
+          {[5, 4, 3, 2, 1].map((star) => (
+            <option value={star.toString()} selected={filterRating === star.toString()}>
+              {star} étoile{star > 1 ? 's' : ''}
+            </option>
+          ))}
+        </select>
+
+        <select name="type" class="admin-select">
+          <option value="">Tous les types</option>
+          {Object.entries(quizTypeLabels).map(([value, label]) => (
+            <option value={value} selected={filterType === value}>{label}</option>
+          ))}
+        </select>
+
+        <button type="submit" class="btn btn--secondary">Filtrer</button>
+        <a href="/admin/ratings" class="btn btn--outline">Reset</a>
+      </div>
+    </form>
+
+    <!-- Liste des avis -->
+    {ratings.length > 0 ? (
+      <div class="ratings-list">
+        {ratings.map((rating) => (
+          <div class={`rating-card rating-card--${rating.rating >= 4 ? 'positive' : rating.rating <= 2 ? 'negative' : 'neutral'}`}>
+            <div class="rating-card__header">
+              <div class="rating-card__stars">
+                {'★'.repeat(rating.rating)}{'☆'.repeat(5 - rating.rating)}
+              </div>
+              <span class="admin-badge admin-badge--primary">
+                {quizTypeLabels[rating.quiz_type] || rating.quiz_type}
+              </span>
+            </div>
+            
+            <div class="rating-card__meta">
+              <span class="rating-card__user">👤 {rating.user?.pseudo || 'Anonyme'}</span>
+              <span class="rating-card__date">{new Date(rating.created_at).toLocaleDateString('fr-FR')}</span>
+            </div>
+
+            {rating.theme && (
+              <div class="rating-card__theme">
+                <strong>Thème :</strong> {rating.theme}
+              </div>
+            )}
+
+            {rating.prompt_used && (
+              <div class="rating-card__prompt">
+                <strong>Prompt :</strong> "{rating.prompt_used}"
+              </div>
+            )}
+
+            {rating.comment && (
+              <div class="rating-card__comment">
+                <strong>Commentaire :</strong> {rating.comment}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="admin-empty">
+        <div class="admin-empty__icon">📝</div>
+        <p class="admin-empty__text">Aucun avis trouvé</p>
+      </div>
+    )}
+
+    <!-- Pagination -->
+    {totalPages > 1 && (
+      <div class="admin-pagination">
+        {page > 1 && (
+          <a href={`?page=${page - 1}${filterRating ? `&rating=${filterRating}` : ''}${filterType ? `&type=${filterType}` : ''}`} class="admin-pagination__btn">
+            ← Précédent
+          </a>
+        )}
+        
+        <span class="admin-pagination__info">
+          Page {page} / {totalPages}
+        </span>
+
+        {page < totalPages && (
+          <a href={`?page=${page + 1}${filterRating ? `&rating=${filterRating}` : ''}${filterType ? `&type=${filterType}` : ''}`} class="admin-pagination__btn">
+            Suivant →
+          </a>
+        )}
+      </div>
+    )}
+  </section>
+</AdminLayout>

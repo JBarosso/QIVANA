@@ -3,6 +3,7 @@
 // ============================================
 // Module modulaire pour générer des quiz via IA
 // Providers supportés: OpenAI, Anthropic (Claude)
+// Implémente le système de clarification pour les prompts ambigus
 
 import type { Universe, Difficulty } from './quiz';
 
@@ -24,8 +25,71 @@ export interface AIQuizQuestion {
   explanation: string;
 }
 
+// Modes de réponse possibles
+export type AIResponseMode = 'quiz' | 'clarify' | 'error';
+
+// Clarification proposée quand le prompt est ambigu
+export interface AIClarification {
+  label: string;
+  theme: string;
+  confidence: number;
+}
+
+// Réponse complète de l'IA (nouveau format avec mode)
 export interface AIQuizResponse {
+  mode: AIResponseMode;
+  interpreted_theme?: string;
+  confidence?: number;
+  clarifications?: AIClarification[];
   questions: AIQuizQuestion[];
+  error_message?: string;
+}
+
+// Validation du prompt côté serveur (pré-filtre)
+export interface PromptValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Pré-filtre pour valider l'entrée utilisateur AVANT appel IA
+ * Évite les appels inutiles pour des prompts invalides
+ */
+export function validatePromptPreFilter(prompt: string): PromptValidationResult {
+  const trimmed = prompt.trim();
+  
+  // Minimum 6 caractères
+  if (trimmed.length < 6) {
+    return { isValid: false, error: 'Le prompt doit contenir au moins 6 caractères.' };
+  }
+  
+  // Mots génériques seuls interdits
+  const genericWords = ['film', 'anime', 'manga', 'jeu', 'serie', 'musique', 'quiz', 'question', 'test'];
+  const words = trimmed.toLowerCase().split(/\s+/);
+  if (words.length === 1 && genericWords.includes(words[0])) {
+    return { isValid: false, error: 'Sois plus précis ! Ajoute des détails sur le thème souhaité.' };
+  }
+  
+  // Que des emojis, symboles ou nombres
+  const onlySymbols = /^[\p{Emoji}\p{Symbol}\p{Number}\s]+$/u;
+  if (onlySymbols.test(trimmed)) {
+    return { isValid: false, error: 'Le prompt doit contenir du texte descriptif.' };
+  }
+  
+  // Expressions vagues
+  const vaguePatterns = [
+    /^le truc$/i,
+    /^je sais plus$/i,
+    /^le film avec$/i,
+    /^celui avec$/i,
+    /^le machin$/i,
+    /^n'importe quoi$/i,
+  ];
+  if (vaguePatterns.some(pattern => pattern.test(trimmed))) {
+    return { isValid: false, error: 'Précise davantage le sujet de ton quiz.' };
+  }
+  
+  return { isValid: true };
 }
 
 /**
@@ -99,7 +163,10 @@ Génère maintenant ${numberOfQuestions} questions en JSON STRICT.`;
 }
 
 /**
- * Construit un prompt custom pour le mode "prompt libre"
+ * Construit le prompt de production pour le mode Custom Quiz
+ * Implémente le système de clarification avec score de confiance
+ * Basé sur context-prompt-quiz.md
+ * 
  * @param userPrompt - Prompt de l'utilisateur
  * @param difficulty - Difficulté
  * @param numberOfQuestions - Nombre de questions
@@ -111,52 +178,139 @@ function buildCustomPrompt(
   numberOfQuestions: number,
   contextQuestions?: string[]
 ): string {
-  const difficultyDescriptions = {
-    easy: 'facile (accessible, culture populaire)',
-    medium: 'moyen (connaissances intermédiaires)',
-    hard: 'difficile (expert, détails précis)',
+  const difficultyCalibration = {
+    easy: 'EASY: known by ~80% of fans - Culture populaire, personnages principaux, éléments iconiques',
+    medium: 'MEDIUM: requires solid knowledge (~40-60%) - Personnages secondaires, détails d\'intrigue, années de sortie',
+    hard: 'HARD: expert-level, precise but fair - Détails obscurs, anecdotes de production, références croisées, trivia expert, dates précises',
   };
 
   // Construire la section de contexte si des questions récentes sont fournies
   let contextSection = '';
   if (contextQuestions && contextQuestions.length > 0) {
     const contextExamples = contextQuestions.slice(0, 20).join('\n- ');
-    contextSection = `\n\n⚠️ IMPORTANT - ÉVITE CES SUJETS/QUESTIONS :
-Voici des exemples de questions déjà créées. Génère des questions NOUVELLES et DIFFÉRENTES :
+    contextSection = `
 
+QUESTIONS DÉJÀ POSÉES À CET UTILISATEUR (à éviter absolument):
 - ${contextExamples}
 
-Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS.`;
+Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS de ceux listés ci-dessus.`;
   }
 
-  return `Tu es un expert en culture geek. L'utilisateur demande le quiz suivant:
+  return `You are a professional TV quiz writer and editor.
+Your role is to generate TV-quality quiz questions with zero frustration for players.
 
-"${userPrompt}"
+IMPORTANT LANGUAGE RULE:
+- The entire output (questions, answers, clarifications) MUST be written in FRENCH.
+- Use OFFICIAL FRENCH LOCALIZATIONS for names, places, spells, titles, and terms.
+- Never mix English and French naming.
+- Examples: "Hogwarts" → "Poudlard", "Severus Snape" → "Severus Rogue", "Ash Ketchum" → "Sacha"
 
-Génère ${numberOfQuestions} questions basées sur cette demande, avec une difficulté "${difficultyDescriptions[difficulty]}".${contextSection}
+==========================
+STEP 1 — USER INPUT ANALYSIS
+==========================
+Analyze the user's text input.
+Determine the most likely intended quiz theme.
 
-RÈGLES STRICTES:
-1. Respecte EXACTEMENT la demande de l'utilisateur
-2. Chaque question doit avoir exactement 4 réponses possibles (A, B, C, D)
-3. Une seule réponse correcte
-4. Les 3 fausses réponses doivent être plausibles
-5. Inclure une explication claire de 1-2 phrases
-6. Questions variées (pas de répétitions)
-7. ${contextQuestions && contextQuestions.length > 0 ? 'Questions NOUVELLES sur des sujets différents. ' : ''}RÉPONSE EN JSON STRICT (pas de markdown, pas de commentaires)
+User input: "${userPrompt}"
+Requested difficulty: ${difficulty}
+Number of questions: ${numberOfQuestions}
 
-FORMAT JSON ATTENDU:
+Evaluate a confidence score (0.0 to 1.0) based on:
+- Clarity of the user input
+- Uniqueness of interpretation
+- Factual verifiability
+- Specificity for the requested difficulty
+
+If confidence < 0.75:
+- Do NOT generate any quiz questions
+- Set mode = "clarify"
+- Propose up to 3 clear, quiz-friendly theme interpretations IN FRENCH
+- Each clarification must be specific and actionable
+
+If the input is impossible to interpret:
+- Set mode = "error"
+- Provide a helpful error_message in French
+
+==========================
+STEP 2 — QUIZ GENERATION (ONLY IF ALLOWED)
+==========================
+Proceed ONLY if confidence >= 0.75.
+Set mode = "quiz".
+
+GENERAL RULES (CRITICAL):
+1. NEVER reveal the correct answer inside the question.
+   - No direct mention
+   - No obvious synonym
+   - No trivial clue
+
+2. Each question must be:
+   - Factually correct and verifiable
+   - Non-ambiguous
+   - Written in clear French
+
+3. Answers:
+   - Exactly 1 correct answer
+   - 3 wrong but plausible answers
+   - Wrong answers must belong to the same universe
+   - The correct answer must be the ONLY correct one
+
+4. Difficulty calibration:
+   - ${difficultyCalibration[difficulty]}
+
+5. No invented facts for real universes.
+   - If uncertain, replace the question with another one.
+${contextSection}
+
+==========================
+QUALITY RULES (CRITICAL)
+==========================
+⚠️ ABSOLUTE RULE - 100% CERTAINTY REQUIRED:
+- NEVER generate a question if you are not 100% certain of the correct answer
+- If you have ANY doubt about a fact, SKIP that question and generate another one
+- All answers must be verifiable facts, NOT assumptions or guesses
+- Wrong answers in the database will destroy user trust - quality over quantity
+
+OTHER QUALITY RULES:
+- Write concise, punchy questions (TV style)
+- Avoid repetitive phrasing
+- No trick questions
+- Avoid meaningless numeric questions
+- Player experience is the top priority
+- Include a brief explanation (1-2 sentences) for each answer
+
+==========================
+JSON OUTPUT FORMAT
+==========================
+Return ONLY valid JSON following this EXACT schema:
+
 {
+  "mode": "quiz | clarify | error",
+  "interpreted_theme": "string describing what you understood (in French)",
+  "confidence": 0.0 to 1.0,
+  "clarifications": [
+    {
+      "label": "Short display label in French",
+      "theme": "Detailed theme description in French",
+      "confidence": 0.0 to 1.0
+    }
+  ],
   "questions": [
     {
-      "question": "Quelle est la question?",
-      "choices": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
+      "question": "Question text in French",
+      "choices": ["Option A", "Option B", "Option C", "Option D"],
       "correct_index": 0,
-      "explanation": "Explication claire de la bonne réponse."
+      "explanation": "Brief explanation in French"
     }
-  ]
+  ],
+  "error_message": "Optional error message in French"
 }
 
-Génère maintenant ${numberOfQuestions} questions en JSON STRICT.`;
+IMPORTANT:
+- If mode = "quiz" → questions MUST be filled, clarifications MUST be empty array
+- If mode = "clarify" → clarifications MUST be filled (max 3), questions MUST be empty array
+- If mode = "error" → both arrays MUST be empty, error_message MUST be provided
+
+Generate the response now.`;
 }
 
 /**
@@ -265,6 +419,7 @@ async function generateWithAnthropic(request: AIQuizRequest): Promise<AIQuizResp
 
 /**
  * Validation du JSON retourné par l'IA
+ * Supporte les 3 modes: quiz, clarify, error
  * @param response - Unknown JSON response from AI (type-safe validation)
  */
 export function validateAIResponse(response: unknown): AIQuizResponse {
@@ -274,12 +429,81 @@ export function validateAIResponse(response: unknown): AIQuizResponse {
 
   const responseObj = response as Record<string, unknown>;
 
-  if (!Array.isArray(responseObj.questions)) {
-    throw new Error('Invalid AI response: questions is not an array');
+  // Valider le mode
+  const validModes: AIResponseMode[] = ['quiz', 'clarify', 'error'];
+  const mode = responseObj.mode as AIResponseMode;
+  
+  if (!mode || !validModes.includes(mode)) {
+    // Fallback pour compatibilité avec ancien format (sans mode)
+    if (Array.isArray(responseObj.questions) && responseObj.questions.length > 0) {
+      // Ancien format: juste des questions → on assume mode = 'quiz'
+      return validateQuizQuestions(responseObj.questions as unknown[], {
+        mode: 'quiz',
+        interpreted_theme: 'Quiz généré',
+        confidence: 1.0,
+        clarifications: [],
+        questions: [],
+      });
+    }
+    throw new Error('Invalid AI response: missing or invalid mode');
   }
 
-  for (let i = 0; i < responseObj.questions.length; i++) {
-    const q = responseObj.questions[i] as Record<string, unknown>;
+  // Construire la réponse de base
+  const result: AIQuizResponse = {
+    mode,
+    interpreted_theme: typeof responseObj.interpreted_theme === 'string' ? responseObj.interpreted_theme : undefined,
+    confidence: typeof responseObj.confidence === 'number' ? responseObj.confidence : undefined,
+    clarifications: [],
+    questions: [],
+    error_message: typeof responseObj.error_message === 'string' ? responseObj.error_message : undefined,
+  };
+
+  // Validation selon le mode
+  switch (mode) {
+    case 'quiz':
+      if (!Array.isArray(responseObj.questions) || responseObj.questions.length === 0) {
+        throw new Error('Mode quiz requires non-empty questions array');
+      }
+      return validateQuizQuestions(responseObj.questions as unknown[], result);
+
+    case 'clarify':
+      if (!Array.isArray(responseObj.clarifications) || responseObj.clarifications.length === 0) {
+        throw new Error('Mode clarify requires non-empty clarifications array');
+      }
+      // Valider les clarifications
+      for (let i = 0; i < responseObj.clarifications.length; i++) {
+        const c = responseObj.clarifications[i] as Record<string, unknown>;
+        if (!c.label || typeof c.label !== 'string') {
+          throw new Error(`Clarification ${i}: missing or invalid label`);
+        }
+        if (!c.theme || typeof c.theme !== 'string') {
+          throw new Error(`Clarification ${i}: missing or invalid theme`);
+        }
+        result.clarifications!.push({
+          label: c.label,
+          theme: c.theme,
+          confidence: typeof c.confidence === 'number' ? c.confidence : 0.8,
+        });
+      }
+      return result;
+
+    case 'error':
+      if (!result.error_message) {
+        result.error_message = 'Impossible d\'interpréter cette demande.';
+      }
+      return result;
+
+    default:
+      throw new Error(`Unknown mode: ${mode}`);
+  }
+}
+
+/**
+ * Valide les questions du quiz
+ */
+function validateQuizQuestions(questions: unknown[], result: AIQuizResponse): AIQuizResponse {
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i] as Record<string, unknown>;
 
     if (!q.question || typeof q.question !== 'string') {
       throw new Error(`Question ${i}: missing or invalid question`);
@@ -293,12 +517,18 @@ export function validateAIResponse(response: unknown): AIQuizResponse {
       throw new Error(`Question ${i}: correct_index must be 0-3`);
     }
 
-    if (!q.explanation || typeof q.explanation !== 'string') {
-      throw new Error(`Question ${i}: missing or invalid explanation`);
-    }
+    // Explanation est optionnelle mais recommandée
+    const explanation = typeof q.explanation === 'string' ? q.explanation : '';
+
+    result.questions.push({
+      question: q.question,
+      choices: q.choices as string[],
+      correct_index: q.correct_index,
+      explanation,
+    });
   }
 
-  return response as unknown as AIQuizResponse;
+  return result;
 }
 
 /**

@@ -7,7 +7,7 @@ import BaseLayout from './BaseLayout.astro';
 
 interface Props {
   title: string;
-  currentPage?: 'dashboard' | 'questions' | 'flags' | 'duplicates' | 'analytics';
+  currentPage?: 'dashboard' | 'questions' | 'flags' | 'duplicates' | 'ratings' | 'analytics';
 }
 
 const { title, currentPage = 'dashboard' } = Astro.props;
@@ -17,6 +17,7 @@ const navItems = [
   { id: 'questions', label: 'Questions', icon: '❓', href: '/admin/questions' },
   { id: 'flags', label: 'Signalements', icon: '🚩', href: '/admin/flags' },
   { id: 'duplicates', label: 'Doublons', icon: '📋', href: '/admin/duplicates' },
+  { id: 'ratings', label: 'Avis', icon: '⭐', href: '/admin/ratings' },
   { id: 'analytics', label: 'Analytics', icon: '📈', href: '/admin/analytics' },
 ];
 ---

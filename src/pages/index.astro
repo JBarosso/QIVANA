@@ -44,9 +44,14 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
               <span class="btn__text">🎮 Nouveau Quiz</span>
             </a>
             {profile && profile.plan !== 'freemium' && (
-              <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
-                <span class="btn__text">✨ Quiz Custom</span>
-              </a>
+              <>
+                <a href="/quiz/custom-quiz" class="btn btn--primary btn--custom-quiz">
+                  <span class="btn__text">✨ Quiz Custom</span>
+                </a>
+                <a href="/quiz/endless" class="btn btn--primary btn--endless">
+                  <span class="btn__text">🔥 Mode Endless</span>
+                </a>
+              </>
             )}
             {profile && profile.plan === 'premium+' && (
               <a href="/duel/create" class="btn btn--primary btn--duel">
@@ -162,6 +167,14 @@ const profile = user && supabase ? await getProfile(supabase, user.id) : null;
             <ul class="test-links__list">
               <li><a href="/quiz/play?session=TEST123">▶️ Play quiz (test)</a></li>
               <li><a href="/quiz/results?session=TEST123">📊 Résultats quiz (test)</a></li>
+            </ul>
+          </div>
+
+          <div class="test-links__group">
+            <h3 class="test-links__group-title">Modes de jeu</h3>
+            <ul class="test-links__list">
+              <li><a href="/quiz/endless">🔥 Mode Endless (vs IA)</a></li>
+              <li><a href="/duel/create?mode=battle_royal">⚔️ Battle Royal (bientôt)</a></li>
             </ul>
           </div>
 

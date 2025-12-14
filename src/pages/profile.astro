@@ -101,6 +101,7 @@ if (supabase) {
   let unlockedAvatarIds = new Set<string>();
   let selectedAvatar: any = null;
   let hasNewAvatars = false;
+  let latestUnlockTime: string | null = null;
   
   if (supabase) {
     // Récupérer tous les avatars
@@ -120,6 +121,12 @@ if (supabase) {
       
       // Vérifier s'il y a des avatars débloqués récemment (dans les dernières 24h)
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // Récupérer le timestamp du dernier avatar débloqué
+      latestUnlockTime = userAvatarsData
+        .map((ua: any) => ua.unlocked_at)
+        .filter((d: string) => d)
+        .sort()
+        .reverse()[0] || null;
       hasNewAvatars = userAvatarsData.some((ua: any) => ua.unlocked_at > oneDayAgo);
     }
     
@@ -202,7 +209,7 @@ if (supabase) {
               </div>
             )}
             {hasNewAvatars && (
-              <div class="profile-avatar__badge">
+              <div class="profile-avatar__badge" id="avatar-badge" data-latest-unlock={latestUnlockTime}>
                 <span class="profile-avatar__badge-dot"></span>
               </div>
             )}
@@ -372,11 +379,53 @@ if (supabase) {
 </BaseLayout>
 
 <script>
+  // ============================================
+  // AVATAR BADGE - GESTION DE LA PASTILLE "NOUVEAU"
+  // ============================================
+  const AVATAR_VIEWED_KEY = 'qivana_avatars_last_viewed';
+  const avatarBadge = document.getElementById('avatar-badge') as HTMLElement | null;
+  
+  // Vérifier si l'utilisateur a déjà vu les avatars récemment
+  function checkAvatarBadgeVisibility() {
+    if (!avatarBadge) return;
+    
+    const lastViewed = localStorage.getItem(AVATAR_VIEWED_KEY);
+    const latestUnlock = avatarBadge.dataset.latestUnlock;
+    
+    if (lastViewed && latestUnlock) {
+      // Comparer les dates : si l'utilisateur a vu les avatars APRÈS le dernier déblocage,
+      // alors on cache la pastille
+      const lastViewedDate = new Date(lastViewed);
+      const latestUnlockDate = new Date(latestUnlock);
+      
+      if (lastViewedDate >= latestUnlockDate) {
+        avatarBadge.style.display = 'none';
+      }
+    } else if (lastViewed && !latestUnlock) {
+      // Pas de date de déblocage disponible mais l'utilisateur a déjà vu
+      avatarBadge.style.display = 'none';
+    }
+  }
+  
+  // Marquer les avatars comme vus quand le modal s'ouvre
+  function markAvatarsAsViewed() {
+    localStorage.setItem(AVATAR_VIEWED_KEY, new Date().toISOString());
+    if (avatarBadge) {
+      avatarBadge.style.display = 'none';
+    }
+  }
+  
+  // Vérifier au chargement
+  checkAvatarBadgeVisibility();
+  
   // Avatar modal toggle
   const avatarTrigger = document.getElementById('avatar-trigger');
   
   if (avatarTrigger) {
     avatarTrigger.addEventListener('click', () => {
+      // Marquer les avatars comme vus
+      markAvatarsAsViewed();
+      
       // Dispatcher un événement pour ouvrir le modal React
       const event = new CustomEvent('open-avatar-modal');
       window.dispatchEvent(event);

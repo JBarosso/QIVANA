@@ -25,6 +25,11 @@ const {
 } = Astro.props;
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin;
+
+// Google Analytics - uniquement en production
+const GA_MEASUREMENT_ID = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+const isProduction = import.meta.env.PROD;
+const enableAnalytics = isProduction && GA_MEASUREMENT_ID;
 ---
 
 <!doctype html>
@@ -60,6 +65,22 @@ const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin;
       href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Google Analytics (production only) -->
+    {enableAnalytics && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}></script>
+        <script is:inline define:vars={{ GA_MEASUREMENT_ID }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', GA_MEASUREMENT_ID, {
+            page_title: document.title,
+            page_location: window.location.href
+          });
+        </script>
+      </>
+    )}
   </head>
   <body>
     <slot />

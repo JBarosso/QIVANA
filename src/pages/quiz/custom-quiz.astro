@@ -66,36 +66,45 @@ const minQuestions = 5;
             Décris le quiz que tu veux. Sois précis et créatif !
           </p>
 
-          <div class="prompt-examples">
-            <p class="prompt-examples__title">💡 Exemples de prompts :</p>
-            <button type="button" class="prompt-example" data-prompt="Crée un quiz sur les easter eggs cachés dans les films Marvel">
-              🎬 Easter eggs Marvel
-            </button>
-            <button type="button" class="prompt-example" data-prompt="Quiz sur l'histoire de Nintendo et ses consoles légendaires">
-              🎮 Histoire de Nintendo
-            </button>
-            <button type="button" class="prompt-example" data-prompt="Questions sur les personnages secondaires méconnus dans One Piece">
-              🏴‍☠️ Personnages One Piece
+          <div class="prompt-input-wrapper">
+            <textarea
+              name="prompt"
+              id="promptInput"
+              class="prompt-input"
+              placeholder="Ex: Crée un quiz sur les répliques cultes de Breaking Bad"
+              rows="6"
+              maxlength="500"
+              required
+            ></textarea>
+            <button type="button" class="random-prompt-btn" id="randomPromptBtn" title="Prompt aléatoire">
+              🎲
             </button>
           </div>
-
-          <textarea
-            name="prompt"
-            id="promptInput"
-            class="prompt-input"
-            placeholder="Ex: Crée un quiz sur les répliques cultes de Breaking Bad"
-            rows="6"
-            maxlength="500"
-            required
-          ></textarea>
           
-          <div class="prompt-counter">
-            <span id="charCount">0</span> / 500 caractères
+          <div class="prompt-footer">
+            <div class="prompt-counter">
+              <span id="charCount">0</span> / 500 caractères
+            </div>
           </div>
 
           <!-- Message d'erreur -->
-          <div class="prompt-error" id="promptError" style="display: none;">
+          <div class="prompt-error" id="promptError" hidden>
             ⚠️ Le prompt doit contenir au moins 10 caractères
+          </div>
+
+          <!-- Zone de clarification (affichée si prompt ambigu) -->
+          <div class="clarification-zone" id="clarificationZone" hidden>
+            <div class="clarification-zone__header">
+              <span class="clarification-zone__icon">🤔</span>
+              <h3 class="clarification-zone__title">Ton thème est un peu vague</h3>
+              <p class="clarification-zone__subtitle">Choisis une interprétation :</p>
+            </div>
+            <div class="clarification-zone__options" id="clarificationOptions">
+              <!-- Options générées dynamiquement -->
+            </div>
+            <button type="button" class="btn btn--secondary btn--block" id="cancelClarification">
+              ← Modifier mon prompt
+            </button>
           </div>
         </div>
 
@@ -319,44 +328,14 @@ const minQuestions = 5;
     margin-bottom: var(--space-4);
   }
 
-  .prompt-examples {
-    margin-bottom: var(--space-4);
-    padding: var(--space-4);
-    background: var(--color-background);
-    border-radius: var(--radius-3);
-    border: 1px solid var(--color-border);
-  }
-
-  .prompt-examples__title {
-    font-size: var(--fs-2);
-    font-weight: var(--font-weight-medium);
-    margin-bottom: var(--space-3);
-    color: var(--color-text);
-  }
-
-  .prompt-example {
-    display: inline-block;
-    margin: var(--space-1);
-    padding: var(--space-2) var(--space-3);
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-2);
-    font-size: var(--fs-1);
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition: all var(--transition-base);
-
-    &:hover {
-      background: var(--color-primary);
-      color: var(--color-text-on-primary);
-      border-color: var(--color-primary);
-      transform: translateY(-2px);
-    }
+  .prompt-input-wrapper {
+    position: relative;
   }
 
   .prompt-input {
     width: 100%;
     padding: var(--space-4);
+    padding-right: var(--space-12);
     font-size: var(--fs-2);
     font-family: var(--font-primary);
     color: var(--color-text);
@@ -374,14 +353,58 @@ const minQuestions = 5;
 
     &::placeholder {
       color: var(--color-text-muted);
+      transition: opacity 0.3s ease;
+    }
+
+    &.placeholder-animating::placeholder {
+      opacity: 0;
     }
   }
 
+  .random-prompt-btn {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-4);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      transform: scale(1.1) rotate(15deg);
+      box-shadow: var(--shadow-md);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    &.loading {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .prompt-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: var(--space-2);
+  }
+
   .prompt-counter {
-    text-align: right;
     font-size: var(--fs-1);
     color: var(--color-text-muted);
-    margin-top: var(--space-2);
   }
 
   .prompt-error {
@@ -392,6 +415,83 @@ const minQuestions = 5;
     border-radius: var(--radius-2);
     font-size: var(--fs-1);
     color: hsl(0, 100%, 30%);
+  }
+
+  // Zone de clarification
+  .clarification-zone {
+    margin-top: var(--space-4);
+    padding: var(--space-5);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-3);
+
+    &__header {
+      text-align: center;
+      margin-bottom: var(--space-4);
+    }
+
+    &__icon {
+      font-size: var(--fs-7);
+      display: block;
+      margin-bottom: var(--space-2);
+    }
+
+    &__title {
+      font-size: var(--fs-4);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    &__subtitle {
+      font-size: var(--fs-2);
+      color: var(--color-text-muted);
+    }
+
+    &__options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+  }
+
+  .clarification-option {
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-3);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: left;
+
+    &:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    &__label {
+      font-size: var(--fs-3);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+
+    &__theme {
+      font-size: var(--fs-2);
+      color: var(--color-text-muted);
+    }
+
+    &__confidence {
+      display: inline-block;
+      margin-top: var(--space-2);
+      padding: var(--space-1) var(--space-2);
+      background: var(--color-primary);
+      color: white;
+      border-radius: var(--radius-1);
+      font-size: var(--fs-1);
+    }
   }
 
   .difficulty-grid {
@@ -581,34 +681,139 @@ const minQuestions = 5;
 </style>
 
 <script>
-  // Compteur de caractères
+  // Éléments DOM
   const promptInput = document.getElementById('promptInput') as HTMLTextAreaElement;
   const charCount = document.getElementById('charCount');
   const promptError = document.getElementById('promptError');
+  const clarificationZone = document.getElementById('clarificationZone');
+  const clarificationOptions = document.getElementById('clarificationOptions');
+  const cancelClarificationBtn = document.getElementById('cancelClarification');
+  const form = document.getElementById('customQuizForm') as HTMLFormElement;
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const randomPromptBtn = document.getElementById('randomPromptBtn');
 
+  // État
+  let selectedClarification: string | null = null;
+  let placeholderPrompts: string[] = [];
+  let currentPlaceholderIndex = 0;
+  let placeholderInterval: number | null = null;
+
+  // ============================================
+  // PLACEHOLDER ROTATIF
+  // ============================================
+  async function loadPlaceholderPrompts() {
+    try {
+      const response = await fetch('/api/quiz/random-prompts?count=5');
+      const data = await response.json();
+      if (data.prompts && data.prompts.length > 0) {
+        placeholderPrompts = data.prompts;
+        startPlaceholderRotation();
+      }
+    } catch (error) {
+      console.error('Error loading placeholder prompts:', error);
+    }
+  }
+
+  function startPlaceholderRotation() {
+    if (placeholderPrompts.length === 0 || !promptInput) return;
+
+    // Mettre à jour le placeholder initial
+    updatePlaceholder();
+
+    // Rotation toutes les 5 secondes
+    placeholderInterval = window.setInterval(() => {
+      if (promptInput.value.length === 0) {
+        currentPlaceholderIndex = (currentPlaceholderIndex + 1) % placeholderPrompts.length;
+        updatePlaceholder();
+      }
+    }, 5000);
+  }
+
+  function updatePlaceholder() {
+    if (!promptInput || placeholderPrompts.length === 0) return;
+    
+    // Animation de transition
+    promptInput.classList.add('placeholder-animating');
+    setTimeout(() => {
+      promptInput.placeholder = placeholderPrompts[currentPlaceholderIndex];
+      promptInput.classList.remove('placeholder-animating');
+    }, 150);
+  }
+
+  function stopPlaceholderRotation() {
+    if (placeholderInterval) {
+      clearInterval(placeholderInterval);
+      placeholderInterval = null;
+    }
+  }
+
+  // Charger les prompts au chargement de la page
+  loadPlaceholderPrompts();
+
+  // ============================================
+  // BOUTON ALÉATOIRE
+  // ============================================
+  if (randomPromptBtn && promptInput) {
+    randomPromptBtn.addEventListener('click', async () => {
+      randomPromptBtn.classList.add('loading');
+      
+      try {
+        const response = await fetch('/api/quiz/random-prompts', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.prompt) {
+          promptInput.value = data.prompt;
+          charCount!.textContent = data.prompt.length.toString();
+          promptInput.focus();
+          
+          // Masquer la zone de clarification
+          if (clarificationZone) {
+            clarificationZone.hidden = true;
+            selectedClarification = null;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching random prompt:', error);
+      } finally {
+        randomPromptBtn.classList.remove('loading');
+      }
+    });
+  }
+
+  // ============================================
+  // COMPTEUR DE CARACTÈRES
+  // ============================================
   if (promptInput && charCount) {
     promptInput.addEventListener('input', () => {
       charCount.textContent = promptInput.value.length.toString();
       
       // Masquer l'erreur si elle était visible et que l'utilisateur tape
-      if (promptError && promptError.style.display === 'block') {
-        promptError.style.display = 'none';
+      if (promptError) {
+        promptError.hidden = true;
+      }
+      // Masquer la zone de clarification si l'utilisateur modifie son prompt
+      if (clarificationZone) {
+        clarificationZone.hidden = true;
+        selectedClarification = null;
+      }
+    });
+
+    // Arrêter la rotation quand l'utilisateur commence à taper
+    promptInput.addEventListener('focus', () => {
+      if (promptInput.value.length > 0) {
+        stopPlaceholderRotation();
       }
     });
   }
 
-  // Exemples de prompts cliquables
-  const promptExamples = document.querySelectorAll('.prompt-example');
-  promptExamples.forEach((example) => {
-    example.addEventListener('click', () => {
-      const prompt = example.getAttribute('data-prompt');
-      if (prompt && promptInput) {
-        promptInput.value = prompt;
-        charCount!.textContent = prompt.length.toString();
-        promptInput.focus();
-      }
+  // Bouton annuler clarification
+  if (cancelClarificationBtn && clarificationZone) {
+    cancelClarificationBtn.addEventListener('click', () => {
+      clarificationZone.hidden = true;
+      selectedClarification = null;
+      promptInput.focus();
     });
-  });
+  }
 
   // Slider de questions
   const slider = document.getElementById('questionSlider') as HTMLInputElement;
@@ -630,10 +835,107 @@ const minQuestions = 5;
     });
   }
 
-  // Gestion du formulaire
-  const form = document.getElementById('customQuizForm') as HTMLFormElement;
-  const loadingOverlay = document.getElementById('loadingOverlay');
+  /**
+   * Affiche les options de clarification
+   */
+  function showClarifications(clarifications: Array<{ label: string; theme: string; confidence: number }>) {
+    if (!clarificationZone || !clarificationOptions) return;
 
+    clarificationOptions.innerHTML = clarifications.map((c, index) => `
+      <button type="button" class="clarification-option" data-theme="${c.theme.replace(/"/g, '&quot;')}">
+        <div class="clarification-option__label">${c.label}</div>
+        <div class="clarification-option__theme">${c.theme}</div>
+        <span class="clarification-option__confidence">${Math.round(c.confidence * 100)}% confiance</span>
+      </button>
+    `).join('');
+
+    // Ajouter les événements aux options
+    clarificationOptions.querySelectorAll('.clarification-option').forEach((option) => {
+      option.addEventListener('click', () => {
+        const theme = option.getAttribute('data-theme');
+        if (theme) {
+          selectedClarification = theme;
+          // Soumettre automatiquement avec la clarification sélectionnée
+          submitQuizGeneration();
+        }
+      });
+    });
+
+    clarificationZone.hidden = false;
+  }
+
+  /**
+   * Soumet la génération du quiz
+   */
+  async function submitQuizGeneration() {
+    if (!form || !loadingOverlay) return;
+
+    const formData = new FormData(form);
+    const prompt = formData.get('prompt') as string;
+    const difficulty = formData.get('difficulty') as string;
+    const numberOfQuestions = parseInt(formData.get('numberOfQuestions') as string);
+    const timer = formData.get('timer') as string;
+    const timerSeconds = timer ? parseInt(timer, 10) : 10;
+
+    // Afficher le loading
+    loadingOverlay.style.display = 'flex';
+    if (clarificationZone) {
+      clarificationZone.hidden = true;
+    }
+
+    try {
+      const response = await fetch('/api/quiz/generate-custom-quiz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          difficulty,
+          numberOfQuestions,
+          timerSeconds,
+          selectedClarification, // Envoyer la clarification si sélectionnée
+        }),
+      });
+
+      const data = await response.json();
+
+      console.log('✅ API Response:', data);
+
+      // Gérer le mode clarification
+      if (data.mode === 'clarify' && data.clarifications) {
+        loadingOverlay.style.display = 'none';
+        showClarifications(data.clarifications);
+        return;
+      }
+
+      // Gérer les erreurs
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération');
+      }
+
+      if (!data.sessionId) {
+        throw new Error('Aucune session créée');
+      }
+
+      console.log('✅ Session créée:', data.sessionId);
+
+      // Rediriger vers le quiz avec l'ID de session
+      window.location.href = `/quiz/play?session=${data.sessionId}`;
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      loadingOverlay.style.display = 'none';
+      selectedClarification = null;
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          message: error instanceof Error ? error.message : 'Erreur lors de la génération du quiz', 
+          type: 'error' 
+        } 
+      }));
+    }
+  }
+
+  // Gestion du formulaire
   if (form && loadingOverlay) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -642,59 +944,21 @@ const minQuestions = 5;
       const prompt = formData.get('prompt') as string;
       const difficulty = formData.get('difficulty') as string;
       const numberOfQuestions = parseInt(formData.get('numberOfQuestions') as string);
-      const timer = formData.get('timer') as string;
-      const timerSeconds = timer ? parseInt(timer, 10) : 10;
 
-      // Validation basique
-      if (!prompt || prompt.trim().length < 10) {
-        promptError!.style.display = 'block';
+      // Validation basique côté client (pré-filtre léger)
+      if (!prompt || prompt.trim().length < 6) {
+        promptError!.hidden = false;
+        promptError!.textContent = '⚠️ Le prompt doit contenir au moins 6 caractères';
         promptInput.focus();
         return;
       }
 
       if (!difficulty || !numberOfQuestions) {
-        // Ces champs sont required, pas besoin d'alert
         return;
       }
 
-      // Afficher le loading
-      loadingOverlay.style.display = 'flex';
-
-      try {
-        const response = await fetch('/api/quiz/generate-custom-quiz', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt,
-            difficulty,
-            numberOfQuestions,
-            timerSeconds,
-          }),
-        });
-
-        const data = await response.json();
-
-        console.log('✅ API Response:', data);
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Erreur lors de la génération');
-        }
-
-        if (!data.sessionId) {
-          throw new Error('Aucune session créée');
-        }
-
-        console.log('✅ Session créée:', data.sessionId);
-
-        // Rediriger vers le quiz avec l'ID de session (comme pour les autres quiz)
-        window.location.href = `/quiz/play?session=${data.sessionId}`;
-      } catch (error) {
-        console.error('❌ Erreur:', error);
-        loadingOverlay.style.display = 'none';
-        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: error instanceof Error ? error.message : 'Erreur lors de la génération du quiz', type: 'error' } }));
-      }
+      // Soumettre la génération
+      await submitQuizGeneration();
     });
   }
 </script>

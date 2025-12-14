@@ -107,14 +107,18 @@ const errorMessage = Astro.url.searchParams.get('error');
         📋 Doublons potentiels ({duplicateGroups.length})
       </h2>
       <div class="admin-section__info">
-        {pendingCount} questions en attente de review
+        <a href="/admin/questions?filter=pending" class="admin-link">
+          {pendingCount} questions non approuvées →
+        </a>
       </div>
     </div>
 
     <p class="admin-description">
-      Cette page identifie les questions non approuvées qui ressemblent à des questions déjà existantes.
-      Vous pouvez approuver la nouvelle question (si elle est suffisamment différente), 
-      la supprimer (si c'est un doublon), ou l'éditer pour la rendre unique.
+      Cette page affiche uniquement les questions non approuvées qui ressemblent à des questions déjà existantes dans la base.
+      <br /><br />
+      <strong>Note :</strong> Si vous voyez "{pendingCount} questions non approuvées" mais 0 doublons potentiels, 
+      cela signifie que ces questions sont uniques. Vous pouvez les gérer depuis la 
+      <a href="/admin/questions?filter=pending" class="admin-link">page des questions en attente</a>.
     </p>
 
     {duplicateGroups.length > 0 ? (
@@ -139,7 +143,7 @@ const errorMessage = Astro.url.searchParams.get('error');
                 </div>
               </div>
               <div class="duplicate-card__actions">
-                <form method="post" action="/api/admin/questions/toggle-approve" style="display: inline;">
+                <form method="post" action="/api/admin/questions/toggle-approve" class="admin-inline-form">
                   <input type="hidden" name="id" value={group.question.id} />
                   <input type="hidden" name="approved" value="true" />
                   <button type="submit" class="btn btn--success btn--sm">
@@ -149,7 +153,7 @@ const errorMessage = Astro.url.searchParams.get('error');
                 <a href={`/admin/questions/${group.question.id}`} class="btn btn--primary btn--sm">
                   ✏️ Éditer
                 </a>
-                <form method="post" action="/api/admin/questions/delete" style="display: inline;" onsubmit="return confirm('Supprimer cette question ?')">
+                <form method="post" action="/api/admin/questions/delete" class="admin-inline-form" onsubmit="return confirm('Supprimer cette question ?')">
                   <input type="hidden" name="id" value={group.question.id} />
                   <button type="submit" class="btn btn--danger btn--sm">
                     🗑️ Supprimer (doublon)
@@ -198,167 +202,3 @@ const errorMessage = Astro.url.searchParams.get('error');
   </section>
 </AdminLayout>
 
-<style lang="scss">
-  .admin-alert {
-    padding: var(--space-4);
-    border-radius: var(--radius-2);
-    margin-bottom: var(--space-4);
-    font-weight: var(--font-weight-medium);
-
-    &--success {
-      background: rgba(34, 197, 94, 0.15);
-      color: var(--color-success);
-      border: 1px solid var(--color-success);
-    }
-
-    &--error {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--color-error);
-      border: 1px solid var(--color-error);
-    }
-  }
-
-  .admin-section__info {
-    font-size: var(--fs-2);
-    color: var(--color-text-muted);
-  }
-
-  .admin-description {
-    color: var(--color-text-muted);
-    font-size: var(--fs-3);
-    margin-bottom: var(--space-6);
-    line-height: 1.6;
-  }
-
-  .duplicates-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-  }
-
-  .duplicate-card {
-    background: var(--color-background);
-    border-radius: var(--radius-3);
-    padding: var(--space-5);
-    border: 1px solid var(--color-border);
-  }
-
-  .duplicate-card__new {
-    margin-bottom: var(--space-4);
-  }
-
-  .duplicate-card__label {
-    margin-bottom: var(--space-3);
-
-    &--similars {
-      font-size: var(--fs-2);
-      color: var(--color-text-muted);
-      font-weight: var(--font-weight-semibold);
-      margin-top: var(--space-4);
-    }
-  }
-
-  .duplicate-card__question {
-    background: var(--color-surface);
-    border-radius: var(--radius-2);
-    padding: var(--space-4);
-    border-left: 3px solid var(--color-warning);
-    margin-bottom: var(--space-4);
-  }
-
-  .duplicate-card__text {
-    font-size: var(--fs-3);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text);
-    margin: var(--space-3) 0;
-  }
-
-  .duplicate-card__choices {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .duplicate-card__choice {
-    font-size: var(--fs-2);
-    color: var(--color-text-muted);
-
-    &--correct {
-      color: var(--color-success);
-      font-weight: var(--font-weight-medium);
-    }
-  }
-
-  .duplicate-card__actions {
-    display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-  }
-
-  .duplicate-card__arrow {
-    text-align: center;
-    font-size: var(--fs-6);
-    color: var(--color-text-muted);
-  }
-
-  .duplicate-card__similars {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .similar-item {
-    background: var(--color-surface);
-    border-radius: var(--radius-2);
-    padding: var(--space-4);
-    border-left: 3px solid var(--color-success);
-  }
-
-  .similar-item__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-2);
-  }
-
-  .similar-item__similarity {
-    font-size: var(--fs-2);
-    color: var(--color-text-muted);
-    font-weight: var(--font-weight-medium);
-  }
-
-  .similar-item__text {
-    font-size: var(--fs-3);
-    color: var(--color-text);
-    margin-bottom: var(--space-2);
-  }
-
-  .similar-item__choices {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .btn--success {
-    background: var(--color-success);
-    color: white;
-    border-color: var(--color-success);
-  }
-
-  .btn--danger {
-    background: var(--color-error);
-    color: white;
-    border-color: var(--color-error);
-  }
-
-  .btn--sm {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--fs-2);
-  }
-
-  .admin-empty__subtext {
-    font-size: var(--fs-2);
-    color: var(--color-text-muted);
-    margin-top: var(--space-2);
-  }
-</style>

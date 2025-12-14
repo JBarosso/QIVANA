@@ -70,13 +70,28 @@ const totalQuestions = session.questions_ids.length;
 const answers = (session.answers as Answers) || [];
 const answeredQuestions = answers.filter((a) => a !== null && a !== undefined).length;
 
-// Pour les correctAnswers, on ne peut pas les calculer précisément pour custom-quiz car les questions ne sont pas en DB
-// On utilise le score comme proxy
+// Calculer les correctAnswers
 let correctAnswers = 0;
 
 if (session.quiz_type === 'ai-custom-quiz') {
-  // Estimation basée sur score (10 pts/question max)
-  correctAnswers = Math.round(session.score / 10);
+  // Pour les quiz custom, utiliser les temp_questions stockées dans la session
+  const tempQuestions = (session as any).temp_questions as Array<{ correct_index: number }> | null;
+  
+  if (tempQuestions && Array.isArray(tempQuestions)) {
+    correctAnswers = answers.reduce((count: number, answer: number | null, index: number) => {
+      if (answer === null || answer === undefined) return count;
+      const question = tempQuestions[index];
+      return question && answer === question.correct_index ? count + 1 : count;
+    }, 0);
+  } else {
+    // Fallback si temp_questions n'est pas disponible : utiliser le nombre de réponses non-nulles
+    // qui ont potentiellement été correctes (approximation basée sur score)
+    // 20 pts max par question (10 base + 10 bonus temps)
+    correctAnswers = Math.min(
+      Math.round(session.score / 15), // Moyenne entre 10 et 20
+      answeredQuestions
+    );
+  }
 } else {
   // Pour les quiz normaux, vérifier chaque réponse
   // On s'assure que toutes les questions sont chargées avant de calculer
@@ -98,7 +113,7 @@ if (session.quiz_type === 'ai-custom-quiz') {
   } else {
     // Fallback : si les questions ne sont pas toutes chargées, utiliser le score comme estimation
     console.warn('Not all questions loaded, using score estimation');
-    correctAnswers = Math.round(session.score / 10);
+    correctAnswers = Math.round(session.score / 15);
   }
 }
 
@@ -152,12 +167,6 @@ if (accuracy >= 90) {
           <div class="stat-card__value">{incorrectAnswers}</div>
           <div class="stat-card__label">Mauvaises réponses</div>
         </div>
-
-        <div class="stat-card stat-card--primary">
-          <div class="stat-card__icon">🎯</div>
-          <div class="stat-card__value">{accuracy}%</div>
-          <div class="stat-card__label">Précision</div>
-        </div>
       </div>
 
       {/* Messages motivants */}
@@ -178,10 +187,10 @@ if (accuracy >= 90) {
 
       {/* Actions */}
       <div class="quiz-results__actions">
-        <a href="/quiz/setup" class="btn btn--primary btn--large">
+        <a href={session.quiz_type === 'ai-custom-quiz' ? '/quiz/custom-quiz' : '/quiz/setup'} class="btn btn--primary btn--large">
           Nouveau Quiz 🚀
         </a>
-        <a href="/profile" class="btn btn--secondary btn--large">
+        <a href="/profil" class="btn btn--secondary btn--large">
           Mon Profil
         </a>
       </div>

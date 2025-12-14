@@ -115,6 +115,11 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers, timer
       return;
     }
 
+    // Si l'utilisateur a déjà répondu (dans cette session), ne pas continuer le timer
+    if (isAnswered) {
+      return;
+    }
+
     // Réinitialiser l'état pour la nouvelle question
     setIsAnswered(false);
     setSelectedAnswer(null);
@@ -148,7 +153,7 @@ export default function QuizPlayer({ sessionId, questions, currentAnswers, timer
     return () => {
       clearInterval(timer);
     };
-  }, [currentQuestionIndex, validatedTimerSeconds, currentAnswers]); // Utiliser validatedTimerSeconds
+  }, [currentQuestionIndex, validatedTimerSeconds, currentAnswers, isAnswered]); // Arrêter le timer quand isAnswered change
 
   const handleNext = () => {
     if (currentQuestionIndex < totalQuestions - 1) {

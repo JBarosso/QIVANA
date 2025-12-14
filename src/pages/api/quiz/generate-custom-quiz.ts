@@ -7,8 +7,9 @@
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
-import { generateQuiz } from '../../../lib/ai';
+import { generateQuiz, validatePromptPreFilter } from '../../../lib/ai';
 import { getRecentUserQuestions } from '../../../lib/quiz';
+import { addQuestionsToHistory } from '../../../lib/questionHistory';
 import type { Difficulty } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -76,7 +77,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
-    const { prompt, difficulty, numberOfQuestions, timerSeconds } = await request.json();
+    const { prompt, difficulty, numberOfQuestions, timerSeconds, selectedClarification } = await request.json();
 
     // Validation des paramètres
     if (!prompt || !difficulty || !numberOfQuestions) {
@@ -102,13 +103,31 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // Validation du prompt
-    if (prompt.length < 10 || prompt.length > 500) {
+    // ⚠️ PRÉ-FILTRE : Validation du prompt AVANT appel IA
+    // Si une clarification a été sélectionnée, on skip le pré-filtre (le thème est déjà validé)
+    if (!selectedClarification) {
+      const preFilterResult = validatePromptPreFilter(prompt);
+      if (!preFilterResult.isValid) {
+        return new Response(
+          JSON.stringify({ 
+            error: preFilterResult.error,
+            mode: 'prefilter_error'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Validation de la longueur du prompt
+    if (prompt.length > 500) {
       return new Response(
-        JSON.stringify({ error: 'Le prompt doit contenir entre 10 et 500 caractères' }),
+        JSON.stringify({ error: 'Le prompt doit contenir moins de 500 caractères' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Utiliser la clarification sélectionnée comme prompt si disponible
+    const effectivePrompt = selectedClarification || prompt;
 
     // Limiter le nombre de questions selon le plan
     const maxQuestions = profile.plan === 'premium' ? 10 : 30;
@@ -120,15 +139,52 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     console.log(`📝 Context: ${contextQuestions.length} recent custom questions for injection`);
 
     // Générer le quiz via IA avec le prompt custom + contexte
-    console.log('🎨 Generating CUSTOM quiz:', { prompt: prompt.substring(0, 50), difficulty, numberOfQuestions: requestedQuestions });
+    console.log('🎨 Generating CUSTOM quiz:', { prompt: effectivePrompt.substring(0, 50), difficulty, numberOfQuestions: requestedQuestions });
     
     const aiResponse = await generateQuiz({
       universe: 'other', // Fictif, le customPrompt prendra le dessus
       difficulty: difficulty as Difficulty,
       numberOfQuestions: requestedQuestions,
-      customPrompt: prompt, // Le prompt custom de l'utilisateur
+      customPrompt: effectivePrompt, // Le prompt (ou clarification sélectionnée)
       contextQuestions: contextQuestions.length > 0 ? contextQuestions : undefined, // Injection de contexte
     });
+
+    console.log('✅ AI Response mode:', aiResponse.mode, '- Questions:', aiResponse.questions.length);
+
+    // ============================================
+    // GESTION DES MODES DE RÉPONSE IA
+    // ============================================
+    
+    // Mode ERREUR : prompt impossible à interpréter
+    if (aiResponse.mode === 'error') {
+      return new Response(
+        JSON.stringify({
+          mode: 'error',
+          error: aiResponse.error_message || 'Impossible d\'interpréter cette demande.',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Mode CLARIFICATION : prompt ambigu, proposer des alternatives
+    if (aiResponse.mode === 'clarify') {
+      // ⚠️ Ne pas consommer de crédit IA pour la clarification
+      return new Response(
+        JSON.stringify({
+          mode: 'clarify',
+          interpreted_theme: aiResponse.interpreted_theme,
+          confidence: aiResponse.confidence,
+          clarifications: aiResponse.clarifications,
+          message: 'Ton thème est un peu vague. Choisis une interprétation ci-dessous :',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Mode QUIZ : génération réussie
+    if (aiResponse.questions.length === 0) {
+      throw new Error('Aucune question générée par l\'IA');
+    }
 
     console.log('✅ Generated', aiResponse.questions.length, 'questions for custom quiz');
 
@@ -173,6 +229,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     console.log('✅ Session created:', newSession.id);
+
+    // Sauvegarder les questions dans l'historique pour éviter les doublons
+    try {
+      await addQuestionsToHistory(
+        supabase,
+        user.id,
+        aiResponse.questions,
+        effectivePrompt
+      );
+      console.log('📝 Questions added to history');
+    } catch (historyError) {
+      // Ne pas bloquer si l'historique échoue
+      console.warn('⚠️ Failed to add questions to history:', historyError);
+    }
 
     // Incrémenter le compteur de quiz IA utilisés
     const { error: updateError } = await supabase
