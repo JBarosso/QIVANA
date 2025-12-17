@@ -7,6 +7,7 @@
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
 import { generateQuiz } from '../../../lib/ai';
+import { checkAndConsumeAiCredit } from '../../../lib/ai-credits';
 import type { Difficulty } from '../../../lib/quiz';
 
 // Thèmes variés pour le mode Endless (plus engageants)
@@ -52,22 +53,26 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response('Non autorisé', { status: 401 });
   }
 
-  // Vérifier le plan
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('plan')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.plan === 'freemium') {
-    return new Response(
-      JSON.stringify({ error: 'Mode Endless réservé aux abonnés Premium' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
   try {
     const { difficulty, questionNumber = 1 } = await request.json();
+
+    // Récupérer le profil pour obtenir le plan
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return new Response('Profil introuvable', { status: 404 });
+    }
+
+    if (profile.plan === 'freemium') {
+      return new Response(
+        JSON.stringify({ error: 'Mode Endless réservé aux abonnés Premium' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     const cacheKey = `${user.id}_endless`;
 
     // Vérifier si on a des questions en cache
@@ -108,6 +113,29 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const batchSize = 10;
     const theme = ENDLESS_THEMES[Math.floor(Math.random() * ENDLESS_THEMES.length)];
 
+    // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA (avant génération)
+    const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
+      mode: 'endless',
+      questionsInBatch: batchSize,
+    });
+
+    if (!creditCheck.allowed) {
+      if (creditCheck.error === 'out_of_credits') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'out_of_credits',
+            message: 'Crédits IA épuisés',
+            creditsRemaining: creditCheck.creditsRemaining,
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: 'Impossible de générer des questions' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`🔥 Endless: Génération de ${batchSize} questions ${difficulty} - "${theme}"`);
 
     const aiResponse = await generateQuiz({
@@ -129,6 +157,23 @@ IMPORTANT ENDLESS MODE RULES:
       const [firstQuestion, ...restQuestions] = aiResponse.questions;
       questionCache.set(cacheKey, restQuestions);
 
+      // Logging pour analytics (ai_usage) - en arrière-plan
+      supabase
+        .from('ai_usage')
+        .insert({
+          user_id: user.id,
+          quiz_type: 'ai-custom-quiz', // Endless utilise custom prompts
+          questions_count: aiResponse.questions.length,
+          universe: 'other',
+          prompt: theme.substring(0, 200),
+          mode: 'endless',
+          credits_consumed: 1,
+          plan_at_time: profile.plan,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging endless AI usage:', error);
+        });
+
       return new Response(
         JSON.stringify({
           question: {
@@ -137,6 +182,7 @@ IMPORTANT ENDLESS MODE RULES:
             correct_index: firstQuestion.correct_index,
             explanation: firstQuestion.explanation,
           },
+          creditsRemaining: creditCheck.creditsRemaining,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -154,9 +200,28 @@ IMPORTANT ENDLESS MODE RULES:
 
 /**
  * Génère un batch de questions en arrière-plan
+ * ⚠️ IMPORTANT: Cette fonction doit aussi vérifier et consommer les crédits
  */
 async function generateBatchAsync(cacheKey: string, difficulty: string, userId: string) {
   try {
+    // Créer un client Supabase pour cette fonction async
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+
+    // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
+    const creditCheck = await checkAndConsumeAiCredit(supabaseAdmin, userId, {
+      mode: 'endless',
+      questionsInBatch: 10,
+    });
+
+    if (!creditCheck.allowed) {
+      console.warn(`⚠️ Endless: Cannot generate batch for ${userId} - out of credits`);
+      return; // Ne pas générer si pas de crédits
+    }
+
     const theme = ENDLESS_THEMES[Math.floor(Math.random() * ENDLESS_THEMES.length)];
     
     // Générer 10 questions par batch (au lieu de 5)
@@ -178,6 +243,29 @@ async function generateBatchAsync(cacheKey: string, difficulty: string, userId: 
       
       questionCache.set(cacheKey, [...existingQuestions, ...newQuestions]);
       console.log(`✅ Endless: ${newQuestions.length} questions ajoutées au cache pour ${userId}`);
+
+      // Logging pour analytics (ai_usage) - en arrière-plan
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('plan')
+        .eq('id', userId)
+        .single();
+
+      supabaseAdmin
+        .from('ai_usage')
+        .insert({
+          user_id: userId,
+          quiz_type: 'ai-custom-quiz',
+          questions_count: aiResponse.questions.length,
+          universe: 'other',
+          prompt: theme.substring(0, 200),
+          mode: 'endless',
+          credits_consumed: 1,
+          plan_at_time: profile?.plan || 'unknown',
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging endless batch AI usage:', error);
+        });
     }
   } catch (error) {
     console.error('Error generating batch:', error);

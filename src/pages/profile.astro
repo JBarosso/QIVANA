@@ -7,6 +7,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import { getUser, getProfile } from '@/lib/auth';
 import BadgeGrid from '@/components/badges/BadgeGrid';
 import AvatarModalWrapper from '@/components/avatars/AvatarModalWrapper';
+import AiUsageGauge from '@/components/profile/AiUsageGauge';
 import type { BadgeData } from '@/components/badges/types';
 
 interface AvatarData {
@@ -300,15 +301,14 @@ if (supabase) {
             </div>
           )}
 
-          {/* Quiz AI ce mois - affiché seulement si > 0 */}
-          {profile.ai_quizzes_used_this_month > 0 && (
-            <div class="stat-card">
-              <div class="stat-card__icon">✨</div>
-              <div class="stat-card__value">{profile.ai_quizzes_used_this_month}</div>
-              <div class="stat-card__label">Quiz AI ce mois</div>
-            </div>
-          )}
         </div>
+
+        {/* Section Crédits IA - affichée seulement pour Premium/Premium+ */}
+        {(profile.plan === 'premium' || profile.plan === 'premium+') && (
+          <div class="profile-card__ai-credits">
+            <AiUsageGauge client:load userId={user.id} />
+          </div>
+        )}
 
         <div class="profile-card__actions">
           <a href="/" class="btn btn--secondary">

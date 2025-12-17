@@ -11,6 +11,7 @@ import {
   getRecentUserQuestions,
 } from '../../../lib/quiz';
 import { generateQuiz } from '../../../lib/ai';
+import { checkAndConsumeAiCredit } from '../../../lib/ai-credits';
 import type { Universe, Difficulty, Question } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -188,37 +189,30 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         // ⚠️ IMPORTANT : Générer les questions au démarrage depuis le prompt
         console.log('🎨 Generating custom quiz from prompt at game start...');
         
-        // Vérifier le quota IA
-        const { data: quotaProfile } = await supabase
-          .from('profiles')
-          .select('ai_quizzes_used_this_month, ai_quota_reset_date')
-          .eq('id', user.id)
-          .single();
+        // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
+        const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
+          mode: 'multiplayer',
+          questionsInBatch: questionsCount,
+        });
 
-        if (quotaProfile) {
-          const now = new Date();
-          const resetDate = new Date(quotaProfile.ai_quota_reset_date);
-          
-          // Si la date de reset est passée, réinitialiser le quota
-          if (now > resetDate) {
-            await supabase
-              .from('profiles')
-              .update({
-                ai_quizzes_used_this_month: 0,
-                ai_quota_reset_date: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
-              })
-              .eq('id', user.id);
+        if (!creditCheck.allowed) {
+          if (creditCheck.error === 'out_of_credits') {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Crédits IA épuisés',
+                creditsRemaining: creditCheck.creditsRemaining,
+                out_of_credits: true
+              }),
+              {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
           }
-        }
-
-        const currentQuota = quotaProfile?.ai_quizzes_used_this_month || 0;
-        const maxQuota = 200; // Premium+ a 200 quiz IA par mois
-        
-        if (currentQuota >= maxQuota) {
           return new Response(
             JSON.stringify({ 
-              error: 'Quota mensuel de quiz IA épuisé',
-              message: `Vous avez utilisé ${currentQuota}/${maxQuota} quiz IA ce mois. Le quota sera réinitialisé le mois prochain.`
+              error: 'Impossible de générer le quiz custom',
+              message: 'Vérifiez votre plan et vos crédits IA.'
             }),
             {
               status: 403,
@@ -251,14 +245,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             difficulty: q.difficulty || difficulty,
             universe: q.universe || universe,
           }));
-          
-          // Incrémenter le quota
+
+          // Logging pour analytics (ai_usage)
           await supabase
-            .from('profiles')
-            .update({
-              ai_quizzes_used_this_month: currentQuota + 1,
+            .from('ai_usage')
+            .insert({
+              user_id: user.id,
+              quiz_type: 'ai-custom-quiz',
+              questions_count: aiResponse.questions.length,
+              universe: 'other',
+              prompt: customPrompt.substring(0, 200),
+              mode: 'multiplayer',
+              credits_consumed: 1,
+              plan_at_time: profile.plan,
             })
-            .eq('id', user.id);
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error logging duel AI usage:', error);
+              } else {
+                console.log(`✅ Duel AI usage logged: ${aiResponse.questions.length} questions`);
+              }
+            });
 
           console.log(`✅ Custom quiz generated at game start: ${questions.length} questions`);
         } catch (error) {

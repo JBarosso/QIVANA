@@ -112,10 +112,10 @@ export async function generateControlledAIQuestions(
   console.log(`✅ Inserted ${insertedQuestions.length} questions, ${duplicates.length} duplicates skipped`);
 
   // ============================================
-  // LOGGING pour analytics
+  // LOGGING pour analytics (ai_usage)
   // ============================================
   try {
-    // Log dans la console (à remplacer par une table dédiée si nécessaire)
+    // Log dans la console
     console.log(`📊 AI Generation Log:`, {
       userId,
       universe,
@@ -127,16 +127,31 @@ export async function generateControlledAIQuestions(
       timestamp: new Date().toISOString(),
     });
 
-    // TODO: Implémenter logging dans table ai_usage si elle existe
-    // await supabase.from('ai_usage').insert({
-    //   user_id: userId,
-    //   universe,
-    //   difficulty,
-    //   questions_generated: aiResponse.questions.length,
-    //   questions_inserted: insertedQuestions.length,
-    //   duplicates_skipped: duplicates.length,
-    //   created_at: new Date().toISOString(),
-    // });
+    // Logger dans ai_usage si des questions ont été insérées
+    if (insertedQuestions.length > 0) {
+      // Récupérer le plan de l'utilisateur pour le logging
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', userId)
+        .single();
+
+      await supabase.from('ai_usage').insert({
+        user_id: userId,
+        quiz_type: 'ai-predefined',
+        questions_count: insertedQuestions.length,
+        universe: universe as any,
+        mode: 'solo', // Par défaut pour les générations via generateControlledAIQuestions
+        credits_consumed: 1,
+        plan_at_time: profile?.plan || 'freemium',
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Error logging AI usage in ai-generation:', error);
+        } else {
+          console.log(`✅ AI usage logged: ${insertedQuestions.length} questions inserted`);
+        }
+      });
+    }
   } catch (logError) {
     console.error('Error logging AI generation:', logError);
     // Ne pas bloquer si le logging échoue

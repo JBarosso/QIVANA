@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { stripe, getPlanFromPriceId } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { getCreditsForPack } from '@/lib/ai-credits-config';
 
 // Client Supabase avec service role pour bypasser RLS
 const supabaseAdmin = createClient(
@@ -95,11 +96,94 @@ export const POST: APIRoute = async ({ request }) => {
 
 async function handleCheckoutCompleted(session: any) {
   const userId = session.metadata?.supabase_user_id;
+  const sessionType = session.metadata?.type;
+
+  if (!userId) {
+    console.error('Missing user ID in checkout session metadata');
+    return;
+  }
+
+  // Vérifier si c'est un achat de pack de crédits
+  if (sessionType === 'credit_pack') {
+    const packType = session.metadata?.pack_type;
+    
+    if (!packType || !['starter', 'standard', 'pro'].includes(packType)) {
+      console.error('Invalid pack type in checkout session');
+      return;
+    }
+
+    console.log(`✅ Credit pack purchase completed for user ${userId}, pack: ${packType}`);
+
+    // Récupérer le profil pour obtenir les crédits actuels
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('extra_ai_credits')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Error fetching profile for credit pack:', profileError);
+      return;
+    }
+
+    // Calculer les crédits à ajouter
+    const creditsToAdd = getCreditsForPack(packType as 'starter' | 'standard' | 'pro');
+    const currentCredits = profile.extra_ai_credits || 0;
+
+    // Incrémenter extra_ai_credits
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ extra_ai_credits: currentCredits + creditsToAdd })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating extra AI credits:', updateError);
+      return;
+    }
+
+    // Logger l'achat dans ai_credit_purchases
+    const { error: purchaseError } = await supabaseAdmin
+      .from('ai_credit_purchases')
+      .insert({
+        user_id: userId,
+        stripe_session_id: session.id,
+        pack_type: packType,
+        credits_purchased: creditsToAdd,
+        amount_cents: session.amount_total,
+      });
+
+    if (purchaseError) {
+      console.error('Error logging credit purchase:', purchaseError);
+    }
+
+    // Enregistrer le paiement
+    const { error: paymentError } = await supabaseAdmin
+      .from('payments')
+      .insert({
+        user_id: userId,
+        stripe_payment_intent_id: session.payment_intent,
+        stripe_subscription_id: null, // Pas d'abonnement pour les packs
+        amount_cents: session.amount_total,
+        currency: session.currency,
+        plan: 'freemium', // Les packs ne changent pas le plan
+        status: 'completed',
+        paid_at: new Date().toISOString(),
+      });
+
+    if (paymentError) {
+      console.error('Error recording payment:', paymentError);
+    }
+
+    console.log(`🎉 User ${userId} purchased ${creditsToAdd} AI credits (${packType} pack)`);
+    return;
+  }
+
+  // Sinon, c'est un abonnement (logique existante)
   const plan = session.metadata?.plan;
   const subscriptionId = session.subscription;
 
-  if (!userId || !plan) {
-    console.error('Missing metadata in checkout session');
+  if (!plan) {
+    console.error('Missing plan in checkout session metadata');
     return;
   }
 

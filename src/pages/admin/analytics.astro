@@ -16,6 +16,9 @@ let quizStats = {
   thisMonth: 0,
   thisWeek: 0,
 };
+let usageByPlan: any[] = [];
+let usageByMode: any[] = [];
+let creditPurchases: any[] = [];
 
 if (supabase) {
   // AI Usage par jour (30 derniers jours)
@@ -24,11 +27,29 @@ if (supabase) {
 
   const { data: aiUsage } = await supabase
     .from('ai_usage')
-    .select('created_at, questions_count, estimated_cost_cents, quiz_type')
+    .select('created_at, questions_count, estimated_cost_cents, quiz_type, mode, plan_at_time, credits_consumed')
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: true });
 
   aiUsageData = aiUsage || [];
+
+  // Stats par plan
+  const { data: usageByPlan } = await supabase
+    .from('ai_usage')
+    .select('plan_at_time, credits_consumed')
+    .gte('created_at', thirtyDaysAgo.toISOString());
+
+  // Stats par mode
+  const { data: usageByMode } = await supabase
+    .from('ai_usage')
+    .select('mode, credits_consumed')
+    .gte('created_at', thirtyDaysAgo.toISOString());
+
+  // Revenus des packs de crédits
+  const { data: creditPurchases } = await supabase
+    .from('ai_credit_purchases')
+    .select('amount_cents, credits_purchased, purchased_at')
+    .gte('purchased_at', thirtyDaysAgo.toISOString());
 
   // Stats mensuelles (6 derniers mois)
   for (let i = 5; i >= 0; i--) {
@@ -111,6 +132,36 @@ const quizzesValues = monthlyStats.map(s => s.quizzes);
 // Total AI cost
 const totalAiCost = aiCostValues.reduce((a, b) => a + b, 0);
 const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
+
+// Stats par plan
+const planStats: Record<string, { count: number; credits: number }> = {};
+if (usageByPlan) {
+  usageByPlan.forEach((u: any) => {
+    const plan = u.plan_at_time || 'unknown';
+    if (!planStats[plan]) {
+      planStats[plan] = { count: 0, credits: 0 };
+    }
+    planStats[plan].count += 1;
+    planStats[plan].credits += u.credits_consumed || 1;
+  });
+}
+
+// Stats par mode
+const modeStats: Record<string, { count: number; credits: number }> = {};
+if (usageByMode) {
+  usageByMode.forEach((u: any) => {
+    const mode = u.mode || 'unknown';
+    if (!modeStats[mode]) {
+      modeStats[mode] = { count: 0, credits: 0 };
+    }
+    modeStats[mode].count += 1;
+    modeStats[mode].credits += u.credits_consumed || 1;
+  });
+}
+
+// Revenus des packs de crédits
+const totalCreditRevenue = creditPurchases?.reduce((acc: number, p: any) => acc + (p.amount_cents || 0), 0) || 0;
+const totalCreditsSold = creditPurchases?.reduce((acc: number, p: any) => acc + (p.credits_purchased || 0), 0) || 0;
 ---
 
 <AdminLayout title="Analytics" currentPage="analytics">
@@ -159,6 +210,18 @@ const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
       <div class="admin-stat-card__value">{avgMonthlyCost.toFixed(2)}€</div>
       <div class="admin-stat-card__label">Coût AI mensuel moyen</div>
     </div>
+
+    <div class="admin-stat-card admin-stat-card--revenue">
+      <div class="admin-stat-card__icon">💵</div>
+      <div class="admin-stat-card__value">{(totalCreditRevenue / 100).toFixed(2)}€</div>
+      <div class="admin-stat-card__label">Revenus packs crédits (30j)</div>
+    </div>
+
+    <div class="admin-stat-card">
+      <div class="admin-stat-card__icon">🎯</div>
+      <div class="admin-stat-card__value">{totalCreditsSold}</div>
+      <div class="admin-stat-card__label">Crédits vendus (30j)</div>
+    </div>
   </div>
 
   <!-- Charts Grid -->
@@ -204,6 +267,40 @@ const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
     </section>
   </div>
 
+  <!-- Ventilation par Plan -->
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">📊 Utilisation par Plan (30 derniers jours)</h2>
+    </div>
+    <div class="stats-grid">
+      {Object.entries(planStats).map(([plan, stats]) => (
+        <div class="stat-breakdown-card">
+          <div class="stat-breakdown-card__plan">{plan}</div>
+          <div class="stat-breakdown-card__value">{stats.count}</div>
+          <div class="stat-breakdown-card__label">Générations</div>
+          <div class="stat-breakdown-card__subvalue">{stats.credits} crédits</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Ventilation par Mode -->
+  <section class="admin-section">
+    <div class="admin-section__header">
+      <h2 class="admin-section__title">🎮 Utilisation par Mode (30 derniers jours)</h2>
+    </div>
+    <div class="stats-grid">
+      {Object.entries(modeStats).map(([mode, stats]) => (
+        <div class="stat-breakdown-card">
+          <div class="stat-breakdown-card__plan">{mode || 'unknown'}</div>
+          <div class="stat-breakdown-card__value">{stats.count}</div>
+          <div class="stat-breakdown-card__label">Générations</div>
+          <div class="stat-breakdown-card__subvalue">{stats.credits} crédits</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
   <!-- ROI Section -->
   <section class="admin-section">
     <div class="admin-section__header">
@@ -242,6 +339,19 @@ const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
         <div class="roi-card__description">
           Abonnements Premium nécessaires pour couvrir les coûts AI
           <br/><small>(à 4.99€/mois)</small>
+        </div>
+      </div>
+
+      <div class="roi-card roi-card--revenue">
+        <div class="roi-card__title">Revenus vs Coûts (30j)</div>
+        <div class="roi-card__value">
+          {totalCreditRevenue > 0 && totalAiCost > 0
+            ? ((totalCreditRevenue / 100) / totalAiCost).toFixed(2)
+            : '0.00'}x
+        </div>
+        <div class="roi-card__description">
+          Ratio revenus packs / coûts AI
+          <br/><small>Revenus: {(totalCreditRevenue / 100).toFixed(2)}€ | Coûts: {totalAiCost.toFixed(2)}€</small>
         </div>
       </div>
     </div>
@@ -435,5 +545,63 @@ const avgMonthlyCost = totalAiCost / (aiCostValues.length || 1);
     small {
       opacity: 0.7;
     }
+  }
+
+  .admin-stat-card--revenue {
+    border-color: var(--color-success);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02));
+  }
+
+  .roi-card--revenue {
+    border-color: var(--color-success);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02));
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .stat-breakdown-card {
+    background: var(--color-background);
+    border-radius: var(--radius-3);
+    padding: var(--space-5);
+    text-align: center;
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-base);
+
+    &:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+    }
+  }
+
+  .stat-breakdown-card__plan {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    text-transform: capitalize;
+    margin-bottom: var(--space-2);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .stat-breakdown-card__value {
+    font-size: var(--fs-8);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary);
+    margin-bottom: var(--space-1);
+  }
+
+  .stat-breakdown-card__label {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat-breakdown-card__subvalue {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    font-weight: var(--font-weight-medium);
   }
 </style>

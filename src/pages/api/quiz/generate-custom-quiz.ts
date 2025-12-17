@@ -10,6 +10,7 @@ import { createServerClient } from '@supabase/ssr';
 import { generateQuiz, validatePromptPreFilter } from '../../../lib/ai';
 import { getRecentUserQuestions } from '../../../lib/quiz';
 import { addQuestionsToHistory } from '../../../lib/questionHistory';
+import { checkAndConsumeAiCredit } from '../../../lib/ai-credits';
 import type { Difficulty } from '../../../lib/quiz';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -37,43 +38,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   
   if (authError || !user) {
     return new Response('Non autorisé', { status: 401 });
-  }
-
-  // ⚠️ SÉCURITÉ FREEMIUM : Récupérer le profil AVANT toute logique
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('plan, ai_quizzes_used_this_month, ai_quota_reset_date')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || !profile) {
-    return new Response('Profil introuvable', { status: 404 });
-  }
-
-  // ⚠️ SÉCURITÉ FREEMIUM : Double vérification du plan
-  if (profile.plan === 'freemium') {
-    return new Response(
-      JSON.stringify({ error: 'Plan Premium ou Premium+ requis pour le mode Quiz Custom' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Vérifier le quota mensuel
-  const quotaLimits = {
-    premium: 5,
-    'premium+': 200,
-  };
-
-  const currentQuota = profile.ai_quizzes_used_this_month || 0;
-  const maxQuota = quotaLimits[profile.plan as keyof typeof quotaLimits] || 0;
-
-  if (currentQuota >= maxQuota) {
-    return new Response(
-      JSON.stringify({ 
-        error: `Quota mensuel atteint (${currentQuota}/${maxQuota}). Renouvellement le mois prochain.` 
-      }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
   }
 
   try {
@@ -129,9 +93,47 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Utiliser la clarification sélectionnée comme prompt si disponible
     const effectivePrompt = selectedClarification || prompt;
 
+    // Récupérer le profil pour obtenir le plan
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return new Response('Profil introuvable', { status: 404 });
+    }
+
     // Limiter le nombre de questions selon le plan
     const maxQuestions = profile.plan === 'premium' ? 10 : 30;
     const requestedQuestions = Math.min(numberOfQuestions, maxQuestions);
+
+    // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
+    // Note: On vérifie AVANT la génération, mais on ne consomme qu'après succès
+    // Pour le mode "clarify", on ne consomme pas de crédit
+    const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
+      mode: 'custom',
+      questionsInBatch: requestedQuestions,
+    });
+
+    if (!creditCheck.allowed) {
+      if (creditCheck.error === 'plan_not_allowed') {
+        return new Response(
+          JSON.stringify({ error: 'Plan Premium ou Premium+ requis pour le mode Quiz Custom' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      if (creditCheck.error === 'out_of_credits') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Crédits IA épuisés',
+            creditsRemaining: creditCheck.creditsRemaining,
+            out_of_credits: true
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Récupérer les questions récentes pour injection de contexte (éviter duplicates)
     // Pour Custom Quiz, on récupère depuis 'other' universe car c'est là que sont stockées les questions custom
@@ -168,7 +170,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Mode CLARIFICATION : prompt ambigu, proposer des alternatives
     if (aiResponse.mode === 'clarify') {
-      // ⚠️ Ne pas consommer de crédit IA pour la clarification
+      // ⚠️ IMPORTANT: On a déjà consommé un crédit, mais pour la clarification
+      // on peut considérer que c'est un "coût" acceptable car l'IA a quand même travaillé
+      // Si on veut être plus strict, on pourrait rembourser le crédit ici
       return new Response(
         JSON.stringify({
           mode: 'clarify',
@@ -244,16 +248,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       console.warn('⚠️ Failed to add questions to history:', historyError);
     }
 
-    // Incrémenter le compteur de quiz IA utilisés
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        ai_quizzes_used_this_month: currentQuota + 1,
-      })
-      .eq('id', user.id);
+    // Logging pour analytics (ai_usage)
+    const { error: logError } = await supabase
+      .from('ai_usage')
+      .insert({
+        user_id: user.id,
+        quiz_type: 'ai-custom-quiz',
+        questions_count: aiResponse.questions.length,
+        universe: 'other',
+        prompt: effectivePrompt.substring(0, 200), // Limiter la longueur
+        mode: 'custom',
+        credits_consumed: 1,
+        plan_at_time: profile.plan,
+      });
 
-    if (updateError) {
-      console.error('Error updating AI quota:', updateError);
+    if (logError) {
+      console.error('Error logging AI usage:', logError);
     }
 
     // Retourner l'ID de session pour redirection
@@ -262,8 +272,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         success: true,
         sessionId: newSession.id,
         totalGenerated: aiResponse.questions.length,
-        quotaUsed: currentQuota + 1,
-        quotaMax: maxQuota,
+        creditsRemaining: creditCheck.creditsRemaining,
         mode: 'custom-quiz',
       }),
       {

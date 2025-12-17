@@ -32,6 +32,13 @@ export const STRIPE_PRICES = {
   },
 } as const;
 
+// Packs de crédits IA (one-time payments)
+export const CREDIT_PACK_PRICES = {
+  starter: import.meta.env.STRIPE_PRICE_CREDITS_STARTER || 'price_credits_starter_test',
+  standard: import.meta.env.STRIPE_PRICE_CREDITS_STANDARD || 'price_credits_standard_test',
+  pro: import.meta.env.STRIPE_PRICE_CREDITS_PRO || 'price_credits_pro_test',
+} as const;
+
 // ============================================
 // CONFIGURATION DES PLANS
 // ============================================
