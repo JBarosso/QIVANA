@@ -48,25 +48,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response('Paramètres manquants', { status: 400 });
     }
 
-    // Récupérer et valider le timer
-    let validatedTimerSeconds = 10; // Par défaut
-    if (timerSeconds) {
-      const parsedTimer = parseInt(timerSeconds.toString(), 10);
-      if (!isNaN(parsedTimer) && parsedTimer > 0) {
-        validatedTimerSeconds = parsedTimer;
-        // Validation selon le plan
-        if (profile.plan === 'premium') {
-          if (![5, 10, 15].includes(validatedTimerSeconds)) {
-            validatedTimerSeconds = 10; // Fallback
-          }
-        } else if (profile.plan === 'premium+') {
-          if (validatedTimerSeconds < 3 || validatedTimerSeconds > 20) {
-            validatedTimerSeconds = 10; // Fallback
-          }
-        }
-      }
-    }
-
     // ⚠️ PRÉ-FILTRE : Validation du prompt AVANT appel IA
     // Si une clarification a été sélectionnée, on skip le pré-filtre (le thème est déjà validé)
     if (!selectedClarification) {
@@ -93,7 +74,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Utiliser la clarification sélectionnée comme prompt si disponible
     const effectivePrompt = selectedClarification || prompt;
 
-    // Récupérer le profil pour obtenir le plan
+    // Récupérer le profil pour obtenir le plan (AVANT la validation du timer)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('plan')
@@ -107,6 +88,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Limiter le nombre de questions selon le plan
     const maxQuestions = profile.plan === 'premium' ? 10 : 30;
     const requestedQuestions = Math.min(numberOfQuestions, maxQuestions);
+
+    // Récupérer et valider le timer selon le plan
+    let validatedTimerSeconds = 10; // Par défaut
+    if (timerSeconds) {
+      const parsedTimer = parseInt(timerSeconds.toString(), 10);
+      if (!isNaN(parsedTimer) && parsedTimer > 0) {
+        validatedTimerSeconds = parsedTimer;
+        // Validation selon le plan
+        if (profile.plan === 'premium') {
+          if (![5, 10, 15].includes(validatedTimerSeconds)) {
+            validatedTimerSeconds = 10; // Fallback
+          }
+        } else if (profile.plan === 'premium+') {
+          if (validatedTimerSeconds < 3 || validatedTimerSeconds > 20) {
+            validatedTimerSeconds = 10; // Fallback
+          }
+        }
+      }
+    }
 
     // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
     // Note: On vérifie AVANT la génération, mais on ne consomme qu'après succès
