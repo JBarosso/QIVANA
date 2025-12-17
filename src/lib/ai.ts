@@ -105,12 +105,6 @@ function buildPrompt(request: AIQuizRequest): string {
     return buildCustomPrompt(customPrompt, difficulty, numberOfQuestions, contextQuestions);
   }
 
-  const difficultyDescriptions = {
-    easy: 'facile (culture populaire, références connues)',
-    medium: 'moyen (connaissances intermédiaires, nuances)',
-    hard: 'difficile (détails précis, références obscures)',
-  };
-
   const universeDescriptions = {
     anime: 'animes japonais',
     manga: 'mangas japonais',
@@ -121,40 +115,123 @@ function buildPrompt(request: AIQuizRequest): string {
     other: 'culture geek générale',
   };
 
+  // Calibration détaillée selon la difficulté
+  const difficultyCalibration = {
+    easy: `EASY (~80% de réussite attendue):
+    - Culture populaire, personnages principaux, éléments iconiques
+    - Questions que la majorité des fans peut répondre
+    - Références connues du grand public`,
+    
+    medium: `MEDIUM (~40-60% de réussite attendue):
+    - Personnages secondaires, détails d'intrigue
+    - Années de sortie, éléments moins évidents
+    - Connaissance approfondie mais pas experte`,
+    
+    hard: `HARD: NIVEAU EXPERT "GRAND QUIZ TV" (~10-20% de réussite)
+    
+    🚨 PROTOCOLE DE CERTITUDE ABSOLUE (PRIORITÉ MAX):
+    ⚠️ INTERDICTION de générer une question si tu n'es pas CERTAIN à 100% du fait.
+    Si doute sur un type, date, nom ou attribut → CHANGE DE SUJET immédiatement.
+    La précision factuelle PRIME sur la difficulté.
+    
+    🎯 PROTOCOLE "PIVOT TECHNIQUE" (OBLIGATOIRE):
+    - JAMAIS de question directe sur le sujet A
+    - Utiliser un sujet B lié (contexte) pour faire deviner A
+    - ⚠️ Le PIVOT ne modifie JAMAIS les propriétés intrinsèques (type, couleur, date)
+    - Le PIVOT utilise le CONTEXTE (dresseur, apparition, numéro, relation)
+    - Ex: Au lieu de "Type de X?", demander "Pokémon créé par Y partageant son type avec Z?"
+    
+    🎭 "NEAR-MISS DISTRACTORS" (OBLIGATOIRE):
+    - Mauvaises réponses ultra-crédibles et proches
+    - Dates à ±1 an, personnages de la même scène/arc
+    - Même catégorie exacte que la bonne réponse
+    
+    📏 "BIAIS DE FORME" (OBLIGATOIRE):
+    - Les 4 choix DOIVENT avoir une longueur similaire (±15%)
+    - La bonne réponse ne doit PAS être identifiable par sa longueur
+    
+    📚 EXPLICATIONS EXPERT (AUTO-VÉRIFICATION):
+    - OBLIGATOIRE: Source/référence explicite intégrée naturellement (ex: "Selon le Pokédex G2...", "D'après l'épisode 47...")
+    - OBLIGATOIRE: Confirmer l'attribut clé de façon fluide (double vérification interne)
+    - Expliquer directement les autres choix sans formule "étaient des pièges"
+    
+    FORMAT NATUREL:
+    "La bonne réponse est X. Selon [source], [confirmation fluide de l'attribut clé]. Y est incorrect car [raison], Z parce que [raison], et W car [raison]."
+    
+    EXEMPLE CORRECT:
+    "La bonne réponse est Mewtwo. D'après le Pokédex de Pokémon Rouge/Bleu, Mewtwo est de type Psy pur, créé artificiellement par manipulation génétique de Mew. Alakazam est aussi Psy pur mais il a évolué naturellement, Lucario est de type Combat/Acier, et Mew est le Pokémon originel de type Psy."
+    
+    🚫 ANTI-PATTERNS INTERDITS:
+    - Réponse déductible de la formulation
+    - Question résoluble par élimination
+    - Trivia de surface que les fans casuals connaîtraient`,
+  };
+
   // Construire la section de contexte si des questions récentes sont fournies
   let contextSection = '';
   if (contextQuestions && contextQuestions.length > 0) {
     const contextExamples = contextQuestions.slice(0, 30).join('\n- ');
-    contextSection = `\n\n⚠️ IMPORTANT - ÉVITE CES SUJETS/QUESTIONS :
-Voici des exemples de questions déjà créées pour cet utilisateur dans cet univers. Génère des questions NOUVELLES et DIFFÉRENTES sur d'autres sujets, aspects ou angles d'approche :
-
+    contextSection = `\n\n⚠️ QUESTIONS DÉJÀ POSÉES (à éviter absolument):
 - ${contextExamples}
 
-Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS de ceux listés ci-dessus.`;
+Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS.`;
   }
 
-  return `Tu es un expert en culture geek. Génère ${numberOfQuestions} questions de quiz sur l'univers "${universeDescriptions[universe]}" avec une difficulté "${difficultyDescriptions[difficulty]}".${contextSection}
+  return `Tu es un rédacteur professionnel de quiz TV de haut niveau, spécialisé dans les émissions culturelles françaises.
 
-RÈGLES STRICTES:
-1. Chaque question doit avoir exactement 4 réponses possibles (A, B, C, D)
-2. Une seule réponse correcte
-3. Les 3 fausses réponses doivent être:
-   - Plausibles (pas absurdes)
-   - Du même univers
-   - De longueur similaire
-   - Pas trivialement fausses
-4. Inclure une explication claire de 1-2 phrases
-5. Questions variées (pas de répétitions)
-6. ${contextQuestions && contextQuestions.length > 0 ? 'Questions NOUVELLES sur des sujets différents de ceux listés ci-dessus. ' : ''}RÉPONSE EN JSON STRICT (pas de markdown, pas de commentaires)
+═══════════════════════════════════════════════════════════
+🇫🇷 RÈGLE ABSOLUE - FRANÇAIS INTÉGRAL (NON NÉGOCIABLE)
+═══════════════════════════════════════════════════════════
+- L'INTÉGRALITÉ de l'output DOIT être en FRANÇAIS
+- Utiliser EXCLUSIVEMENT les noms officiels de la VERSION FRANÇAISE (VF)
+- JAMAIS de mélange anglais/français
 
-FORMAT JSON ATTENDU:
-{
+EXEMPLES DE LOCALISATIONS:
+- "Hogwarts" → "Poudlard" | "Severus Snape" → "Severus Rogue"
+- "Ash Ketchum" → "Sacha" | "Attack on Titan" → "L'Attaque des Titans"
+- Titres conservés en VO si officiels en France: "One Piece", "Death Note", "Game of Thrones"
+
+═══════════════════════════════════════════════════════════
+📋 MISSION
+═══════════════════════════════════════════════════════════
+Génère ${numberOfQuestions} questions de quiz sur l'univers "${universeDescriptions[universe]}".
+
+DIFFICULTÉ DEMANDÉE:
+${difficultyCalibration[difficulty]}
+${contextSection}
+
+═══════════════════════════════════════════════════════════
+📏 RÈGLES STRICTES
+═══════════════════════════════════════════════════════════
+1. Exactement 4 réponses par question (A, B, C, D)
+2. UNE SEULE réponse correcte
+3. Les 3 fausses réponses DOIVENT être:
+   - Plausibles et crédibles (pas absurdes)
+   - Du même univers thématique
+   - De LONGUEUR SIMILAIRE (±15% de caractères)
+   - Pas trivialement fausses ou éliminables
+
+4. ⚠️ CERTITUDE ABSOLUE REQUISE:
+   - NE JAMAIS générer une question si tu n'es pas 100% certain
+   - En cas de doute, ABANDONNER et générer une autre question
+   - Qualité > Quantité
+
+5. Explications OBLIGATOIRES (AUTO-VÉRIFICATION):
+   - OBLIGATOIRE: Source/référence intégrée naturellement (Pokédex, épisode, manuel officiel...)
+   - OBLIGATOIRE: Confirmer l'attribut clé de façon fluide (double vérification)
+   - Expliquer directement les autres choix sans dire "étaient des pièges"
+   - Format naturel: "La bonne réponse est X. Selon [source], [confirmation fluide]. Y est incorrect car [raison], Z parce que [raison]."
+
+═══════════════════════════════════════════════════════════
+📤 FORMAT JSON STRICT (pas de markdown)
+═══════════════════════════════════════════════════════════
+  {
   "questions": [
     {
-      "question": "Quelle est la question?",
+      "question": "Question en français",
       "choices": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
       "correct_index": 0,
-      "explanation": "Explication claire de la bonne réponse."
+      "explanation": "La bonne réponse est X. Selon [source], [confirmation fluide]. Y est incorrect car [raison], Z parce que [raison]."
     }
   ]
 }
@@ -179,29 +256,117 @@ function buildCustomPrompt(
   contextQuestions?: string[]
 ): string {
   const difficultyCalibration = {
-    easy: 'EASY: known by ~80% of fans - Culture populaire, personnages principaux, éléments iconiques, questions que la majorité peut répondre',
-    medium: 'MEDIUM: requires solid knowledge (~40-60%) - Personnages secondaires, détails d\'intrigue, années de sortie, éléments moins évidents',
-    hard: `HARD: EXPERT-LEVEL ONLY (~10-20% success rate expected)
+    easy: `EASY: connu par ~80% des fans
+    - Culture populaire, personnages principaux, éléments iconiques
+    - Questions que la majorité peut répondre
+    - Références connues du grand public`,
     
-    HARD QUESTION REQUIREMENTS:
-    - Secondary knowledge, NOT the most famous facts
-    - Structural, historical, or contextual facts
-    - Cross-referenced information between works
-    - Production anecdotes, behind-the-scenes facts
-    - Precise dates, episode numbers, chapter numbers
-    - Questions that only TRUE experts can answer confidently
+    medium: `MEDIUM: nécessite des connaissances solides (~40-60%)
+    - Personnages secondaires, détails d'intrigue
+    - Années de sortie, éléments moins évidents
+    - Connaissance approfondie mais pas experte`,
     
-    HARD ANTI-PATTERNS (FORBIDDEN):
-    - The answer must NOT be inferable from the wording
-    - The answer must NOT be a title/name explicitly hinted in the question
-    - The question must NOT be solvable by common sense or elimination
-    - NO surface-level trivia that casual fans would know
+    hard: `HARD: NIVEAU EXPERT "GRAND QUIZ TV" (~10-20% de réussite attendue)
+
+    ═══════════════════════════════════════════
+    🚨 PROTOCOLE DE CERTITUDE ABSOLUE (PRIORITÉ MAX)
+    ═══════════════════════════════════════════
+    ⚠️ INTERDICTION FORMELLE DE GÉNÉRER UNE QUESTION SI TU N'ES PAS CERTAIN À 100% DU FAIT TECHNIQUE.
     
-    HARD FACTUAL SAFETY (CRITICAL):
-    - INTERNALLY VERIFY that the correct answer is 100% factually true
-    - VERIFY that ALL wrong answers are factually false
-    - If ANY doubt exists, DISCARD and generate another question
-    - Iterate until valid - NEVER lower difficulty`,
+    Si tu as UN SEUL DOUTE sur:
+    - Un type (Pokémon, élément, catégorie)
+    - Une date (année, épisode, chapitre)
+    - Un nom (personnage, lieu, technique)
+    - Un attribut (couleur, taille, propriété)
+    
+    → CHANGE IMMÉDIATEMENT DE SUJET
+    → NE TENTE PAS D'APPROXIMER
+    → La précision factuelle PRIME sur la difficulté
+    
+    Exemple d'erreur à ÉVITER:
+    ❌ "Quel est le type du Pokémon Mewtwo?" puis se tromper sur Psy/Combat
+    ✅ Si doute → Passer à une autre question dont tu es CERTAIN à 100%
+
+    ═══════════════════════════════════════════
+    🎯 PROTOCOLE "PIVOT TECHNIQUE" (OBLIGATOIRE)
+    ═══════════════════════════════════════════
+    Tu ne dois JAMAIS poser une question directe sur le sujet A.
+    Tu dois utiliser un sujet B lié pour faire deviner A.
+    
+    ⚠️ RÈGLE CRITIQUE DU PIVOT:
+    Le PIVOT ne modifie JAMAIS les propriétés intrinsèques d'un objet.
+    Le PIVOT utilise le CONTEXTE (dresseur, apparition, numéro, relation) pour complexifier.
+    
+    EXEMPLES DE PIVOT CORRECTS:
+    ❌ INTERDIT: "Qui est l'auteur de One Piece?"
+    ✅ CORRECT: "Quel ancien assistant de Nobuhiro Watsuki a créé un manga de pirates dépassant les 500 millions d'exemplaires?"
+    → Le pivot utilise le contexte (assistant de Watsuki) sans modifier les faits
+    
+    ❌ INTERDIT: "Quel est le type de Mewtwo?"
+    ✅ CORRECT: "Quel Pokémon créé par le Projet Mewtwo dans Pokémon Rouge/Bleu partage son type avec Alakazam?"
+    → Le pivot utilise le contexte (Projet Mewtwo, lien avec Alakazam) sans modifier le type Psy
+    
+    ❌ INTERDIT: "Dans quel film apparaît Darth Vader?"
+    ✅ CORRECT: "Quel film de 1977, initialement refusé par tous les studios sauf la Fox, a introduit un antagoniste dont le costume a été inspiré par les samouraïs japonais?"
+    → Le pivot utilise le contexte historique sans modifier les faits sur le personnage
+
+    ═══════════════════════════════════════════
+    🎭 "NEAR-MISS DISTRACTORS" (OBLIGATOIRE)
+    ═══════════════════════════════════════════
+    Les 3 mauvaises réponses doivent être des pièges ultra-crédibles:
+    - Chronologiquement proches (dates à ±1 an, même décennie)
+    - Thématiquement liées (même œuvre, même studio, même période)
+    - Même catégorie exacte (si la réponse est un réalisateur, les 3 autres aussi)
+    - Personnages de la même scène ou arc narratif
+    - Artistes du même mouvement ou label
+    
+    EXEMPLES:
+    - Si la bonne réponse est "1997", proposer: 1996, 1998, 1995
+    - Si la bonne réponse est "Vegeta", proposer: Piccolo, Gohan, Trunks (pas Goku, trop évident)
+    - Si la bonne réponse est "Miyazaki", proposer: Takahata, Hosoda, Shinkai
+
+    ═══════════════════════════════════════════
+    📏 "BIAIS DE FORME" (OBLIGATOIRE)
+    ═══════════════════════════════════════════
+    Les 4 choix de réponse DOIVENT avoir une longueur similaire.
+    - Écart maximum de 15% en nombre de caractères
+    - La bonne réponse ne doit PAS être identifiable par sa longueur
+    - Si la bonne réponse est longue, les distracteurs aussi
+    - Si la bonne réponse est courte, les distracteurs aussi
+    
+    ❌ INTERDIT: ["Oui", "Non", "Le personnage créé par Stan Lee en 1962", "Peut-être"]
+    ✅ CORRECT: ["Peter Parker", "Bruce Banner", "Tony Stark", "Steve Rogers"]
+
+    ═══════════════════════════════════════════
+    📚 EXPLICATIONS EXPERT (OBLIGATOIRE + AUTO-VÉRIFICATION)
+    ═══════════════════════════════════════════
+    Chaque explication DOIT contenir:
+    1. Une SOURCE ou RÉFÉRENCE intégrée naturellement (ex: "Selon le Pokédex de la G2...", "D'après l'épisode 47...", "Le databook officiel confirme...")
+    2. Une CONFIRMATION fluide des attributs mentionnés dans la question (double vérification interne)
+    3. L'explication directe des autres choix sans utiliser la formule "étaient des pièges"
+    
+    FORMAT NATUREL ET FLUIDE:
+    "La bonne réponse est X. Selon [source], [confirmation naturelle de l'attribut clé]. Y est incorrect car [raison], Z parce que [raison], et W car [raison]."
+    
+    EXEMPLE CORRECT:
+    "La bonne réponse est Mewtwo. D'après le Pokédex de Pokémon Rouge/Bleu, Mewtwo est de type Psy pur, créé artificiellement par manipulation génétique de Mew. Alakazam est aussi Psy pur mais a évolué naturellement, Lucario est de type Combat/Acier, et Mew est le Pokémon originel sans manipulation."
+
+    ═══════════════════════════════════════════
+    🚫 ANTI-PATTERNS HARD (INTERDITS)
+    ═══════════════════════════════════════════
+    - La réponse ne doit PAS être déductible de la formulation
+    - La réponse ne doit PAS être un titre/nom explicitement suggéré
+    - La question ne doit PAS être résoluble par bon sens ou élimination
+    - AUCUNE trivia de surface que les fans casuals connaîtraient
+    - JAMAIS de question dont la réponse est "évidente" pour un fan moyen
+
+    ═══════════════════════════════════════════
+    ✅ VÉRIFICATION FACTUELLE (CRITIQUE)
+    ═══════════════════════════════════════════
+    - VÉRIFIER INTERNEMENT que la bonne réponse est 100% vraie
+    - VÉRIFIER que TOUTES les mauvaises réponses sont fausses
+    - En cas de DOUTE, ABANDONNER et générer une autre question
+    - Itérer jusqu'à validation - NE JAMAIS baisser la difficulté`,
   };
 
   // Construire la section de contexte si des questions récentes sont fournies
@@ -216,14 +381,31 @@ QUESTIONS DÉJÀ POSÉES À CET UTILISATEUR (à éviter absolument):
 Tu DOIS générer des questions sur des sujets COMPLÈTEMENT DIFFÉRENTS de ceux listés ci-dessus.`;
   }
 
-  return `You are a professional TV quiz writer and editor.
-Your role is to generate TV-quality quiz questions with zero frustration for players.
+  return `Tu es un rédacteur professionnel de quiz TV de haut niveau, spécialisé dans les émissions culturelles françaises.
+Ton rôle est de générer des questions dignes des plus grands quiz télévisés (Questions pour un Champion, Slam, Le Grand Quiz).
 
-IMPORTANT LANGUAGE RULE:
-- The entire output (questions, answers, clarifications) MUST be written in FRENCH.
-- Use OFFICIAL FRENCH LOCALIZATIONS for names, places, spells, titles, and terms.
-- Never mix English and French naming.
-- Examples: "Hogwarts" → "Poudlard", "Severus Snape" → "Severus Rogue", "Ash Ketchum" → "Sacha"
+═══════════════════════════════════════════════════════════
+🇫🇷 RÈGLE ABSOLUE - FRANÇAIS INTÉGRAL (NON NÉGOCIABLE)
+═══════════════════════════════════════════════════════════
+- L'INTÉGRALITÉ de l'output (questions, réponses, explications, thèmes) DOIT être en FRANÇAIS
+- Utiliser EXCLUSIVEMENT les noms officiels de la VERSION FRANÇAISE (VF)
+- JAMAIS de mélange anglais/français
+- En cas de doute, privilégier la traduction française officielle
+
+EXEMPLES DE LOCALISATIONS OBLIGATOIRES:
+- "Hogwarts" → "Poudlard"
+- "Severus Snape" → "Severus Rogue"  
+- "Ash Ketchum" → "Sacha"
+- "Attack on Titan" → "L'Attaque des Titans"
+- "Death Note" → reste "Death Note" (titre officiel en France)
+- "One Piece" → reste "One Piece" (titre officiel)
+- "Fullmetal Alchemist" → reste "Fullmetal Alchemist"
+- "Avengers" → "Les Vengeurs" (pour les personnages, pas le film)
+- "Spider-Man" → "L'Homme-Araignée" (personnage historique VF)
+- "Batman" → reste "Batman" (adopté en VF)
+- "The Lord of the Rings" → "Le Seigneur des Anneaux"
+- "Game of Thrones" → reste "Game of Thrones" (titre officiel)
+- "Winterfell" → "Winterfell" (adopté en VF)
 
 ==========================
 STEP 1 — USER INPUT ANALYSIS
@@ -252,33 +434,40 @@ If the input is impossible to interpret:
 - Provide a helpful error_message in French
 
 ==========================
-STEP 2 — QUIZ GENERATION (ONLY IF ALLOWED)
+ÉTAPE 2 — GÉNÉRATION DU QUIZ (SI AUTORISÉ)
 ==========================
-Proceed ONLY if confidence >= 0.75.
-Set mode = "quiz".
+Procéder UNIQUEMENT si confiance >= 0.75.
+Définir mode = "quiz".
 
-GENERAL RULES (CRITICAL):
-1. NEVER reveal the correct answer inside the question.
-   - No direct mention
-   - No obvious synonym
-   - No trivial clue
+RÈGLES GÉNÉRALES (CRITIQUES):
+1. NE JAMAIS révéler la bonne réponse dans la question.
+   - Pas de mention directe
+   - Pas de synonyme évident
+   - Pas d'indice trivial
 
-2. Each question must be:
-   - Factually correct and verifiable
-   - Non-ambiguous
-   - Written in clear French
+2. Chaque question DOIT être:
+   - Factuellement correcte et vérifiable
+   - Non-ambiguë
+   - Rédigée en français clair et élégant
 
-3. Answers:
-   - Exactly 1 correct answer
-   - 3 wrong but plausible answers
-   - Wrong answers must belong to the same universe
-   - The correct answer must be the ONLY correct one
+3. Réponses (RÈGLES STRICTES):
+   - Exactement 1 bonne réponse
+   - 3 mauvaises réponses PLAUSIBLES et CRÉDIBLES
+   - Les mauvaises réponses DOIVENT appartenir au même univers
+   - La bonne réponse doit être la SEULE correcte
+   - TOUTES les réponses doivent avoir une LONGUEUR SIMILAIRE (±15% de caractères)
 
-4. Difficulty calibration:
+4. Calibration de difficulté:
    - ${difficultyCalibration[difficulty]}
 
-5. No invented facts for real universes.
-   - If uncertain, replace the question with another one.
+5. AUCUN fait inventé pour les univers réels.
+   - En cas d'incertitude, remplacer par une autre question.
+
+6. EXPLICATIONS OBLIGATOIRES (FORMAT EXPERT + AUTO-VÉRIFICATION):
+   - OBLIGATOIRE: Intégrer naturellement une SOURCE/RÉFÉRENCE (ex: "Selon le Pokédex...", "D'après l'épisode X...", "Le manuel officiel confirme...")
+   - OBLIGATOIRE: Confirmer l'attribut clé de façon fluide (double vérification)
+   - Expliquer directement les autres choix sans dire "étaient des pièges"
+   - Format naturel: "La bonne réponse est X. Selon [source], [confirmation fluide]. Y est incorrect car [raison], Z parce que [raison]."
 ${contextSection}
 
 ==========================
@@ -319,7 +508,7 @@ Return ONLY valid JSON following this EXACT schema:
       "question": "Question text in French",
       "choices": ["Option A", "Option B", "Option C", "Option D"],
       "correct_index": 0,
-      "explanation": "Brief explanation in French"
+      "explanation": "La bonne réponse est X. Selon [source], [confirmation fluide]. Y est incorrect car [raison], Z parce que [raison]."
     }
   ],
   "error_message": "Optional error message in French"
@@ -360,8 +549,10 @@ async function generateWithOpenAI(request: AIQuizRequest): Promise<AIQuizRespons
   const prompt = buildPrompt(request);
   const model = selectOpenAIModel(request.difficulty);
   
-  // Température plus basse pour HARD (moins de créativité, plus de précision)
-  const temperature = request.difficulty === 'hard' ? 0.5 : 0.8;
+  // Température optimisée selon la difficulté
+  // HARD: 0.1 (déterminisme maximal, zéro hallucination)
+  // EASY/MEDIUM: 0.7 (bon équilibre créativité/cohérence)
+  const temperature = request.difficulty === 'hard' ? 0.1 : 0.7;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
