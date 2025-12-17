@@ -277,4 +277,14 @@
     color: var(--color-secondary);
     text-decoration: underline;
   }
+  
+  &--small {
+    font-size: var(--fs-1);
+  }
+}
+
+// Auth form footer (override pour certaines pages)
+.auth-form__footer {
+  margin-top: var(--space-3);
+  text-align: center;
 }

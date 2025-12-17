@@ -1,0 +1,17 @@
+// ============================================
+// 📦 PAGES INDEX
+// ============================================
+// Fichier central qui forward toutes les pages
+// Permet d'importer toutes les pages avec un seul @use 'pages'
+
+@forward 'admin';
+@forward 'auth';
+@forward 'duel';
+@forward 'error';
+@forward 'home';
+@forward 'leaderboard';
+@forward 'legal';
+@forward 'payment';
+@forward 'pricing';
+@forward 'profile';
+@forward 'quiz';

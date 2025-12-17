@@ -1,0 +1,16 @@
+// ============================================
+// 📦 COMPONENTS INDEX
+// ============================================
+// Fichier central qui forward tous les composants
+// Permet d'importer tous les composants avec un seul @use 'components'
+
+@forward 'AdminLayout';
+@forward 'AvatarModal';
+@forward 'AvatarSelector';
+@forward 'Badge';
+@forward 'BadgeGrid';
+@forward 'DuelPlayer';
+@forward 'LobbyRealtime';
+@forward 'QuizPlayer';
+@forward 'Toast';
+@forward 'UpgradeModal';

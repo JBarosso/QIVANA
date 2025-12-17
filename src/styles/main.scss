@@ -7,31 +7,9 @@
 // ⚠️ IMPORTANT: Tous les @use DOIVENT être avant @import
 // L'ordre est critique pour éviter les erreurs Sass
 
-// 1. Import du frameworkCss (base du Design System Qivana)
 @use 'frameworkCss/base';
-
-// 2. Import des composants UI du framework
-@use 'frameworkCss/components/alert';
-
-// 3. Import des composants personnalisés Qivana
-@use 'components/Badge';
-@use 'components/BadgeGrid';
-@use 'components/DuelPlayer';
-@use 'components/LobbyRealtime';
-@use 'components/QuizPlayer';
-@use 'components/Toast';
-@use 'components/AvatarSelector';
-@use 'components/AvatarModal';
-@use 'components/AdminLayout';
-@use 'components/UpgradeModal';
-
-// 4. Import des pages
-@use 'pages/pricing';
-@use 'pages/payment';
-@use 'pages/error';
-@use 'pages/legal';
-@use 'pages/admin';
-@use 'pages/leaderboard';
+@use 'components';
+@use 'pages';
 
 // ============================================
 // GLOBAL OVERRIDES QIVANA

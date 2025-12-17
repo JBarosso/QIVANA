@@ -827,3 +827,13 @@
     gap: var(--space-3);
   }
 }
+
+// ============================================
+// ENDLESS PAGE WRAPPER
+// ============================================
+
+.endless-page {
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, var(--color-neutral-900) 0%, var(--color-neutral-800) 100%);
+}

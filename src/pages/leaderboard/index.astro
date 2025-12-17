@@ -108,6 +108,15 @@ if (user) {
       <header class="leaderboard-header">
         <h1 class="leaderboard-header__title">🏆 Classement Global</h1>
         <p class="leaderboard-header__subtitle">Les meilleurs joueurs de Qivana</p>
+        
+        <nav class="leaderboard-nav">
+          <a href="/leaderboard" class="leaderboard-nav__link leaderboard-nav__link--active">
+            🏆 Classement Global
+          </a>
+          <a href="/leaderboard/endless" class="leaderboard-nav__link">
+            🔥 Mode Endless
+          </a>
+        </nav>
       </header>
 
       {currentUserRank && (
@@ -204,7 +213,3 @@ if (user) {
     </div>
   </main>
 </BaseLayout>
-
-<style lang="scss">
-  @use '../../styles/pages/leaderboard' as *;
-</style>

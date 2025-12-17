@@ -82,10 +82,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Si on a des questions en cache, en retourner une
     if (cachedQuestions.length > 0) {
       const question = cachedQuestions.shift();
+      const remainingInCache = cachedQuestions.length;
       questionCache.set(cacheKey, cachedQuestions);
       
-      // Pré-générer si on arrive à 3 questions restantes
-      if (cachedQuestions.length <= 3) {
+      // Pré-générer à la 7ème question de chaque batch (quand il reste 3 questions dans un batch de 10)
+      // questionNumber commence à 1
+      // Question 7 : (7-1) % 10 = 6 (7ème du premier batch, index 6)
+      // Question 17 : (17-1) % 10 = 6 (7ème du deuxième batch, index 6)
+      // etc.
+      // À la 7ème question d'un batch de 10, il reste 3 questions dans le cache
+      const positionInBatch = (questionNumber - 1) % 10;
+      if (positionInBatch === 6 && remainingInCache === 3) {
         // Génération asynchrone en arrière-plan (ne pas attendre)
         generateBatchAsync(cacheKey, difficulty, user.id);
       }
@@ -97,7 +104,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Pas de cache, générer un batch de questions
-    const batchSize = questionNumber === 1 ? 10 : 5;
+    // Batch de 10 questions (même après les 10 premières)
+    const batchSize = 10;
     const theme = ENDLESS_THEMES[Math.floor(Math.random() * ENDLESS_THEMES.length)];
 
     console.log(`🔥 Endless: Génération de ${batchSize} questions ${difficulty} - "${theme}"`);
@@ -151,10 +159,11 @@ async function generateBatchAsync(cacheKey: string, difficulty: string, userId: 
   try {
     const theme = ENDLESS_THEMES[Math.floor(Math.random() * ENDLESS_THEMES.length)];
     
+    // Générer 10 questions par batch (au lieu de 5)
     const aiResponse = await generateQuiz({
       universe: 'other' as any,
       difficulty: difficulty as Difficulty,
-      numberOfQuestions: 5,
+      numberOfQuestions: 10,
       customPrompt: theme,
     });
 
