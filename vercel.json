@@ -2,10 +2,5 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "astro",
-  "functions": {
-    "**/*.js": {
-      "runtime": "nodejs24.x"
-    }
-  }
+  "framework": "astro"
 }
