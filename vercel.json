@@ -1,6 +1,15 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "astro"
+  "framework": "astro",
+  "functions": {
+    "_render": {
+      "runtime": "nodejs24.x"
+    },
+    "**/*.js": {
+      "runtime": "nodejs24.x"
+    }
+  }
 }
