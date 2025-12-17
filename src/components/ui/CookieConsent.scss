@@ -1,0 +1,77 @@
+// ============================================
+// COOKIE CONSENT BANNER STYLES
+// ============================================
+// Bandeau minimaliste en bas à droite
+
+.cookie-consent {
+  &__banner {
+    position: fixed;
+    bottom: var(--space-4);
+    right: var(--space-4);
+    z-index: 10000;
+    max-width: 400px;
+    animation: cookie-consent-slide-in 0.3s ease-out;
+
+    @media (max-width: 767px) {
+      bottom: var(--space-3);
+      right: var(--space-3);
+      left: var(--space-3);
+      max-width: none;
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-neutral-800);
+    border-radius: var(--radius-3);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &__text {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  &__link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-semibold);
+    margin-left: var(--space-1);
+    transition: color var(--transition-base);
+
+    &:hover {
+      color: var(--color-primary-light);
+      text-decoration: underline;
+    }
+
+    &:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-1);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
+  }
+}
+
+// Animation
+@keyframes cookie-consent-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

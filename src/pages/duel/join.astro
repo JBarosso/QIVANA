@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { requirePremiumPlus } from '../../lib/auth';
+import { requireAuth } from '../../lib/auth';
 import { getSalonByCode } from '../../lib/duel';
 
-// Protection de la route - Premium+ uniquement
-const authResult = await requirePremiumPlus(Astro);
+// Protection de la route - Authentification requise (tous les plans peuvent rejoindre)
+const authResult = await requireAuth(Astro);
 
 // Si c'est une redirection, elle a déjà été effectuée
 if (authResult instanceof Response) {
@@ -13,10 +13,20 @@ if (authResult instanceof Response) {
 
 const { user, profile } = authResult;
 
+// Limites journalières par plan
+const DAILY_LIMITS: Record<string, number> = {
+  'freemium': 5,
+  'premium': 20,
+  'premium+': -1,
+};
+const userDailyLimit = DAILY_LIMITS[profile.plan] || 5;
+
 // Récupérer le code du salon depuis l'URL
 const salonCode = Astro.url.searchParams.get('code');
 let salon = null;
 let error = null;
+let canJoinSalon = false;
+let limitInfo: { currentCount?: number; dailyLimit?: number; message?: string } | null = null;
 
 if (salonCode) {
   const supabase = (Astro.locals as { supabase?: any }).supabase;
@@ -47,7 +57,34 @@ if (salonCode) {
         // Le chef est déjà dans le salon, rediriger vers le lobby
         return Astro.redirect(`/duel/lobby?salon=${salon.id}`);
       }
-      // Sinon, permettre de rejoindre (pas d'erreur)
+      
+      // Vérifier si l'utilisateur peut rejoindre (limite journalière)
+      const dailyLimit = DAILY_LIMITS[profile.plan] || DAILY_LIMITS['freemium'];
+      
+      if (dailyLimit === -1) {
+        // Premium+ : accès illimité
+        canJoinSalon = true;
+      } else {
+        // Vérifier la limite via la fonction DB
+        const { data: limitCheck } = await supabase
+          .rpc('can_join_multiplayer', { p_user_id: user.id });
+        
+        if (limitCheck && limitCheck.length > 0) {
+          const { can_join, current_count, daily_limit } = limitCheck[0];
+          canJoinSalon = can_join;
+          
+          if (!can_join) {
+            limitInfo = {
+              currentCount: current_count,
+              dailyLimit: daily_limit,
+              message: `Tu as atteint ta limite de ${daily_limit} parties multijoueur par jour. Passe à Premium+ pour un accès illimité !`
+            };
+          }
+        } else {
+          // En cas d'erreur, autoriser par défaut
+          canJoinSalon = true;
+        }
+      }
     } else {
       // Autre statut (cancelled, etc.)
       error = 'Ce salon n\'est plus disponible.';
@@ -72,6 +109,31 @@ if (salonCode) {
           <a href="/duel/create" class="btn btn--primary">
             Créer un salon
           </a>
+        </div>
+      ) : salon && !canJoinSalon ? (
+        <!-- Limite atteinte : afficher les infos du salon mais pas le bouton -->
+        <div class="duel-join__success">
+          <div class="duel-join__salon-info">
+            <h2 class="duel-join__salon-name">{salon.salon_name}</h2>
+            <div class="duel-join__salon-details">
+              <span>🌍 {salon.universe}</span>
+              <span>⚡ {salon.difficulty}</span>
+              <span>❓ {salon.questions_count} questions</span>
+              <span>⏱️ {salon.timer_seconds ? `${salon.timer_seconds}s` : 'Désactivé'}</span>
+            </div>
+          </div>
+          
+          <div class="duel-join__limit-reached">
+            <p class="duel-join__limit-message">
+              🚫 {limitInfo?.message || 'Tu as atteint ta limite journalière de parties multijoueur.'}
+            </p>
+            <a href="/pricing?upgrade=multiplayer" class="btn btn--primary btn--block">
+              ✨ Passer à Premium+
+            </a>
+            <a href="/" class="btn btn--secondary btn--block">
+              Retour à l'accueil
+            </a>
+          </div>
         </div>
       ) : salon ? (
         <div class="duel-join__success">
@@ -113,6 +175,16 @@ if (salonCode) {
             Rejoindre
           </button>
         </form>
+      )}
+
+      <!-- Info limite journalière pour les utilisateurs non-Premium+ -->
+      {profile.plan !== 'premium+' && !salon && (
+        <div class="duel-join__limit-info">
+          <p>
+            <span class="duel-join__limit-icon">ℹ️</span>
+            Tu peux rejoindre jusqu'à <strong>{userDailyLimit} parties</strong> par jour avec ton abonnement {profile.plan}.
+          </p>
+        </div>
       )}
     </div>
   </div>
@@ -292,5 +364,49 @@ if (salonCode) {
     border-radius: var(--radius-2);
     font-size: var(--fs-3);
     color: var(--color-text);
+  }
+
+  /* Info limite journalière */
+  .duel-join__limit-info {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-neutral-800);
+    border-radius: var(--radius-3);
+    border-left: 4px solid var(--color-warning);
+  }
+
+  .duel-join__limit-info p {
+    margin: 0;
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .duel-join__limit-info strong {
+    color: var(--color-warning);
+  }
+
+  .duel-join__limit-icon {
+    font-size: var(--fs-3);
+  }
+
+  /* Message de limite atteinte */
+  .duel-join__limit-reached {
+    margin-top: var(--space-4);
+    padding: var(--space-5);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+    border: 2px solid var(--color-danger);
+    border-radius: var(--radius-3);
+    text-align: center;
+  }
+
+  .duel-join__limit-message {
+    font-size: var(--fs-3);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+    font-weight: var(--font-weight-semibold);
   }
 </style>

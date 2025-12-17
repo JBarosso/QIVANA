@@ -300,17 +300,14 @@ export default function DuelPlayerBattleRoyal({
     (answerIndex: number) => {
       if (isAnswered || isAnsweredRef.current || !currentQuestion || !socket || isEliminated) return;
       
-      if (!selectedDifficulty) {
-        window.dispatchEvent(new CustomEvent('show-toast', { 
-          detail: { message: 'Tu dois d\'abord choisir une difficulté !', type: 'error' } 
-        }));
-        return;
-      }
+      // En Battle Royal, le serveur gère le choix de difficulté via le modal
+      // On ne bloque plus ici car le modal doit être affiché AVANT la question
+      // Si le joueur n'a pas choisi, c'est que le modal n'a pas été affiché correctement
       
       isAnsweredRef.current = true;
       setIsAnswered(true);
 
-      console.log('📤 Sending answer:', answerIndex);
+      console.log('📤 Sending answer:', answerIndex, 'with difficulty:', selectedDifficulty);
 
       socket.emit('game:answer', {
         questionIndex: currentQuestion.questionIndex,

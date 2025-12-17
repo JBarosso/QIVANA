@@ -8,6 +8,7 @@
 import '../styles/main.scss';
 import ToastContainer from '../components/ui/ToastContainer';
 import UpgradeModal from '../components/ui/UpgradeModal';
+import CookieConsent from '../components/ui/CookieConsent';
 import Seo from '../components/Seo.astro';
 
 interface Props {
@@ -26,10 +27,8 @@ const {
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin;
 
-// Google Analytics - uniquement en production
-const GA_MEASUREMENT_ID = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
-const isProduction = import.meta.env.PROD;
-const enableAnalytics = isProduction && GA_MEASUREMENT_ID;
+// Google Analytics sera chargé dynamiquement après consentement utilisateur
+// Voir CookieConsent.tsx pour l'implémentation
 ---
 
 <!doctype html>
@@ -66,21 +65,8 @@ const enableAnalytics = isProduction && GA_MEASUREMENT_ID;
       rel="stylesheet"
     />
 
-    <!-- Google Analytics (production only) -->
-    {enableAnalytics && (
-      <>
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}></script>
-        <script is:inline define:vars={{ GA_MEASUREMENT_ID }}>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', GA_MEASUREMENT_ID, {
-            page_title: document.title,
-            page_location: window.location.href
-          });
-        </script>
-      </>
-    )}
+    <!-- Google Analytics sera chargé dynamiquement après consentement -->
+    <!-- Voir CookieConsent.tsx pour l'implémentation -->
   </head>
   <body>
     <slot />
@@ -90,5 +76,11 @@ const enableAnalytics = isProduction && GA_MEASUREMENT_ID;
     
     <!-- Upgrade Modal (affiché via événement global) -->
     <UpgradeModal client:only="react" />
+    
+    <!-- Cookie Consent Modal (RGPD) -->
+    <CookieConsent client:only="react" />
+    
+    <!-- Portal container for modals -->
+    <div id="modal-root"></div>
   </body>
 </html>

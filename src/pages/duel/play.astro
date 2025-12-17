@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { requirePremiumPlus } from '../../lib/auth';
+import { requireAuth } from '../../lib/auth';
 import DuelPlayerSocketIO from '../../components/duel/DuelPlayerSocketIO';
 import DuelPlayerBattleRoyal from '../../components/duel/DuelPlayerBattleRoyal';
 
-// Protection de la route - Premium+ uniquement
-const authResult = await requirePremiumPlus(Astro);
+// Protection de la route - Authentification requise (tous les plans peuvent jouer s'ils ont rejoint)
+const authResult = await requireAuth(Astro);
 
 // Si c'est une redirection, elle a déjà été effectuée
 if (authResult instanceof Response) {

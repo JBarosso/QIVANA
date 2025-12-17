@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
@@ -276,9 +278,11 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode: Database["public"]["Enums"]["duel_game_mode"]
           id: string
+          initial_lives: number | null
           is_public: boolean
           mode: Database["public"]["Enums"]["quiz_type"]
           participants: Json
+          player_lives: Json | null
           questions_count: number
           questions_ids: string[] | null
           salon_code: string
@@ -300,9 +304,11 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
+          initial_lives?: number | null
           is_public?: boolean
           mode: Database["public"]["Enums"]["quiz_type"]
           participants?: Json
+          player_lives?: Json | null
           questions_count: number
           questions_ids?: string[] | null
           salon_code: string
@@ -324,9 +330,11 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["quiz_difficulty"]
           game_mode?: Database["public"]["Enums"]["duel_game_mode"]
           id?: string
+          initial_lives?: number | null
           is_public?: boolean
           mode?: Database["public"]["Enums"]["quiz_type"]
           participants?: Json
+          player_lives?: Json | null
           questions_count?: number
           questions_ids?: string[] | null
           salon_code?: string
@@ -373,6 +381,44 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: true
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      endless_scores: {
+        Row: {
+          created_at: string
+          id: string
+          lives_remaining: number
+          max_difficulty: string
+          questions_answered: number
+          score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lives_remaining?: number
+          max_difficulty: string
+          questions_answered: number
+          score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lives_remaining?: number
+          max_difficulty?: string
+          questions_answered?: number
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endless_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -500,6 +546,7 @@ export type Database = {
           pseudo: string
           selected_avatar_id: string | null
           slug: string | null
+          subscription_end_date: string | null
           total_score: number | null
           updated_at: string
         }
@@ -517,6 +564,7 @@ export type Database = {
           pseudo: string
           selected_avatar_id?: string | null
           slug?: string | null
+          subscription_end_date?: string | null
           total_score?: number | null
           updated_at?: string
         }
@@ -534,6 +582,7 @@ export type Database = {
           pseudo?: string
           selected_avatar_id?: string | null
           slug?: string | null
+          subscription_end_date?: string | null
           total_score?: number | null
           updated_at?: string
         }
@@ -546,6 +595,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      prompt_examples: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          prompt: string
+          source: string
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          prompt: string
+          source?: string
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          prompt?: string
+          source?: string
+          usage_count?: number
+        }
+        Relationships: []
       }
       questions: {
         Row: {
@@ -597,6 +673,57 @@ export type Database = {
           {
             foreignKeyName: "questions_reviewed_by_fkey"
             columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          prompt_used: string | null
+          quiz_type: string
+          rating: number
+          session_id: string | null
+          theme: string | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          prompt_used?: string | null
+          quiz_type: string
+          rating: number
+          session_id?: string | null
+          theme?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          prompt_used?: string | null
+          quiz_type?: string
+          rating?: number
+          session_id?: string | null
+          theme?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_ratings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_ratings_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -768,6 +895,38 @@ export type Database = {
           },
         ]
       }
+      user_question_history: {
+        Row: {
+          created_at: string
+          id: string
+          question_hash: string
+          theme: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_hash: string
+          theme?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_hash?: string
+          theme?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_question_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       recent_duels: {
@@ -794,6 +953,7 @@ export type Database = {
           unlocked_badge_ids: string[]
         }[]
       }
+      cleanup_old_question_history: { Args: never; Returns: undefined }
       generate_profile_slug: { Args: { p_pseudo: string }; Returns: string }
       get_duel_leaderboard: {
         Args: { limit_count?: number }
@@ -838,7 +998,7 @@ export type Database = {
       }
     }
     Enums: {
-      duel_game_mode: "classic" | "deathmatch"
+      duel_game_mode: "classic" | "deathmatch" | "battle_royal"
       duel_status: "lobby" | "in-progress" | "completed" | "cancelled"
       question_source: "ia" | "admin"
       quiz_difficulty: "easy" | "medium" | "hard"
@@ -980,7 +1140,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      duel_game_mode: ["classic", "deathmatch"],
+      duel_game_mode: ["classic", "deathmatch", "battle_royal"],
       duel_status: ["lobby", "in-progress", "completed", "cancelled"],
       question_source: ["ia", "admin"],
       quiz_difficulty: ["easy", "medium", "hard"],

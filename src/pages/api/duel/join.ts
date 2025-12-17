@@ -1,10 +1,18 @@
 // ============================================
 // API ROUTE - JOIN DUEL SALON
 // ============================================
-// Permet à un utilisateur Premium+ de rejoindre un salon
+// Permet à un utilisateur authentifié de rejoindre un salon
+// Limites journalières : Freemium (5/jour), Premium (20/jour), Premium+ (illimité)
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
+
+// Limites de participation journalière par plan
+const DAILY_LIMITS: Record<string, number> = {
+  'freemium': 5,
+  'premium': 20,
+  'premium+': -1, // illimité
+};
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   // Créer le client Supabase
@@ -36,7 +44,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     });
   }
 
-  // ⚠️ SÉCURITÉ : Vérifier que l'utilisateur a Premium+
+  // Récupérer le profil de l'utilisateur
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan, pseudo')
@@ -48,16 +56,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
-  }
-
-  if (profile.plan !== 'premium+') {
-    return new Response(
-      JSON.stringify({ error: 'Accès réservé aux utilisateurs Premium+' }),
-      {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
   }
 
   try {
@@ -114,6 +112,39 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       );
     }
 
+    // ⚠️ VÉRIFIER LA LIMITE JOURNALIÈRE (sauf pour Premium+ et le chef du salon)
+    const dailyLimit = DAILY_LIMITS[profile.plan] || DAILY_LIMITS['freemium'];
+    
+    if (dailyLimit !== -1) {
+      // Vérifier le nombre de participations du jour via la fonction DB
+      const { data: limitCheck, error: limitError } = await supabase
+        .rpc('can_join_multiplayer', { p_user_id: user.id });
+      
+      if (limitError) {
+        console.error('Error checking daily limit:', limitError);
+        // En cas d'erreur, on continue (fail-open pour UX)
+      } else if (limitCheck && limitCheck.length > 0) {
+        const { can_join, current_count, daily_limit } = limitCheck[0];
+        
+        if (!can_join) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Limite journalière atteinte',
+              code: 'DAILY_LIMIT_REACHED',
+              current_count,
+              daily_limit,
+              plan: profile.plan,
+              message: `Tu as atteint ta limite de ${daily_limit} parties multijoueur par jour. Passe à Premium+ pour un accès illimité !`
+            }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      }
+    }
+
     // Ajouter l'utilisateur aux participants
     const participants = Array.isArray(salon.participants) ? salon.participants : [];
     
@@ -167,6 +198,24 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       console.log('✅ Participant added successfully:', newParticipant);
       console.log('✅ Updated participants:', updatedSalon?.participants);
       console.log('📡 Realtime event should be triggered NOW for all connected clients');
+      
+      // 📊 Enregistrer la participation pour le compteur journalier (sauf Premium+)
+      const dailyLimit = DAILY_LIMITS[profile.plan] || DAILY_LIMITS['freemium'];
+      if (dailyLimit !== -1) {
+        const { error: participationError } = await supabase
+          .from('multiplayer_participations')
+          .insert({
+            user_id: user.id,
+            session_id: salonId,
+          });
+        
+        if (participationError) {
+          // Log mais ne pas bloquer (la participation est déjà enregistrée dans le salon)
+          console.warn('⚠️ Could not record participation for daily limit:', participationError);
+        } else {
+          console.log('📊 Participation recorded for daily limit tracking');
+        }
+      }
     }
 
     // Rediriger vers le lobby

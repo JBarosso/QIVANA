@@ -1,13 +1,13 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { requirePremiumPlus } from '../../lib/auth';
+import { requireAuth } from '../../lib/auth';
 import { getSalonByCode } from '../../lib/duel';
 import LobbyRealtime from '../../components/duel/LobbyRealtime';
 import StartGameButton from '../../components/duel/StartGameButton';
 import CreateRoomButton from '../../components/duel/CreateRoomButton';
 
-// Protection de la route - Premium+ uniquement
-const authResult = await requirePremiumPlus(Astro);
+// Protection de la route - Authentification requise (tous les plans peuvent rejoindre un lobby)
+const authResult = await requireAuth(Astro);
 
 // Si c'est une redirection, elle a déjà été effectuée
 if (authResult instanceof Response) {
@@ -15,6 +15,9 @@ if (authResult instanceof Response) {
 }
 
 const { user, profile } = authResult;
+
+// Vérifier si l'utilisateur peut configurer les paramètres (Premium+ uniquement)
+const canConfigureSettings = profile.plan === 'premium+';
 
 // Récupérer le salon depuis l'URL
 const salonId = Astro.url.searchParams.get('salon');
@@ -129,9 +132,26 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
             </p>
           </section>
 
+          <!-- Message pour les invités non-Premium+ -->
+          {!isChef && !canConfigureSettings && (
+            <div class="duel-lobby__guest-notice">
+              <span class="duel-lobby__guest-notice-icon">👋</span>
+              <div class="duel-lobby__guest-notice-content">
+                <p class="duel-lobby__guest-notice-title">Tu es invité(e) par {chefPseudo}</p>
+                <p class="duel-lobby__guest-notice-text">
+                  Les paramètres sont définis par le chef de salon. 
+                  <a href="/pricing?upgrade=multiplayer">Passe à Premium+</a> pour créer tes propres salons !
+                </p>
+              </div>
+            </div>
+          )}
+
           <!-- Informations du salon -->
           <section class="duel-lobby__section">
-            <h2 class="duel-lobby__section-title">Paramètres</h2>
+            <h2 class="duel-lobby__section-title">
+              Paramètres
+              {!isChef && <span class="duel-lobby__readonly-badge">Lecture seule</span>}
+            </h2>
             <div class="duel-lobby__info-grid">
               <div class="duel-lobby__info-item">
                 <span class="duel-lobby__info-label">Univers</span>
@@ -388,6 +408,64 @@ const shareUrl = `${siteUrl}/duel/join?code=${salonCode}`;
     font-size: var(--fs-2);
     color: var(--color-text-muted);
     text-align: center;
+  }
+
+  /* Notice pour les invités non-Premium+ */
+  .duel-lobby__guest-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-indigo-dark) 100%);
+    border-radius: var(--radius-3);
+    border: 1px solid var(--color-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  .duel-lobby__guest-notice-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .duel-lobby__guest-notice-content {
+    flex: 1;
+  }
+
+  .duel-lobby__guest-notice-title {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-1) 0;
+    font-size: var(--fs-3);
+  }
+
+  .duel-lobby__guest-notice-text {
+    font-size: var(--fs-2);
+    color: var(--color-text-muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .duel-lobby__guest-notice-text a {
+    color: var(--color-cyan);
+    text-decoration: none;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .duel-lobby__guest-notice-text a:hover {
+    text-decoration: underline;
+  }
+
+  /* Badge lecture seule */
+  .duel-lobby__readonly-badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-neutral-700);
+    border-radius: var(--radius-2);
+    font-size: var(--fs-1);
+    font-weight: var(--font-weight-normal);
+    color: var(--color-text-muted);
+    margin-left: var(--space-2);
+    vertical-align: middle;
   }
 </style>
 
