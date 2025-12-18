@@ -142,7 +142,7 @@ export async function generateControlledAIQuestions(
         questions_count: insertedQuestions.length,
         universe: universe as any,
         mode: 'solo', // Par défaut pour les générations via generateControlledAIQuestions
-        credits_consumed: 1,
+        credits_consumed: insertedQuestions.length, // 1 crédit = 1 question insérée
         plan_at_time: profile?.plan || 'freemium',
       }).then(({ error }) => {
         if (error) {

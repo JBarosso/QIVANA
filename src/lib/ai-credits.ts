@@ -25,16 +25,17 @@ export interface AiCreditsStatus {
 export type AiGenerationMode = 'solo' | 'custom' | 'multiplayer' | 'endless';
 
 /**
- * Vérifie et consomme 1 crédit IA pour un batch de génération
+ * Vérifie et consomme N crédits IA (1 crédit = 1 question)
  * 
  * Logique de consommation:
  * 1. Utiliser extra_ai_credits en priorité (si > 0)
  * 2. Sinon, utiliser le quota mensuel (si disponible)
- * 3. Sinon, bloquer avec out_of_credits
+ * 3. Peut combiner les deux si nécessaire
+ * 4. Sinon, bloquer avec out_of_credits
  * 
  * @param supabase Client Supabase (doit avoir les permissions nécessaires)
  * @param userId ID de l'utilisateur
- * @param context Contexte de la génération (mode, nombre de questions)
+ * @param context Contexte de la génération (mode, nombre de questions à générer)
  * @returns Résultat de la vérification avec statut des crédits
  */
 export async function checkAndConsumeAiCredit(
@@ -103,61 +104,63 @@ export async function checkAndConsumeAiCredit(
   const monthlyQuota = getMonthlyQuota(plan);
   const monthlyUsed = profile.ai_quizzes_used_this_month || 0;
   const monthlyRemaining = monthlyQuota - monthlyUsed;
+  const creditsNeeded = context.questionsInBatch;
+  const totalAvailable = extraCredits + monthlyRemaining;
 
-  if (extraCredits > 0) {
-    // Consommer un crédit extra
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ extra_ai_credits: extraCredits - 1 })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Error consuming extra credit:', updateError);
-      return {
-        allowed: false,
-        creditsRemaining: extraCredits,
-        source: 'extra',
-        error: 'out_of_credits',
-      };
-    }
-
+  // Vérifier si on a assez de crédits au total
+  if (totalAvailable < creditsNeeded) {
     return {
-      allowed: true,
-      creditsRemaining: extraCredits - 1 + monthlyRemaining,
-      source: 'extra',
+      allowed: false,
+      creditsRemaining: totalAvailable,
+      source: 'none',
+      error: 'out_of_credits',
     };
   }
 
-  // 5. Sinon, utiliser le quota mensuel
-  if (monthlyRemaining > 0) {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ ai_quizzes_used_this_month: monthlyUsed + 1 })
-      .eq('id', userId);
+  // Consommer les crédits (priorité aux extra_credits)
+  let creditsToConsumeFromExtra = 0;
+  let creditsToConsumeFromMonthly = 0;
 
-    if (updateError) {
-      console.error('Error consuming monthly credit:', updateError);
-      return {
-        allowed: false,
-        creditsRemaining: monthlyRemaining,
-        source: 'monthly',
-        error: 'out_of_credits',
-      };
-    }
+  if (extraCredits >= creditsNeeded) {
+    // On a assez de crédits extra pour tout couvrir
+    creditsToConsumeFromExtra = creditsNeeded;
+  } else {
+    // On utilise tous les extra + une partie du monthly
+    creditsToConsumeFromExtra = extraCredits;
+    creditsToConsumeFromMonthly = creditsNeeded - extraCredits;
+  }
 
+  // Mettre à jour la base de données
+  const updates: any = {};
+  if (creditsToConsumeFromExtra > 0) {
+    updates.extra_ai_credits = extraCredits - creditsToConsumeFromExtra;
+  }
+  if (creditsToConsumeFromMonthly > 0) {
+    updates.ai_quizzes_used_this_month = monthlyUsed + creditsToConsumeFromMonthly;
+  }
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId);
+
+  if (updateError) {
+    console.error('Error consuming credits:', updateError);
     return {
-      allowed: true,
-      creditsRemaining: monthlyRemaining - 1,
-      source: 'monthly',
+      allowed: false,
+      creditsRemaining: totalAvailable,
+      source: creditsToConsumeFromExtra > 0 ? 'extra' : 'monthly',
+      error: 'out_of_credits',
     };
   }
 
-  // 6. Aucun crédit disponible
+  // Calculer les crédits restants après consommation
+  const remainingAfter = totalAvailable - creditsNeeded;
+
   return {
-    allowed: false,
-    creditsRemaining: 0,
-    source: 'none',
-    error: 'out_of_credits',
+    allowed: true,
+    creditsRemaining: remainingAfter,
+    source: creditsToConsumeFromExtra > 0 ? 'extra' : 'monthly',
   };
 }
 

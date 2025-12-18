@@ -4,55 +4,156 @@
 // ============================================
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { stripe } from '@/lib/stripe';
+import { getCreditsForPack } from '@/lib/ai-credits-config';
 
 // Récupérer les informations de la session si disponibles
 const sessionId = Astro.url.searchParams.get('session_id');
 
-// On pourrait vérifier la session ici si nécessaire
-// Pour l'instant on affiche juste un message de succès
+// Récupérer les détails de la session Stripe
+let sessionData: {
+  type?: 'subscription' | 'credit_pack';
+  plan?: string;
+  billing?: string;
+  packType?: string;
+  credits?: number;
+  amount?: number;
+} | null = null;
+
+if (sessionId) {
+  try {
+    // Récupérer directement la session Stripe côté serveur
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    // Déterminer le type d'achat depuis les metadata
+    const purchaseType = session.metadata?.type || 'subscription';
+    const packType = session.metadata?.pack_type;
+
+    sessionData = {
+      type: purchaseType as 'subscription' | 'credit_pack',
+    };
+
+    if (purchaseType === 'credit_pack' && packType) {
+      // C'est un achat de pack de crédits
+      sessionData.packType = packType;
+      sessionData.credits = getCreditsForPack(packType as 'starter' | 'standard' | 'pro');
+      sessionData.amount = session.amount_total ? session.amount_total / 100 : undefined;
+    } else {
+      // C'est un abonnement
+      sessionData.plan = session.metadata?.plan;
+      sessionData.billing = session.metadata?.billing;
+      sessionData.amount = session.amount_total ? session.amount_total / 100 : undefined;
+    }
+  } catch (error) {
+    console.error('Error retrieving Stripe session:', error);
+  }
+}
+
+const isCreditPack = sessionData?.type === 'credit_pack';
+const packTypeNames: Record<string, string> = {
+  starter: 'Pack Starter',
+  standard: 'Pack Standard',
+  pro: 'Pack Pro',
+};
 ---
 
 <BaseLayout title="Paiement réussi" description="Votre paiement a été accepté">
   <main class="payment-page">
-    <div class="payment-card payment-card--success">
-      <div class="payment-card__icon">🎉</div>
-      
-      <h1 class="payment-card__title">Paiement réussi !</h1>
-      
-      <p class="payment-card__message">
-        Merci pour votre confiance ! Votre abonnement est maintenant actif.
-      </p>
+    {isCreditPack ? (
+      <!-- Page de succès pour achat de crédits IA -->
+      <div class="payment-card payment-card--success">
+        <div class="payment-card__icon">✨</div>
+        
+        <h1 class="payment-card__title">Crédits IA achetés !</h1>
+        
+        <p class="payment-card__message">
+          Merci pour votre achat ! Vos crédits bonus ont été ajoutés à votre compte.
+        </p>
 
-      <div class="payment-card__details">
-        <div class="payment-card__feature">
-          <span class="payment-card__feature-icon">✓</span>
-          Accès immédiat à toutes les fonctionnalités
+        <div class="payment-card__credits-info">
+          <div class="payment-card__credits-amount">
+            <span class="payment-card__credits-number">{sessionData?.credits || 0}</span>
+            <span class="payment-card__credits-label">crédits IA</span>
+          </div>
+          {sessionData?.packType && (
+            <p class="payment-card__pack-name">
+              {packTypeNames[sessionData.packType] || sessionData.packType}
+            </p>
+          )}
         </div>
-        <div class="payment-card__feature">
-          <span class="payment-card__feature-icon">✓</span>
-          Quiz IA débloqués
+
+        <div class="payment-card__details">
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Crédits disponibles immédiatement
+          </div>
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Ne se périment jamais
+          </div>
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Utilisés en priorité avant votre quota mensuel
+          </div>
         </div>
-        <div class="payment-card__feature">
-          <span class="payment-card__feature-icon">✓</span>
-          Accès aux duels multijoueur
+
+        <div class="payment-card__actions">
+          <a href="/quiz" class="btn btn--primary btn--lg">
+            🎮 Générer un quiz
+          </a>
+          <a href="/profile" class="btn btn--outline">
+            👤 Voir mes crédits
+          </a>
         </div>
+
+        <p class="payment-card__note">
+          Un email de confirmation vous a été envoyé.
+          <br/>
+          Vous pouvez voir vos crédits restants dans votre profil.
+        </p>
       </div>
+    ) : (
+      <!-- Page de succès pour abonnement -->
+      <div class="payment-card payment-card--success">
+        <div class="payment-card__icon">🎉</div>
+        
+        <h1 class="payment-card__title">Paiement réussi !</h1>
+        
+        <p class="payment-card__message">
+          Merci pour votre confiance ! Votre abonnement est maintenant actif.
+        </p>
 
-      <div class="payment-card__actions">
-        <a href="/" class="btn btn--primary btn--lg">
-          🎮 Jouer maintenant
-        </a>
-        <a href="/profile" class="btn btn--outline">
-          👤 Voir mon profil
-        </a>
+        <div class="payment-card__details">
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Accès immédiat à toutes les fonctionnalités
+          </div>
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Quiz IA débloqués
+          </div>
+          <div class="payment-card__feature">
+            <span class="payment-card__feature-icon">✓</span>
+            Accès aux duels multijoueur
+          </div>
+        </div>
+
+        <div class="payment-card__actions">
+          <a href="/" class="btn btn--primary btn--lg">
+            🎮 Jouer maintenant
+          </a>
+          <a href="/profile" class="btn btn--outline">
+            👤 Voir mon profil
+          </a>
+        </div>
+
+        <p class="payment-card__note">
+          Un email de confirmation vous a été envoyé.
+          <br/>
+          Vous pouvez gérer votre abonnement depuis votre profil.
+        </p>
       </div>
-
-      <p class="payment-card__note">
-        Un email de confirmation vous a été envoyé.
-        <br/>
-        Vous pouvez gérer votre abonnement depuis votre profil.
-      </p>
-    </div>
+    )}
 
     <!-- Confetti Animation -->
     <div class="confetti" id="confetti"></div>

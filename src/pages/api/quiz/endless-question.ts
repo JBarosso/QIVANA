@@ -2,7 +2,8 @@
 // API ROUTE - ENDLESS QUESTION
 // ============================================
 // Génère des questions pour le mode Endless via IA
-// Système de batch : génère 10 questions, puis 5 par 5
+// Système de batch : génère 10 questions par batch
+// Consommation : 1 crédit IA = 1 question générée
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
@@ -114,6 +115,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const theme = ENDLESS_THEMES[Math.floor(Math.random() * ENDLESS_THEMES.length)];
 
     // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA (avant génération)
+    // Consomme 10 crédits (1 crédit = 1 question)
     const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
       mode: 'endless',
       questionsInBatch: batchSize,
@@ -167,7 +169,7 @@ IMPORTANT ENDLESS MODE RULES:
           universe: 'other',
           prompt: theme.substring(0, 200),
           mode: 'endless',
-          credits_consumed: 1,
+          credits_consumed: aiResponse.questions.length, // 1 crédit = 1 question
           plan_at_time: profile.plan,
         })
         .then(({ error }) => {
@@ -200,7 +202,7 @@ IMPORTANT ENDLESS MODE RULES:
 
 /**
  * Génère un batch de questions en arrière-plan
- * ⚠️ IMPORTANT: Cette fonction doit aussi vérifier et consommer les crédits
+ * ⚠️ IMPORTANT: Cette fonction consomme 10 crédits (1 crédit = 1 question)
  */
 async function generateBatchAsync(cacheKey: string, difficulty: string, userId: string) {
   try {
@@ -260,7 +262,7 @@ async function generateBatchAsync(cacheKey: string, difficulty: string, userId: 
           universe: 'other',
           prompt: theme.substring(0, 200),
           mode: 'endless',
-          credits_consumed: 1,
+          credits_consumed: aiResponse.questions.length, // 1 crédit = 1 question
           plan_at_time: profile?.plan || 'unknown',
         })
         .then(({ error }) => {

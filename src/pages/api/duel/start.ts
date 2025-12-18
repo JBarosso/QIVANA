@@ -190,6 +190,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         console.log('🎨 Generating custom quiz from prompt at game start...');
         
         // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
+        // Consomme N crédits (1 crédit = 1 question)
         const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
           mode: 'multiplayer',
           questionsInBatch: questionsCount,
@@ -256,7 +257,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
               universe: 'other',
               prompt: customPrompt.substring(0, 200),
               mode: 'multiplayer',
-              credits_consumed: 1,
+              credits_consumed: aiResponse.questions.length, // 1 crédit = 1 question
               plan_at_time: profile.plan,
             })
             .then(({ error }) => {

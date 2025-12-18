@@ -145,6 +145,53 @@
 }
 
 // ============================================
+// CREDITS PACK SUCCESS STYLES
+// ============================================
+
+.payment-card__credits-info {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(168, 85, 247, 0.1));
+  border-radius: var(--radius-3);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  border: 2px solid var(--color-primary);
+}
+
+.payment-card__credits-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.payment-card__credits-number {
+  font-size: var(--fs-11);
+  font-weight: var(--font-weight-bold);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.payment-card__credits-label {
+  font-size: var(--fs-4);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: var(--font-weight-semibold);
+}
+
+.payment-card__pack-name {
+  font-size: var(--fs-5);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+// ============================================
 // CONFETTI ANIMATION (Success page only)
 // ============================================
 

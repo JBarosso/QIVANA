@@ -4,6 +4,7 @@
 // ⚠️ IMPORTANT: This API generates questions for "custom quiz" mode
 // These questions MUST NEVER be stored in the database
 // They are stored in quiz_sessions.temp_questions and exist only for the current quiz session
+// Consommation : 1 crédit IA = 1 question générée
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
@@ -109,8 +110,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
-    // Note: On vérifie AVANT la génération, mais on ne consomme qu'après succès
-    // Pour le mode "clarify", on ne consomme pas de crédit
+    // Consomme N crédits (1 crédit = 1 question)
+    // Note: La consommation est immédiate, même si la génération échoue après
     const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
       mode: 'custom',
       questionsInBatch: requestedQuestions,
@@ -258,7 +259,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         universe: 'other',
         prompt: effectivePrompt.substring(0, 200), // Limiter la longueur
         mode: 'custom',
-        credits_consumed: 1,
+        credits_consumed: aiResponse.questions.length, // 1 crédit = 1 question
         plan_at_time: profile.plan,
       });
 

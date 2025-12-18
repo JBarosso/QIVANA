@@ -5,6 +5,7 @@
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { PLANS } from '@/lib/stripe';
+import { getCreditsForPack } from '@/lib/ai-credits-config';
 
 // Récupérer l'utilisateur s'il est connecté
 const supabase = (Astro.locals as any).supabase;
@@ -29,6 +30,34 @@ if (supabase) {
 }
 
 const plans = Object.values(PLANS);
+
+// Définir les packs de crédits
+const creditPacks = [
+  {
+    name: 'starter',
+    displayName: 'Pack Starter',
+    credits: getCreditsForPack('starter'),
+    price: 1.99,
+    description: 'Parfait pour tester',
+    popular: false,
+  },
+  {
+    name: 'standard',
+    displayName: 'Pack Standard',
+    credits: getCreditsForPack('standard'),
+    price: 4.99,
+    description: 'Le meilleur rapport qualité/prix',
+    popular: true,
+  },
+  {
+    name: 'pro',
+    displayName: 'Pack Pro',
+    credits: getCreditsForPack('pro'),
+    price: 9.99,
+    description: 'Pour les gros générateurs',
+    popular: false,
+  },
+];
 ---
 
 <BaseLayout title="Tarifs" description="Découvrez les offres Qivana : Freemium, Premium et Premium+">
@@ -127,6 +156,65 @@ const plans = Object.values(PLANS);
         </div>
       ))}
     </div>
+
+    <!-- Section Packs de Crédits IA -->
+    <section class="credits-section" id="credits">
+      <div class="credits-section__header">
+        <h2 class="credits-section__title">
+          Besoin de plus de crédits IA ?
+        </h2>
+        <p class="credits-section__subtitle">
+          Achetez des crédits bonus qui ne se périment jamais
+        </p>
+      </div>
+
+      <div class="credits-grid">
+        {creditPacks.map((pack) => (
+          <div class={`credit-card ${pack.popular ? 'credit-card--popular' : ''}`}>
+            {pack.popular && (
+              <div class="credit-card__badge">⭐ Meilleur rapport</div>
+            )}
+
+            <div class="credit-card__header">
+              <h3 class="credit-card__name">{pack.displayName}</h3>
+              <p class="credit-card__description">{pack.description}</p>
+            </div>
+
+            <div class="credit-card__credits">
+              <span class="credit-card__credits-amount">{pack.credits}</span>
+              <span class="credit-card__credits-label">crédits IA</span>
+            </div>
+
+            <div class="credit-card__price">
+              <span class="credit-card__currency">€</span>
+              <span class="credit-card__amount">{pack.price}</span>
+            </div>
+
+            <ul class="credit-card__features">
+              <li>✓ Ne se périment jamais</li>
+              <li>✓ Utilisés en priorité</li>
+              <li>✓ Paiement unique</li>
+              <li>✓ Tous les modes de jeu</li>
+            </ul>
+
+            <button 
+              class="btn btn--primary btn--full btn--buy-credits"
+              data-pack={pack.name}
+            >
+              Acheter
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div class="credits-section__info">
+        <p>
+          💡 <strong>Comment ça marche ?</strong> 
+          Les crédits bonus sont utilisés en priorité avant votre quota mensuel. 
+          Parfait pour les mois où vous générez plus de quiz que d'habitude !
+        </p>
+      </div>
+    </section>
 
     <!-- FAQ Section -->
     <section class="pricing-faq">
@@ -267,6 +355,55 @@ const plans = Object.values(PLANS);
         window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Une erreur est survenue. Veuillez réessayer.', type: 'error' } }));
         btn.removeAttribute('disabled');
         btn.textContent = 'Réessayer';
+      }
+    });
+  });
+
+  // Gérer l'achat de packs de crédits
+  const buyCreditsButtons = document.querySelectorAll('.btn--buy-credits');
+  buyCreditsButtons.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const packType = (btn as HTMLButtonElement).dataset.pack;
+
+      if (!packType) return;
+
+      // Désactiver le bouton
+      btn.setAttribute('disabled', 'true');
+      if (btn instanceof HTMLButtonElement) {
+        btn.textContent = 'Chargement...';
+      }
+
+      try {
+        const response = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            type: 'credit_pack',
+            packType: packType 
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.redirect) {
+          window.location.href = data.redirect;
+        } else {
+          throw new Error(data.error || 'Erreur inconnue');
+        }
+      } catch (error) {
+        console.error('Checkout error:', error);
+        window.dispatchEvent(new CustomEvent('show-toast', { 
+          detail: { 
+            message: 'Une erreur est survenue. Veuillez réessayer.', 
+            type: 'error' 
+          } 
+        }));
+        btn.removeAttribute('disabled');
+        if (btn instanceof HTMLButtonElement) {
+          btn.textContent = 'Réessayer';
+        }
       }
     });
   });

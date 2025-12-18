@@ -3,6 +3,7 @@
 // ============================================
 // ⚠️ NOTE: Cette route est maintenue pour compatibilité mais devrait être remplacée
 // par la logique unifiée dans start.ts. Utilise maintenant la génération contrôlée.
+// Consommation : 1 crédit IA = 1 question générée
 
 import type { APIRoute } from 'astro';
 import { createServerClient } from '@supabase/ssr';
@@ -61,6 +62,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const requestedQuestions = Math.min(numberOfQuestions, maxQuestions);
 
     // ⚠️ VÉRIFICATION ET CONSOMMATION DES CRÉDITS IA
+    // Consomme N crédits (1 crédit = 1 question)
     const creditCheck = await checkAndConsumeAiCredit(supabase, user.id, {
       mode: 'solo',
       questionsInBatch: requestedQuestions,
